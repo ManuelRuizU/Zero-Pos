@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZERO POS — Pantalla Cliente</title>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.1);
+  --accent:#6366f1;--accent2:#818cf8;--text:#f1f5f9;--text-dim:#94a3b8;
+  --success:#22c55e;--radius:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background-image:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(99,102,241,0.12) 0%,transparent 70%);
+}
+.logo{font-size:48px;margin-bottom:16px;}
+h1{font-size:32px;font-weight:800;letter-spacing:-1px;text-align:center;margin-bottom:6px;}
+h1 span{color:var(--accent2);}
+.tagline{color:var(--text-dim);font-size:15px;text-align:center;margin-bottom:48px;}
+.total-section{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:36px 48px;text-align:center;
+  min-width:320px;margin-bottom:32px;
+}
+.total-label{font-size:14px;color:var(--text-dim);margin-bottom:10px;}
+.total-monto{font-size:56px;font-weight:900;letter-spacing:-2px;color:var(--accent2);}
+.metodo{font-size:14px;color:var(--text-dim);margin-top:12px;}
+.qr-section{text-align:center;}
+.qr-section img{border-radius:16px;max-width:200px;border:1px solid var(--border);}
+.qr-label{font-size:13px;color:var(--text-dim);margin-top:12px;}
+.gracias{margin-top:40px;font-size:14px;color:var(--text-dim);text-align:center;}
+.idle{text-align:center;}
+.idle .icon{font-size:80px;margin-bottom:16px;}
+.idle .msg{font-size:18px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+<div id="pantallaIdle" class="idle">
+  <div class="icon">🛍️</div>
+  <h1>ZERO<span>POS</span></h1>
+  <p class="tagline">Sin internet. Sin comisiones. Solo tú y tus ventas.</p>
+  <p class="msg">Esperando venta...</p>
+</div>
+
+<div id="pantallaVenta" style="display:none">
+  <div class="logo">🛍️</div>
+  <div class="total-section">
+    <div class="total-label">Total a pagar</div>
+    <div class="total-monto" id="totalMonto">$0</div>
+    <div class="metodo" id="metodoInfo"></div>
+  </div>
+  <div class="qr-section" id="qrSection" style="display:none">
+    <img id="qrImg" src="" alt="QR Pago">
+    <div class="qr-label">Escanea para pagar</div>
+  </div>
+  <div class="gracias" id="mensajeGracias"></div>
+</div>
+
+<script>
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+let ultimaVenta = null;
+
+async function poll() {
+  try {
+    const ventas = await fetch('/api/ventas?limite=1',{credentials:'include'}).then(r=>r.json());
+    if (!ventas.length) return;
+    const v = ventas[0];
+    if (ultimaVenta === v.id) return;
+    ultimaVenta = v.id;
+    mostrarVenta(v);
+  } catch(e) {}
+}
+
+function mostrarVenta(v) {
+  document.getElementById('pantallaIdle').style.display='none';
+  document.getElementById('pantallaVenta').style.display='flex';
+  document.getElementById('pantallaVenta').style.flexDirection='column';
+  document.getElementById('pantallaVenta').style.alignItems='center';
+  document.getElementById('totalMonto').textContent = fmt(v.total);
+  document.getElementById('metodoInfo').textContent = 'Pago: ' + v.metodo_pago.toUpperCase();
+  document.getElementById('mensajeGracias').textContent = v.cliente_nombre ? `Gracias, ${v.cliente_nombre}! 🙌` : '¡Gracias por su compra! 🙌';
+  if (v.metodo_pago==='transferencia') cargarQR(v);
+  setTimeout(() => {
+    document.getElementById('pantallaVenta').style.display='none';
+    document.getElementById('pantallaIdle').style.display='block';
+    ultimaVenta = null;
+  }, 15000);
+}
+
+async function cargarQR(v) {
+  try {
+    const r = await fetch('/api/qr/pago',{
+      method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({monto:v.total,concepto:'Pago en tienda'})
+    }).then(r=>r.json());
+    if (r.qr_base64) {
+      document.getElementById('qrImg').src='data:image/png;base64,'+r.qr_base64;
+      document.getElementById('qrSection').style.display='block';
+    }
+  } catch(e) {}
+}
+
+setInterval(poll, 5000);
+</script>
+</body>
+</html>

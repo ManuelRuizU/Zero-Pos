@@ -1,0 +1,37 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+env/
+
+# Base de datos y datos sensibles
+zero_pos.db
+zero_pos.db-wal
+zero_pos.db-shm
+zero_pos.db.prev
+.secret_key
+.backup_key
+
+# Sesiones Flask
+flask_sessions/
+
+# Backups y PDFs
+backups/
+facturas_pdf/
+sync/
+
+# Logs
+*.log
+logs/
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

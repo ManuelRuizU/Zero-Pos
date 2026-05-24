@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZERO POS — Admin</title>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.1);--accent:#6366f1;--accent2:#818cf8;
+  --text:#f1f5f9;--text-dim:#94a3b8;
+  --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;
+  --radius:14px;--blur:blur(20px);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(99,102,241,0.1) 0%,transparent 70%);
+}
+.topbar{
+  display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:rgba(10,10,15,0.8);backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;
+}
+.logo{font-weight:700;font-size:16px;}
+.logo span{color:var(--accent);}
+.nav{display:flex;gap:6px;margin-left:auto;}
+.nav-btn{
+  background:none;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s;
+}
+.nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text);}
+.content{max-width:1200px;margin:0 auto;padding:24px 20px;}
+h2{font-size:22px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px;}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:28px;}
+.kpi-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;
+}
+.kpi-label{font-size:12px;color:var(--text-dim);margin-bottom:6px;}
+.kpi-value{font-size:28px;font-weight:800;letter-spacing:-1px;}
+.kpi-sub{font-size:12px;color:var(--text-dim);margin-top:4px;}
+
+/* Charts placeholder */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;}
+.chart-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;
+}
+.chart-title{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text-dim);}
+.bar-chart{display:flex;flex-direction:column;gap:6px;}
+.bar-row{display:flex;align-items:center;gap:10px;font-size:12px;}
+.bar-label{width:80px;color:var(--text-dim);text-align:right;}
+.bar-track{flex:1;background:rgba(255,255,255,0.06);border-radius:4px;height:10px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .4s ease;}
+.bar-val{width:70px;color:var(--text-dim);}
+
+/* Tabla */
+.table-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;margin-bottom:28px;
+}
+table{width:100%;border-collapse:collapse;}
+th{
+  background:rgba(255,255,255,0.04);
+  padding:12px 16px;text-align:left;
+  font-size:12px;font-weight:600;color:var(--text-dim);
+  border-bottom:1px solid var(--border);
+}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);}
+tr:last-child td{border:none;}
+tr:hover td{background:rgba(255,255,255,0.03);}
+
+/* IA panel */
+.ia-panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;margin-bottom:28px;
+}
+.ia-title{font-size:14px;font-weight:600;margin-bottom:12px;}
+.ia-chat{
+  background:rgba(0,0,0,0.3);border-radius:10px;
+  padding:14px;min-height:80px;font-size:13px;
+  color:var(--text-dim);line-height:1.6;margin-bottom:12px;
+}
+.ia-input-row{display:flex;gap:8px;}
+.ia-input{
+  flex:1;background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;
+}
+.ia-input:focus{border-color:var(--accent);}
+.ia-btn{
+  background:var(--accent);border:none;color:#fff;
+  border-radius:10px;padding:10px 16px;cursor:pointer;font-size:13px;
+  transition:filter .15s;
+}
+.ia-btn:hover{filter:brightness(1.15);}
+
+/* Sección backup */
+.backup-section{display:flex;gap:10px;flex-wrap:wrap;}
+.btn{
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:10px;padding:10px 18px;
+  font-size:13px;cursor:pointer;transition:all .15s;
+}
+.btn:hover{background:rgba(99,102,241,0.2);border-color:var(--accent);}
+.btn.primary{background:var(--accent);border-color:var(--accent);}
+.btn.primary:hover{filter:brightness(1.1);}
+
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">ZERO<span>POS</span> Admin</div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showTab('dashboard',this)">📊 Dashboard</button>
+    <button class="nav-btn" onclick="showTab('ventas',this)">🧾 Ventas</button>
+    <button class="nav-btn" onclick="showTab('ia',this)">🤖 IA</button>
+    <button class="nav-btn" onclick="showTab('config',this)">⚙️ Config</button>
+    <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- Dashboard -->
+  <div class="tab-content active" id="tab-dashboard">
+    <h2>Resumen del día</h2>
+    <div class="kpi-grid" id="kpiGrid">
+      <div class="kpi-card"><div class="kpi-label">Ventas hoy</div><div class="kpi-value" id="kpiNum">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Total recaudado</div><div class="kpi-value" id="kpiTotal">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Ticket promedio</div><div class="kpi-value" id="kpiTicket">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Alertas stock</div><div class="kpi-value" id="kpiAlertas" style="color:var(--warning)">—</div></div>
+    </div>
+
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">Ventas por hora</div>
+        <div class="bar-chart" id="chartHoras"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Top productos hoy</div>
+        <div class="bar-chart" id="chartTop"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ventas recientes -->
+  <div class="tab-content" id="tab-ventas">
+    <h2>Historial de ventas</h2>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>#</th><th>Fecha</th><th>Cajero</th><th>Método</th><th>Total</th><th>Estado</th></tr></thead>
+        <tbody id="tablaVentas"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- IA -->
+  <div class="tab-content" id="tab-ia">
+    <h2>Análisis con IA local</h2>
+    <div class="ia-panel">
+      <div class="ia-title">🤖 Asistente ZERO POS (TinyLlama)</div>
+      <div class="ia-chat" id="iaRespuesta">Pregúntale algo al asistente sobre tu negocio...</div>
+      <div class="ia-input-row">
+        <input class="ia-input" type="text" id="iaPregunta"
+          placeholder="¿Qué productos vendo más? ¿Cómo va hoy?"
+          onkeydown="if(event.key==='Enter')preguntarIA()">
+        <button class="ia-btn" onclick="preguntarIA()">Preguntar →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config -->
+  <div class="tab-content" id="tab-config">
+    <h2>Configuración</h2>
+    <div class="ia-panel">
+      <div class="ia-title">💾 Backups</div>
+      <div class="backup-section">
+        <button class="btn primary" onclick="crearBackup()">Crear backup ahora</button>
+        <button class="btn" onclick="location.href='/api/backup/listar'">Ver backups</button>
+      </div>
+      <p style="margin-top:12px;font-size:12px;color:var(--text-dim)">
+        Los backups se guardan en <code>/backups/</code> cifrados. Backup automático a las 03:00.
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+
+async function init() {
+  const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
+  if (!me||me.error||me.rol!=='admin') { location.href='login.html'; return; }
+  cargarDashboard();
+}
+
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name==='ventas') cargarVentas();
+}
+
+async function cargarDashboard() {
+  const [dia, alertas] = await Promise.all([
+    fetch('/api/reportes/ventas/dia',{credentials:'include'}).then(r=>r.json()).catch(()=>({por_metodo:[],por_hora:[],top_productos:[]})),
+    fetch('/api/productos/alertas',{credentials:'include'}).then(r=>r.json()).catch(()=>[]),
+  ]);
+
+  const totales = dia.por_metodo.reduce((a,r)=>({n:a.n+r.num_ventas,t:a.t+r.total}),{n:0,t:0});
+  document.getElementById('kpiNum').textContent = totales.n;
+  document.getElementById('kpiTotal').textContent = fmt(totales.t);
+  document.getElementById('kpiTicket').textContent = totales.n ? fmt(totales.t/totales.n) : '$0';
+  document.getElementById('kpiAlertas').textContent = alertas.length;
+
+  renderBars('chartHoras', dia.por_hora, r=>r.hora+':00', r=>r.total);
+  renderBars('chartTop', dia.top_productos.slice(0,6), r=>r.nombre, r=>r.unidades);
+}
+
+function renderBars(elId, data, labelFn, valFn) {
+  const el = document.getElementById(elId);
+  if (!data.length) { el.innerHTML = '<p style="color:var(--text-dim);font-size:12px">Sin datos</p>'; return; }
+  const max = Math.max(...data.map(valFn)) || 1;
+  el.innerHTML = data.map(r => {
+    const pct = (valFn(r)/max*100).toFixed(0);
+    const label = String(labelFn(r)).substring(0,10);
+    return `<div class="bar-row">
+      <span class="bar-label">${label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+      <span class="bar-val">${typeof valFn(r)==='number'?valFn(r).toLocaleString('es-CL'):valFn(r)}</span>
+    </div>`;
+  }).join('');
+}
+
+async function cargarVentas() {
+  const ventas = await fetch('/api/ventas?limite=50',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  const tbody = document.getElementById('tablaVentas');
+  if (!ventas.length) { tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-dim)">Sin ventas</td></tr>'; return; }
+  tbody.innerHTML = ventas.map(v=>`
+    <tr>
+      <td>#${v.id}</td>
+      <td>${v.creado_en?.substring(0,16)||'—'}</td>
+      <td>${v.cajero||'—'}</td>
+      <td>${v.metodo_pago}</td>
+      <td style="font-weight:700">${fmt(v.total)}</td>
+      <td><span style="color:${v.estado==='completada'?'var(--success)':v.estado==='anulada'?'var(--danger)':'var(--warning)'}">${v.estado}</span></td>
+    </tr>`).join('');
+}
+
+async function preguntarIA() {
+  const input = document.getElementById('iaPregunta');
+  const pregunta = input.value.trim();
+  const el = document.getElementById('iaRespuesta');
+  el.textContent = 'Consultando...';
+  try {
+    const r = await fetch('/api/reportes/ia/analisis', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pregunta}),
+    }).then(r=>r.json());
+    el.textContent = r.respuesta || 'Sin respuesta';
+    input.value = '';
+  } catch(e) {
+    el.textContent = 'Error al consultar IA';
+  }
+}
+
+async function crearBackup() {
+  const r = await fetch('/api/backup/crear',{method:'POST',credentials:'include'}).then(r=>r.json());
+  alert(r.ok ? `✓ Backup creado: ${r.nombre}` : `Error: ${r.error}`);
+}
+
+init();
+</script>
+</body>
+</html>

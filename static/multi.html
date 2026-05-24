@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZERO POS — Multi-sucursal</title>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.1);--accent:#6366f1;--accent2:#818cf8;
+  --text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--danger:#ef4444;
+  --radius:14px;--blur:blur(20px);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(99,102,241,0.1) 0%,transparent 70%);}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:rgba(10,10,15,0.8);backdrop-filter:var(--blur);border-bottom:1px solid var(--border);}
+.logo{font-weight:700;font-size:16px;} .logo span{color:var(--accent);}
+.back{background:none;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;margin-left:auto;}
+.content{max-width:960px;margin:0 auto;padding:24px 20px;}
+h2{font-size:22px;font-weight:700;margin-bottom:20px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:28px;}
+.suc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.suc-nombre{font-size:16px;font-weight:700;margin-bottom:6px;}
+.suc-dir{font-size:13px;color:var(--text-dim);margin-bottom:14px;}
+.kpi-row{display:flex;gap:16px;margin-bottom:14px;}
+.kpi-mini{flex:1;text-align:center;}
+.kpi-mini .val{font-size:20px;font-weight:800;}
+.kpi-mini .lbl{font-size:11px;color:var(--text-dim);}
+.btn{background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:10px;padding:8px 14px;
+  font-size:13px;cursor:pointer;transition:all .15s;}
+.btn:hover{background:rgba(99,102,241,0.2);border-color:var(--accent);}
+.btn.primary{background:var(--accent);border-color:var(--accent);}
+.toolbar{display:flex;gap:10px;margin-bottom:16px;}
+.sync-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;}
+.sync-title{font-size:15px;font-weight:600;margin-bottom:12px;}
+.sync-info{font-size:13px;color:var(--text-dim);line-height:1.6;}
+/* modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);
+  z-index:100;display:none;align-items:center;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal{background:#13131a;border:1px solid var(--border);border-radius:20px;
+  padding:28px;width:100%;max-width:420px;animation:slideUp .25s ease;}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:20px;}
+.form-group{margin-bottom:14px;}
+label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px;}
+input{width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;}
+input:focus{border-color:var(--accent);}
+.modal-btns{display:flex;gap:10px;margin-top:20px;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">ZERO<span>POS</span> Multi-sucursal</div>
+  <button class="back" onclick="location.href='admin.html'">← Admin</button>
+</div>
+<div class="content">
+  <h2>Sucursales</h2>
+  <div class="sync-card">
+    <div class="sync-title">🔄 Sincronización local</div>
+    <p class="sync-info">
+      La sincronización usa una carpeta <code>sync/</code> compartida en red local.
+      Monta esta carpeta como unidad de red en cada dispositivo para sincronizar automáticamente.
+    </p>
+    <div style="margin-top:14px">
+      <button class="btn primary" onclick="sincronizar()">Sincronizar ahora</button>
+    </div>
+  </div>
+  <div class="toolbar">
+    <button class="btn primary" onclick="abrirModal()">+ Nueva sucursal</button>
+  </div>
+  <div class="grid" id="gridSucursales"></div>
+</div>
+
+<div class="modal-overlay" id="modal">
+<div class="modal">
+  <div class="modal-title">Nueva sucursal</div>
+  <div class="form-group"><label>Nombre *</label><input id="sNombre" type="text"></div>
+  <div class="form-group"><label>Dirección</label><input id="sDireccion" type="text"></div>
+  <div class="form-group"><label>Teléfono</label><input id="sTelefono" type="text"></div>
+  <div class="modal-btns">
+    <button class="btn" style="flex:1" onclick="cerrarModal()">Cancelar</button>
+    <button class="btn primary" style="flex:2" onclick="guardar()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<script>
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+
+async function init() {
+  const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
+  if (!me||me.error||me.rol!=='admin') { location.href='login.html'; return; }
+  cargar();
+}
+
+async function cargar() {
+  const sucursales = await fetch('/api/sucursales',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  const grid = document.getElementById('gridSucursales');
+  if (!sucursales.length) {
+    grid.innerHTML='<p style="color:var(--text-dim);font-size:13px">No hay sucursales registradas.</p>';
+    return;
+  }
+  grid.innerHTML='';
+  for (const s of sucursales) {
+    const res = await fetch(`/api/sucursales/${s.id}/resumen`,{credentials:'include'}).then(r=>r.json()).catch(()=>({ventas_hoy:{num:0,total:0},productos_activos:0}));
+    const div = document.createElement('div');
+    div.className='suc-card';
+    div.innerHTML=`
+      <div class="suc-nombre">🏪 ${s.nombre}</div>
+      <div class="suc-dir">${s.direccion||'Sin dirección'}</div>
+      <div class="kpi-row">
+        <div class="kpi-mini"><div class="val">${res.ventas_hoy.num}</div><div class="lbl">Ventas hoy</div></div>
+        <div class="kpi-mini"><div class="val">${fmt(res.ventas_hoy.total)}</div><div class="lbl">Recaudado</div></div>
+        <div class="kpi-mini"><div class="val">${res.productos_activos}</div><div class="lbl">Productos</div></div>
+      </div>
+    `;
+    grid.appendChild(div);
+  }
+}
+
+async function sincronizar() {
+  const r = await fetch('/api/sucursales/sincronizar',{method:'POST',credentials:'include'}).then(r=>r.json());
+  alert(r.ok ? '✓ Sincronización completada' : 'Error: ' + r.error);
+}
+
+function abrirModal() { document.getElementById('modal').classList.add('active'); }
+function cerrarModal() { document.getElementById('modal').classList.remove('active'); }
+
+async function guardar() {
+  const nombre = document.getElementById('sNombre').value.trim();
+  if (!nombre) { alert('Nombre requerido'); return; }
+  const r = await fetch('/api/sucursales',{
+    method:'POST',credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({nombre, direccion:document.getElementById('sDireccion').value, telefono:document.getElementById('sTelefono').value})
+  });
+  if (r.ok) { cerrarModal(); cargar(); }
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') cerrarModal(); });
+init();
+</script>
+</body>
+</html>

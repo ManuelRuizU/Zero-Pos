@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZERO POS — Escáner</title>
+<style>
+:root{--bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.1);
+  --accent:#6366f1;--text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--danger:#ef4444;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;}
+.topbar{display:flex;align-items:center;padding:12px 20px;gap:12px;
+  background:rgba(10,10,15,0.9);border-bottom:1px solid var(--border);}
+.logo{font-weight:700;font-size:16px;} .logo span{color:var(--accent);}
+.back{background:none;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;margin-left:auto;}
+.scanner-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;}
+video{width:100%;max-width:400px;border-radius:16px;border:2px solid var(--accent);}
+.manual-row{display:flex;gap:10px;width:100%;max-width:400px;}
+.cod-input{flex:1;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 16px;color:var(--text);font-size:16px;outline:none;}
+.cod-input:focus{border-color:var(--accent);}
+.btn-buscar{background:var(--accent);border:none;color:#fff;
+  border-radius:10px;padding:12px 20px;cursor:pointer;font-size:14px;}
+.resultado{width:100%;max-width:400px;background:var(--surface);
+  border:1px solid var(--border);border-radius:14px;padding:20px;display:none;}
+.res-nombre{font-size:18px;font-weight:700;margin-bottom:6px;}
+.res-precio{font-size:28px;font-weight:800;color:var(--accent);}
+.res-stock{font-size:13px;color:var(--text-dim);margin:6px 0 16px;}
+.btn-agregar{width:100%;background:var(--success);border:none;color:#fff;
+  border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;}
+.msg{font-size:13px;color:var(--text-dim);text-align:center;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">ZERO<span>POS</span> — Escáner</div>
+  <button class="back" onclick="location.href='pos.html'">← Volver al POS</button>
+</div>
+<div class="scanner-area">
+  <video id="video" playsinline autoplay></video>
+  <div class="manual-row">
+    <input class="cod-input" type="text" id="codigoInput"
+      placeholder="O ingresa código manualmente..."
+      onkeydown="if(event.key==='Enter')buscarCodigo()">
+    <button class="btn-buscar" onclick="buscarCodigo()">Buscar</button>
+  </div>
+  <div class="resultado" id="resultado">
+    <div class="res-nombre" id="resNombre"></div>
+    <div class="res-precio" id="resPrecio"></div>
+    <div class="res-stock" id="resStock"></div>
+    <button class="btn-agregar" onclick="irAPos()">+ Agregar al carrito →</button>
+  </div>
+  <p class="msg" id="msg">Apunta la cámara al código de barras</p>
+</div>
+
+<script>
+let productoEncontrado = null;
+
+async function iniciarCamara() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    document.getElementById('video').srcObject = stream;
+  } catch(e) {
+    document.getElementById('video').style.display='none';
+    document.getElementById('msg').textContent='Cámara no disponible — usa el campo manual';
+  }
+}
+
+async function buscarCodigo() {
+  const codigo = document.getElementById('codigoInput').value.trim();
+  if (!codigo) return;
+  try {
+    const r = await fetch(`/api/productos/barras/${encodeURIComponent(codigo)}`,{credentials:'include'});
+    if (r.ok) {
+      const p = await r.json();
+      mostrarProducto(p);
+    } else {
+      document.getElementById('resultado').style.display='none';
+      document.getElementById('msg').textContent='Código no encontrado: ' + codigo;
+    }
+  } catch(e) {
+    document.getElementById('msg').textContent='Error de conexión';
+  }
+}
+
+function mostrarProducto(p) {
+  productoEncontrado = p;
+  document.getElementById('resNombre').textContent = p.nombre;
+  document.getElementById('resPrecio').textContent = '$' + Math.round(p.precio).toLocaleString('es-CL');
+  document.getElementById('resStock').textContent = `Stock: ${p.stock}`;
+  document.getElementById('resultado').style.display='block';
+  document.getElementById('msg').textContent='';
+}
+
+function irAPos() {
+  if (productoEncontrado) {
+    sessionStorage.setItem('scan_product', JSON.stringify(productoEncontrado));
+  }
+  location.href='pos.html';
+}
+
+iniciarCamara();
+</script>
+</body>
+</html>

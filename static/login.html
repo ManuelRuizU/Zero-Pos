@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZERO POS — Acceso</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: rgba(255,255,255,0.05);
+    --surface-hover: rgba(255,255,255,0.09);
+    --border: rgba(255,255,255,0.1);
+    --accent: #6366f1;
+    --accent-dim: rgba(99,102,241,0.2);
+    --text: #f1f5f9;
+    --text-dim: #94a3b8;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --radius: 16px;
+    --blur: blur(20px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.15) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(139,92,246,0.08) 0%, transparent 60%);
+  }
+  .card {
+    background: var(--surface);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
+  }
+  .logo {
+    font-size: 42px;
+    margin-bottom: 8px;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.5px;
+  }
+  .tagline {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin: 6px 0 36px;
+  }
+  .pin-display {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .pin-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: transparent;
+    transition: all 0.2s;
+  }
+  .pin-dot.filled {
+    background: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(99,102,241,0.5);
+    transform: scale(1.1);
+  }
+  .numpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .key {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .key:hover { background: var(--surface-hover); transform: scale(1.03); }
+  .key:active { transform: scale(0.96); }
+  .key.del { font-size: 18px; }
+  .key.enter {
+    background: var(--accent);
+    border-color: var(--accent);
+    grid-column: span 3;
+    padding: 16px 0;
+  }
+  .key.enter:hover { filter: brightness(1.15); }
+  .error-msg {
+    color: var(--danger);
+    font-size: 13px;
+    min-height: 20px;
+    margin-top: -10px;
+    margin-bottom: 10px;
+    animation: shake 0.35s ease;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+  .footer { color: var(--text-dim); font-size: 11px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🛍️</div>
+  <h1>ZERO POS</h1>
+  <p class="tagline">Sin internet. Sin comisiones. Solo tú y tus ventas.</p>
+
+  <div class="pin-display">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+
+  <div class="error-msg" id="err"></div>
+
+  <div class="numpad">
+    <button class="key" onclick="addDigit('1')">1</button>
+    <button class="key" onclick="addDigit('2')">2</button>
+    <button class="key" onclick="addDigit('3')">3</button>
+    <button class="key" onclick="addDigit('4')">4</button>
+    <button class="key" onclick="addDigit('5')">5</button>
+    <button class="key" onclick="addDigit('6')">6</button>
+    <button class="key" onclick="addDigit('7')">7</button>
+    <button class="key" onclick="addDigit('8')">8</button>
+    <button class="key" onclick="addDigit('9')">9</button>
+    <button class="key del" onclick="delDigit()">⌫</button>
+    <button class="key" onclick="addDigit('0')">0</button>
+    <button class="key" onclick="clearPin()">✕</button>
+    <button class="key enter" onclick="submitPin()">Entrar →</button>
+  </div>
+
+  <p class="footer">ZERO POS v1.0 — datos solo en este dispositivo</p>
+</div>
+
+<script>
+let pin = '';
+
+function updateDisplay() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('d' + i).classList.toggle('filled', i < pin.length);
+  }
+}
+
+function addDigit(d) {
+  if (pin.length < 4) {
+    pin += d;
+    updateDisplay();
+    if (pin.length === 4) setTimeout(submitPin, 150);
+  }
+}
+
+function delDigit() {
+  pin = pin.slice(0, -1);
+  updateDisplay();
+  setError('');
+}
+
+function clearPin() {
+  pin = '';
+  updateDisplay();
+  setError('');
+}
+
+function setError(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg;
+  if (msg) {
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = 'shake 0.35s ease';
+  }
+}
+
+async function submitPin() {
+  if (pin.length !== 4) { setError('Ingresa tu PIN de 4 dígitos'); return; }
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pin}),
+      credentials: 'include',
+    });
+    const data = await r.json();
+    if (r.ok) {
+      const destino = data.usuario.rol === 'cocina' ? 'cocina.html'
+                    : data.usuario.rol === 'admin'  ? 'admin.html'
+                    : 'pos.html';
+      window.location.href = destino;
+    } else {
+      setError(data.error || 'PIN incorrecto');
+      pin = '';
+      updateDisplay();
+    }
+  } catch(e) {
+    setError('Error de conexión');
+    pin = '';
+    updateDisplay();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key >= '0' && e.key <= '9') addDigit(e.key);
+  else if (e.key === 'Backspace') delDigit();
+  else if (e.key === 'Enter') submitPin();
+  else if (e.key === 'Escape') clearPin();
+});
+</script>
+</body>
+</html>

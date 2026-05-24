@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZERO POS — Inventario</title>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
+  --border:rgba(255,255,255,0.1);--accent:#6366f1;--accent2:#818cf8;
+  --text:#f1f5f9;--text-dim:#94a3b8;
+  --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;
+  --radius:14px;--blur:blur(20px);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(99,102,241,0.1) 0%,transparent 70%);}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;
+  background:rgba(10,10,15,0.8);backdrop-filter:var(--blur);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+.logo{font-weight:700;font-size:16px;} .logo span{color:var(--accent);}
+.nav{display:flex;gap:6px;margin-left:auto;}
+.nav-btn{background:none;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s;}
+.nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text);}
+.content{max-width:1100px;margin:0 auto;padding:24px 20px;}
+h2{font-size:22px;font-weight:700;margin-bottom:20px;}
+.toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.search-input{background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:9px 14px;color:var(--text);font-size:13px;outline:none;
+  flex:1;min-width:200px;}
+.search-input:focus{border-color:var(--accent);}
+.btn{background:var(--surface2);border:1px solid var(--border);
+  color:var(--text);border-radius:10px;padding:9px 16px;
+  font-size:13px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:rgba(99,102,241,0.2);border-color:var(--accent);}
+.btn.primary{background:var(--accent);border-color:var(--accent);}
+.btn.primary:hover{filter:brightness(1.1);}
+.btn.danger{background:rgba(239,68,68,0.15);border-color:var(--danger);color:var(--danger);}
+.table-card{background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+th{background:rgba(255,255,255,0.04);padding:12px 14px;text-align:left;
+  font-size:12px;font-weight:600;color:var(--text-dim);border-bottom:1px solid var(--border);}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04);}
+tr:last-child td{border:none;}
+tr:hover td{background:rgba(255,255,255,0.025);}
+.stock-bajo{color:var(--warning);font-weight:600;}
+.stock-ok{color:var(--success);}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);
+  z-index:100;display:none;align-items:center;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal{background:#13131a;border:1px solid var(--border);border-radius:20px;
+  padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
+  animation:slideUp .25s ease;}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:20px;}
+.form-group{margin-bottom:14px;}
+label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:5px;}
+input,select,textarea{width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;
+  transition:border-color .2s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+select option{background:#13131a;}
+.modal-btns{display:flex;gap:10px;margin-top:20px;}
+.tab-content{display:none;} .tab-content.active{display:block;}
+.badge{display:inline-block;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:600;}
+.badge-bajo{background:rgba(245,158,11,0.15);color:var(--warning);}
+.badge-ok{background:rgba(34,197,94,0.15);color:var(--success);}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">ZERO<span>POS</span> Inventario</div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showTab('productos',this)">📦 Productos</button>
+    <button class="nav-btn" onclick="showTab('proveedores',this)">🏭 Proveedores</button>
+    <button class="nav-btn" onclick="showTab('alertas',this)">⚠️ Alertas</button>
+    <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- Productos -->
+  <div class="tab-content active" id="tab-productos">
+    <h2>Productos</h2>
+    <div class="toolbar">
+      <input class="search-input" type="text" id="searchProd" placeholder="Buscar..." oninput="filtrarProds()">
+      <button class="btn" onclick="filtrarProds(true)">⚠️ Stock bajo</button>
+      <button class="btn primary" onclick="abrirModalProd()">+ Nuevo producto</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Nombre</th><th>Precio</th><th>Costo</th><th>Margen</th><th>Stock</th><th>Mín.</th><th>Acciones</th></tr></thead>
+        <tbody id="tablaProds"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Proveedores -->
+  <div class="tab-content" id="tab-proveedores">
+    <h2>Proveedores</h2>
+    <div class="toolbar">
+      <button class="btn primary" onclick="abrirModalProv()">+ Nuevo proveedor</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Nombre</th><th>RUT</th><th>Contacto</th><th>Teléfono</th><th>Email</th><th>Acciones</th></tr></thead>
+        <tbody id="tablaProvs"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  <div class="tab-content" id="tab-alertas">
+    <h2>Alertas de stock</h2>
+    <div class="table-card">
+      <table>
+        <thead><tr><th>Producto</th><th>Stock actual</th><th>Stock mínimo</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="tablaAlertas"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal producto -->
+<div class="modal-overlay" id="modalProd">
+<div class="modal">
+  <div class="modal-title" id="modalProdTitle">Nuevo producto</div>
+  <input type="hidden" id="prodId">
+  <div class="form-group"><label>Nombre *</label><input id="prodNombre" type="text" required></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="form-group"><label>Precio venta</label><input id="prodPrecio" type="number" min="0" value="0"></div>
+    <div class="form-group"><label>Precio costo</label><input id="prodCosto" type="number" min="0" value="0"></div>
+    <div class="form-group"><label>Stock inicial</label><input id="prodStock" type="number" min="0" value="0"></div>
+    <div class="form-group"><label>Stock mínimo</label><input id="prodStockMin" type="number" min="0" value="5"></div>
+  </div>
+  <div class="form-group"><label>Código de barras</label><input id="prodBarras" type="text"></div>
+  <div class="form-group"><label>Categoría</label>
+    <select id="prodCategoria"><option value="">Sin categoría</option></select>
+  </div>
+  <div class="modal-btns">
+    <button class="btn" style="flex:1" onclick="cerrarModalProd()">Cancelar</button>
+    <button class="btn primary" style="flex:2" onclick="guardarProd()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- Modal proveedor -->
+<div class="modal-overlay" id="modalProv">
+<div class="modal">
+  <div class="modal-title" id="modalProvTitle">Nuevo proveedor</div>
+  <input type="hidden" id="provId">
+  <div class="form-group"><label>Nombre *</label><input id="provNombre" type="text"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="form-group"><label>RUT</label><input id="provRut" type="text"></div>
+    <div class="form-group"><label>Contacto</label><input id="provContacto" type="text"></div>
+    <div class="form-group"><label>Teléfono</label><input id="provTelefono" type="text"></div>
+    <div class="form-group"><label>Email</label><input id="provEmail" type="email"></div>
+  </div>
+  <div class="form-group"><label>Dirección</label><input id="provDireccion" type="text"></div>
+  <div class="modal-btns">
+    <button class="btn" style="flex:1" onclick="cerrarModalProv()">Cancelar</button>
+    <button class="btn primary" style="flex:2" onclick="guardarProv()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<script>
+const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+let categorias = [];
+let soloStockBajo = false;
+
+async function init() {
+  const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
+  if (!me||me.error) { location.href='login.html'; return; }
+  categorias = await fetch('/api/productos/categorias',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  const sel = document.getElementById('prodCategoria');
+  categorias.forEach(c => sel.insertAdjacentHTML('beforeend',`<option value="${c.id}">${c.nombre}</option>`));
+  cargarProductos();
+}
+
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if (name==='proveedores') cargarProveedores();
+  if (name==='alertas') cargarAlertas();
+  if (name==='productos') cargarProductos();
+}
+
+async function cargarProductos() {
+  const q = document.getElementById('searchProd').value;
+  let url = `/api/productos?activos=1${q?'&q='+encodeURIComponent(q):''}${soloStockBajo?'&alerta_stock=1':''}`;
+  const prods = await fetch(url,{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  const tbody = document.getElementById('tablaProds');
+  if (!prods.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:20px">Sin productos</td></tr>'; return; }
+  tbody.innerHTML = prods.map(p => {
+    const margen = p.precio > 0 ? Math.round((p.precio-p.precio_costo)*100/p.precio) : 0;
+    const bajoCls = p.stock<=p.stock_minimo ? 'stock-bajo' : 'stock-ok';
+    return `<tr>
+      <td><strong>${p.nombre}</strong>${p.codigo_barras?`<br><small style="color:var(--text-dim)">${p.codigo_barras}</small>`:''}</td>
+      <td>${fmt(p.precio)}</td>
+      <td>${fmt(p.precio_costo||0)}</td>
+      <td>${margen}%</td>
+      <td class="${bajoCls}">${p.stock} ${p.stock<=p.stock_minimo?'⚠️':''}</td>
+      <td>${p.stock_minimo}</td>
+      <td>
+        <button class="btn" style="padding:4px 10px;font-size:12px" onclick="editarProd(${p.id})">Editar</button>
+        <button class="btn" style="padding:4px 10px;font-size:12px" onclick="ajustarStock(${p.id},'${p.nombre}',${p.stock})">Stock</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrarProds(toggleBajo) {
+  if (toggleBajo) soloStockBajo = !soloStockBajo;
+  clearTimeout(filtrarProds._t);
+  filtrarProds._t = setTimeout(cargarProductos, 250);
+}
+
+async function cargarProveedores() {
+  const provs = await fetch('/api/inventario/proveedores',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  const tbody = document.getElementById('tablaProvs');
+  if (!provs.length) { tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:20px">Sin proveedores</td></tr>'; return; }
+  tbody.innerHTML = provs.map(p=>`<tr>
+    <td><strong>${p.nombre}</strong></td>
+    <td>${p.rut||'—'}</td><td>${p.contacto||'—'}</td>
+    <td>${p.telefono||'—'}</td><td>${p.email||'—'}</td>
+    <td><button class="btn" style="padding:4px 10px;font-size:12px" onclick="editarProv(${p.id})">Editar</button></td>
+  </tr>`).join('');
+}
+
+async function cargarAlertas() {
+  const alertas = await fetch('/api/productos/alertas',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  const tbody = document.getElementById('tablaAlertas');
+  if (!alertas.length) { tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:20px">✓ Sin alertas de stock</td></tr>'; return; }
+  tbody.innerHTML = alertas.map(a=>`<tr>
+    <td><strong>${a.producto_nombre}</strong></td>
+    <td class="stock-bajo">${a.stock}</td>
+    <td>${a.stock_minimo}</td>
+    <td><span class="badge badge-bajo">Stock bajo</span></td>
+    <td><button class="btn" style="padding:4px 10px;font-size:12px" onclick="marcarLeida(${a.id})">✓ Atendida</button></td>
+  </tr>`).join('');
+}
+
+// ── Modal producto ────────────────────────────────────────────────────
+function abrirModalProd() {
+  document.getElementById('prodId').value='';
+  document.getElementById('modalProdTitle').textContent='Nuevo producto';
+  ['prodNombre','prodBarras'].forEach(id=>document.getElementById(id).value='');
+  ['prodPrecio','prodCosto'].forEach(id=>document.getElementById(id).value='0');
+  document.getElementById('prodStock').value='0';
+  document.getElementById('prodStockMin').value='5';
+  document.getElementById('prodCategoria').value='';
+  document.getElementById('modalProd').classList.add('active');
+}
+
+async function editarProd(id) {
+  const p = await fetch(`/api/productos/${id}`,{credentials:'include'}).then(r=>r.json());
+  document.getElementById('prodId').value=p.id;
+  document.getElementById('modalProdTitle').textContent='Editar producto';
+  document.getElementById('prodNombre').value=p.nombre;
+  document.getElementById('prodPrecio').value=p.precio;
+  document.getElementById('prodCosto').value=p.precio_costo||0;
+  document.getElementById('prodStockMin').value=p.stock_minimo;
+  document.getElementById('prodBarras').value=p.codigo_barras||'';
+  document.getElementById('prodCategoria').value=p.categoria_id||'';
+  document.getElementById('prodStock').value=p.stock;
+  document.getElementById('modalProd').classList.add('active');
+}
+
+async function guardarProd() {
+  const id = document.getElementById('prodId').value;
+  const data = {
+    nombre: document.getElementById('prodNombre').value.trim(),
+    precio: parseFloat(document.getElementById('prodPrecio').value)||0,
+    precio_costo: parseFloat(document.getElementById('prodCosto').value)||0,
+    stock: parseInt(document.getElementById('prodStock').value)||0,
+    stock_minimo: parseInt(document.getElementById('prodStockMin').value)||5,
+    codigo_barras: document.getElementById('prodBarras').value.trim()||null,
+    categoria_id: document.getElementById('prodCategoria').value||null,
+  };
+  if (!data.nombre) { alert('El nombre es requerido'); return; }
+  const url = id ? `/api/productos/${id}` : '/api/productos';
+  const r = await fetch(url,{
+    method: id?'PUT':'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data),
+  });
+  if (r.ok) { cerrarModalProd(); cargarProductos(); }
+  else { const e=await r.json(); alert(e.error||'Error'); }
+}
+
+function cerrarModalProd() { document.getElementById('modalProd').classList.remove('active'); }
+
+async function ajustarStock(id, nombre, stockActual) {
+  const val = prompt(`Stock actual de "${nombre}": ${stockActual}\nNuevo stock:`);
+  if (val === null) return;
+  const r = await fetch(`/api/productos/${id}/stock`, {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({tipo:'ajuste', cantidad:parseInt(val)||0, motivo:'ajuste_manual'}),
+  });
+  if (r.ok) cargarProductos();
+}
+
+// ── Modal proveedor ───────────────────────────────────────────────────
+function abrirModalProv() {
+  document.getElementById('provId').value='';
+  document.getElementById('modalProvTitle').textContent='Nuevo proveedor';
+  ['provNombre','provRut','provContacto','provTelefono','provEmail','provDireccion'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modalProv').classList.add('active');
+}
+
+async function editarProv(id) {
+  const provs = await fetch('/api/inventario/proveedores',{credentials:'include'}).then(r=>r.json());
+  const p = provs.find(x=>x.id===id);
+  if (!p) return;
+  document.getElementById('provId').value=p.id;
+  document.getElementById('modalProvTitle').textContent='Editar proveedor';
+  document.getElementById('provNombre').value=p.nombre;
+  document.getElementById('provRut').value=p.rut||'';
+  document.getElementById('provContacto').value=p.contacto||'';
+  document.getElementById('provTelefono').value=p.telefono||'';
+  document.getElementById('provEmail').value=p.email||'';
+  document.getElementById('provDireccion').value=p.direccion||'';
+  document.getElementById('modalProv').classList.add('active');
+}
+
+async function guardarProv() {
+  const id = document.getElementById('provId').value;
+  const data = {
+    nombre: document.getElementById('provNombre').value.trim(),
+    rut: document.getElementById('provRut').value.trim(),
+    contacto: document.getElementById('provContacto').value.trim(),
+    telefono: document.getElementById('provTelefono').value.trim(),
+    email: document.getElementById('provEmail').value.trim(),
+    direccion: document.getElementById('provDireccion').value.trim(),
+  };
+  if (!data.nombre) { alert('Nombre requerido'); return; }
+  const url = id ? `/api/inventario/proveedores/${id}` : '/api/inventario/proveedores';
+  const r = await fetch(url,{method:id?'PUT':'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if (r.ok) { cerrarModalProv(); cargarProveedores(); }
+  else { const e=await r.json(); alert(e.error||'Error'); }
+}
+
+function cerrarModalProv() { document.getElementById('modalProv').classList.remove('active'); }
+
+async function marcarLeida(id) {
+  await fetch(`/api/productos/alertas/${id}/leer`,{method:'POST',credentials:'include'});
+  cargarAlertas();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') {
+    cerrarModalProd();
+    cerrarModalProv();
+  }
+});
+
+init();
+</script>
+</body>
+</html>
