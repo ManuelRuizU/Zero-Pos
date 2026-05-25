@@ -285,6 +285,61 @@ body{
 .toast.success{border-color:var(--success);color:var(--success);}
 .toast.error{border-color:var(--danger);color:var(--danger);}
 
+/* ── Modal variantes ─────────────────────────────────── */
+.modal-variantes{
+  background:#13131a;border:1px solid var(--border);
+  border-radius:20px;padding:24px;width:100%;max-width:380px;
+  animation:slideUp .2s ease;
+}
+.variantes-grid{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:10px;margin:16px 0;
+}
+.variante-btn{
+  background:var(--surface);border:2px solid var(--border);
+  border-radius:12px;padding:14px 10px;
+  cursor:pointer;transition:all .15s;text-align:center;
+  color:var(--text);
+}
+.variante-btn:hover{background:var(--surface-hover);border-color:rgba(99,102,241,0.4);}
+.variante-nombre{font-size:13px;font-weight:600;margin-bottom:4px;}
+.variante-precio{font-size:16px;font-weight:700;color:var(--accent2);}
+.variante-stock{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+/* ── Modal venta rápida ───────────────────────────────── */
+.modal-rapida{
+  background:#13131a;border:1px solid var(--border);
+  border-radius:20px;padding:24px;width:100%;max-width:420px;
+  animation:slideUp .2s ease;
+}
+.campo-group{margin-bottom:16px;}
+.campo-group label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;}
+.campo-group input,.campo-group select{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;
+}
+.campo-group input:focus,.campo-group select:focus{border-color:var(--accent);}
+.campo-group select option{background:#1e1e2e;}
+.rapida-items{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:180px;overflow-y:auto;}
+.rapida-item{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;
+  display:flex;align-items:center;gap:10px;
+}
+.rapida-item-nombre{flex:1;font-size:13px;}
+.rapida-item-precio{font-size:13px;font-weight:700;color:var(--accent2);}
+.rapida-item-del{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px;}
+.rapida-item-del:hover{color:var(--danger);}
+
+/* Lookup barras */
+.lookup-result{
+  background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);
+  border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;
+  display:none;
+}
+.lookup-nombre{font-weight:600;margin-bottom:2px;}
+.lookup-fuente{color:var(--text-dim);font-size:11px;}
+
 /* ── Responsive ───────────────────────────────────── */
 @media(max-width:768px){
   .carrito-panel{
@@ -316,6 +371,7 @@ body{
   <div class="logo">ZERO<span>POS</span></div>
   <div class="cajero" id="cajeroNombre">Cargando...</div>
   <div class="actions">
+    <button class="btn-top" onclick="abrirVentaRapida()" title="Venta rápida sin catálogo">⚡ Rápida</button>
     <button class="btn-top" onclick="verAlertas()" id="btnAlertas">⚠️ Stock</button>
     <button class="btn-top" onclick="location.href='admin.html'">📊</button>
     <button class="btn-top" onclick="cerrarSesion()">Salir</button>
@@ -417,6 +473,67 @@ body{
   </div>
 </div>
 
+<!-- Modal variantes -->
+<div class="modal-overlay" id="modalVariantes">
+  <div class="modal-variantes">
+    <div class="modal-title" id="variantesTitulo" style="font-size:17px;font-weight:700;margin-bottom:4px;"></div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Elige una presentación</div>
+    <div class="variantes-grid" id="variantesGrid"></div>
+    <button class="btn-cancelar" style="width:100%;margin-top:4px;" onclick="cerrarVariantes()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal venta rápida -->
+<div class="modal-overlay" id="modalRapida">
+  <div class="modal-rapida">
+    <div class="modal-title" style="font-size:18px;font-weight:700;margin-bottom:20px;">⚡ Venta rápida</div>
+
+    <!-- Buscar por código de barras -->
+    <div class="campo-group">
+      <label>Buscar por código de barras (opcional)</label>
+      <div style="display:flex;gap:8px;">
+        <input id="rapidaBarras" type="text" placeholder="Escanear o escribir código..."
+          oninput="lookupRapida(this.value)">
+      </div>
+    </div>
+    <div class="lookup-result" id="lookupResult">
+      <div class="lookup-nombre" id="lookupNombre"></div>
+      <div class="lookup-fuente" id="lookupFuente"></div>
+    </div>
+
+    <div class="campo-group">
+      <label>Descripción del producto *</label>
+      <input id="rapidaNombre" type="text" placeholder="Ej: Café con leche">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="campo-group">
+        <label>Precio (CLP) *</label>
+        <input id="rapidaPrecio" type="number" placeholder="0" min="0">
+      </div>
+      <div class="campo-group">
+        <label>Cantidad</label>
+        <input id="rapidaCantidad" type="number" placeholder="1" min="1" value="1">
+      </div>
+    </div>
+    <button class="btn-primary" style="width:100%;margin-bottom:16px;padding:10px;"
+      onclick="agregarItemRapido()">+ Agregar item</button>
+
+    <div class="rapida-items" id="rapidaItems"></div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+      <input type="checkbox" id="rapidaGuardar" style="width:16px;height:16px;">
+      <label for="rapidaGuardar" style="font-size:13px;color:var(--text-dim);cursor:pointer;">
+        Guardar como productos en el catálogo
+      </label>
+    </div>
+
+    <div class="modal-acciones">
+      <button class="btn-cancelar" onclick="cerrarVentaRapida()">Cancelar</button>
+      <button class="btn-confirmar" onclick="confirmarVentaRapida()">⚡ Agregar al carrito</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -433,6 +550,14 @@ async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
   document.getElementById('cajeroNombre').textContent = `👤 ${me.nombre}`;
+
+  // Redirigir a onboarding si nunca se configuró
+  const estado = await fetch('/api/onboarding/estado', {credentials:'include'})
+    .then(r => r.json()).catch(() => ({completado: true}));
+  if (!estado.completado && !estado.hay_productos) {
+    location.href = 'onboarding.html';
+    return;
+  }
 
   await cargarCategorias();
   await cargarProductos();
@@ -482,15 +607,20 @@ function renderProductos(lista) {
     return;
   }
   lista.forEach(p => {
+    const sinStock = !p.tiene_variantes && p.stock <= 0;
     const div = document.createElement('div');
-    div.className = 'prod-card' + (p.stock <= 0 ? ' sin-stock' : '');
+    div.className = 'prod-card' + (sinStock ? ' sin-stock' : '');
     div.innerHTML = `
       <div class="prod-nombre">${p.nombre}</div>
       <div class="prod-precio">${fmt(p.precio)}</div>
-      <div class="prod-stock ${p.stock <= p.stock_minimo ? 'bajo' : ''}">
-        Stock: ${p.stock}${p.stock <= p.stock_minimo ? ' ⚠️' : ''}
+      <div class="prod-stock ${p.stock <= p.stock_minimo && !p.tiene_variantes ? 'bajo' : ''}">
+        ${p.tiene_variantes
+          ? '<span style="color:var(--accent2);font-size:11px;">▼ ver variantes</span>'
+          : `Stock: ${p.stock}${p.stock <= p.stock_minimo ? ' ⚠️' : ''}`}
       </div>`;
-    if (p.stock > 0) div.onclick = () => agregarAlCarrito(p);
+    if (!sinStock) {
+      div.onclick = () => p.tiene_variantes ? abrirVariantes(p) : agregarAlCarrito(p);
+    }
     grid.appendChild(div);
   });
 }
@@ -657,31 +787,64 @@ async function confirmarPago() {
   btn.textContent = 'Procesando...';
 
   const desc = parseFloat(document.getElementById('descuentoInput').value) || 0;
-  const payload = {
-    items: carrito.map(i => ({
-      producto_id: i.producto_id,
-      cantidad: i.cantidad,
-    })),
-    metodo_pago: metodoPago,
-    descuento: desc,
-  };
+
+  // Separar items normales de rápidos
+  const itemsNormales = carrito.filter(i => !i._rapida && i.producto_id);
+  const itemsRapidosCarrito = carrito.filter(i => i._rapida);
 
   try {
-    const r = await fetch('/api/ventas', {
-      method:'POST', credentials:'include',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload),
-    });
-    const data = await r.json();
-    if (r.ok) {
-      cerrarCobro();
-      limpiarCarrito();
-      document.getElementById('descuentoInput').value = '';
-      showToast(`✓ Venta #${data.venta_id} — ${fmt(data.total)}`, 'success');
-      setTimeout(() => cargarProductos(), 500);
-    } else {
-      showToast(data.error || 'Error al registrar venta', 'error');
+    let ventaId = null;
+
+    // Procesar items normales
+    if (itemsNormales.length) {
+      const payload = {
+        items: itemsNormales.map(i => ({
+          producto_id: i.producto_id,
+          variante_id: i.variante_id || null,
+          nombre_variante: i.nombre_variante || "",
+          cantidad: i.cantidad,
+        })),
+        metodo_pago: metodoPago,
+        descuento: itemsRapidosCarrito.length ? 0 : desc,
+      };
+      const r = await fetch('/api/ventas', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json();
+      if (!r.ok) { showToast(data.error || 'Error al registrar venta', 'error'); return; }
+      ventaId = data.venta_id;
     }
+
+    // Procesar items rápidos
+    if (itemsRapidosCarrito.length) {
+      const guardar = itemsRapidosCarrito.some(i => i._guardar);
+      const payloadR = {
+        items: itemsRapidosCarrito.map(i => ({
+          nombre: i.nombre,
+          precio_unit: i.precio_unit,
+          cantidad: i.cantidad,
+        })),
+        metodo_pago: metodoPago,
+        descuento: desc,
+        guardar_productos: guardar,
+      };
+      const r2 = await fetch('/api/ventas/rapida', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payloadR),
+      });
+      const data2 = await r2.json();
+      if (!r2.ok) { showToast(data2.error || 'Error en venta rápida', 'error'); return; }
+      ventaId = ventaId || data2.venta_id;
+    }
+
+    cerrarCobro();
+    limpiarCarrito();
+    document.getElementById('descuentoInput').value = '';
+    showToast(`✓ Venta #${ventaId} — ${fmt(total)}`, 'success');
+    setTimeout(() => cargarProductos(), 500);
   } catch(e) {
     showToast('Error de conexión', 'error');
   } finally {
@@ -712,6 +875,167 @@ async function crearPagoKhipu() {
     btn.disabled = false;
     btn.textContent = '✓ Confirmar pago';
   }
+}
+
+// ── Variantes ────────────────────────────────────────────────────────
+let productoActual = null;
+
+async function abrirVariantes(prod) {
+  productoActual = prod;
+  document.getElementById('variantesTitulo').textContent = prod.nombre;
+  document.getElementById('variantesGrid').innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Cargando...</div>';
+  document.getElementById('modalVariantes').classList.add('active');
+
+  const variantes = await fetch(`/api/productos/${prod.id}/variantes`, {credentials:'include'})
+    .then(r => r.json()).catch(() => []);
+
+  const grid = document.getElementById('variantesGrid');
+  if (!variantes.length) {
+    grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Sin variantes disponibles</div>';
+    return;
+  }
+  grid.innerHTML = '';
+  variantes.forEach(v => {
+    const btn = document.createElement('div');
+    btn.className = 'variante-btn' + (v.stock <= 0 ? ' sin-stock' : '');
+    btn.innerHTML = `
+      <div class="variante-nombre">${v.nombre}</div>
+      <div class="variante-precio">${fmt(v.precio)}</div>
+      <div class="variante-stock">Stock: ${v.stock}</div>`;
+    if (v.stock > 0) {
+      btn.onclick = () => {
+        agregarAlCarritoConVariante(prod, v);
+        cerrarVariantes();
+      };
+    }
+    grid.appendChild(btn);
+  });
+}
+
+function cerrarVariantes() {
+  document.getElementById('modalVariantes').classList.remove('active');
+  productoActual = null;
+}
+
+function agregarAlCarritoConVariante(prod, variante) {
+  const key = `${prod.id}_v${variante.id}`;
+  const idx = carrito.findIndex(i => i._key === key);
+  if (idx >= 0) {
+    if (carrito[idx].cantidad >= variante.stock) { showToast('Stock máximo alcanzado', 'error'); return; }
+    carrito[idx].cantidad++;
+  } else {
+    carrito.push({
+      _key: key,
+      producto_id: prod.id,
+      variante_id: variante.id,
+      nombre: `${prod.nombre} — ${variante.nombre}`,
+      nombre_variante: variante.nombre,
+      precio_unit: variante.precio,
+      cantidad: 1,
+      stock: variante.stock,
+    });
+  }
+  renderCarrito();
+  showToast(`${prod.nombre} (${variante.nombre}) agregado`, 'success');
+}
+
+// ── Venta rápida ──────────────────────────────────────────────────────
+let itemsRapidos = [];
+let lookupTimer = null;
+
+function abrirVentaRapida() {
+  itemsRapidos = [];
+  document.getElementById('rapidaNombre').value = '';
+  document.getElementById('rapidaPrecio').value = '';
+  document.getElementById('rapidaCantidad').value = '1';
+  document.getElementById('rapidaBarras').value = '';
+  document.getElementById('lookupResult').style.display = 'none';
+  document.getElementById('rapidaItems').innerHTML = '';
+  document.getElementById('modalRapida').classList.add('active');
+}
+
+function cerrarVentaRapida() {
+  document.getElementById('modalRapida').classList.remove('active');
+}
+
+function lookupRapida(codigo) {
+  clearTimeout(lookupTimer);
+  if (codigo.length < 6) { document.getElementById('lookupResult').style.display = 'none'; return; }
+  lookupTimer = setTimeout(async () => {
+    const r = await fetch(`/api/productos/barras/${encodeURIComponent(codigo)}/lookup`,
+      {credentials:'include'}).then(r => r.json()).catch(() => null);
+    const box = document.getElementById('lookupResult');
+    if (r && r.encontrado) {
+      document.getElementById('lookupNombre').textContent = r.nombre || r.producto_nombre || '';
+      const fuentes = {local:'✓ En tu catálogo', catalogo_base:'📋 Catálogo base', open_food_facts:'🌐 Open Food Facts'};
+      document.getElementById('lookupFuente').textContent = fuentes[r.fuente] || r.fuente;
+      box.style.display = 'block';
+      if (!document.getElementById('rapidaNombre').value) {
+        document.getElementById('rapidaNombre').value = r.nombre || r.producto_nombre || '';
+      }
+      if (!document.getElementById('rapidaPrecio').value && r.precio_sugerido) {
+        document.getElementById('rapidaPrecio').value = r.precio_sugerido;
+      }
+    } else {
+      box.style.display = 'none';
+    }
+  }, 500);
+}
+
+function agregarItemRapido() {
+  const nombre = document.getElementById('rapidaNombre').value.trim();
+  const precio = parseFloat(document.getElementById('rapidaPrecio').value) || 0;
+  const cantidad = parseInt(document.getElementById('rapidaCantidad').value) || 1;
+  if (!nombre) { showToast('Ingresa una descripción', 'error'); return; }
+  if (precio <= 0) { showToast('Ingresa un precio', 'error'); return; }
+
+  itemsRapidos.push({nombre, precio_unit: precio, cantidad});
+  document.getElementById('rapidaNombre').value = '';
+  document.getElementById('rapidaPrecio').value = '';
+  document.getElementById('rapidaCantidad').value = '1';
+  document.getElementById('rapidaBarras').value = '';
+  document.getElementById('lookupResult').style.display = 'none';
+  renderItemsRapidos();
+}
+
+function renderItemsRapidos() {
+  const el = document.getElementById('rapidaItems');
+  el.innerHTML = '';
+  itemsRapidos.forEach((it, idx) => {
+    const div = document.createElement('div');
+    div.className = 'rapida-item';
+    div.innerHTML = `
+      <div class="rapida-item-nombre">${it.nombre} x${it.cantidad}</div>
+      <div class="rapida-item-precio">${fmt(it.precio_unit * it.cantidad)}</div>
+      <button class="rapida-item-del" onclick="eliminarItemRapido(${idx})">✕</button>`;
+    el.appendChild(div);
+  });
+}
+
+function eliminarItemRapido(idx) {
+  itemsRapidos.splice(idx, 1);
+  renderItemsRapidos();
+}
+
+function confirmarVentaRapida() {
+  if (!itemsRapidos.length) { showToast('Agrega al menos un item', 'error'); return; }
+  // Agregar items al carrito normal para cobrarlos junto
+  itemsRapidos.forEach(it => {
+    carrito.push({
+      _key: `rapida_${Date.now()}_${Math.random()}`,
+      producto_id: null,       // se resolverá en venta rápida
+      variante_id: null,
+      nombre: it.nombre,
+      nombre_variante: '',
+      precio_unit: it.precio_unit,
+      cantidad: it.cantidad,
+      stock: 9999,
+      _rapida: true,
+      _guardar: document.getElementById('rapidaGuardar').checked,
+    });
+  });
+  cerrarVentaRapida();
+  renderCarrito();
 }
 
 // ── Extras ───────────────────────────────────────────────────────────
@@ -745,7 +1069,11 @@ function showToast(msg, type='success') {
 
 // Cierre con Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') cerrarCobro();
+  if (e.key === 'Escape') {
+    cerrarCobro();
+    cerrarVariantes();
+    cerrarVentaRapida();
+  }
 });
 
 init();

@@ -1,0 +1,964 @@
+{
+  "almacen": {
+    "nombre": "Almacén",
+    "icono": "🏪",
+    "categorias": [
+      {"nombre": "Bebidas", "icono": "🥤", "color": "#3b82f6",
+       "subcategorias": [{"nombre": "Sin alcohol"}, {"nombre": "Alcohólicas"}]},
+      {"nombre": "Despensa", "icono": "🛒", "color": "#f59e0b",
+       "subcategorias": [{"nombre": "Harinas y granos"}, {"nombre": "Aceites y condimentos"}, {"nombre": "Conservas"}]},
+      {"nombre": "Lácteos", "icono": "🥛", "color": "#06b6d4", "subcategorias": []},
+      {"nombre": "Snacks", "icono": "🍿", "color": "#ec4899", "subcategorias": []},
+      {"nombre": "Limpieza", "icono": "🧹", "color": "#8b5cf6", "subcategorias": []},
+      {"nombre": "Congelados", "icono": "🧊", "color": "#0ea5e9", "subcategorias": []},
+      {"nombre": "Carnes y Fiambres", "icono": "🥩", "color": "#ef4444", "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "Coca-Cola", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "350ml", "precio": 900, "stock": 48},
+         {"nombre": "1.5L", "precio": 1800, "stock": 24},
+         {"nombre": "2L", "precio": 2200, "stock": 24},
+         {"nombre": "3L", "precio": 2800, "stock": 12}
+       ]},
+      {"nombre": "Sprite", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "350ml", "precio": 900, "stock": 36},
+         {"nombre": "1.5L", "precio": 1800, "stock": 18},
+         {"nombre": "2L", "precio": 2200, "stock": 12}
+       ]},
+      {"nombre": "Fanta Naranja", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "350ml", "precio": 900, "stock": 36},
+         {"nombre": "1.5L", "precio": 1800, "stock": 18}
+       ]},
+      {"nombre": "Pepsi", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "350ml", "precio": 900, "stock": 36},
+         {"nombre": "1.5L", "precio": 1800, "stock": 18},
+         {"nombre": "2L", "precio": 2200, "stock": 12}
+       ]},
+      {"nombre": "Agua Vital", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "500ml", "precio": 600, "stock": 48},
+         {"nombre": "1.5L", "precio": 1100, "stock": 36}
+       ]},
+      {"nombre": "Jugo Watt's Natural", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "200ml", "precio": 500, "stock": 24},
+         {"nombre": "1L", "precio": 1400, "stock": 18}
+       ]},
+      {"nombre": "Monster Energy", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "473ml", "precio": 2500, "stock": 24},
+         {"nombre": "500ml Naranja", "precio": 2600, "stock": 12}
+       ]},
+      {"nombre": "Red Bull", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "250ml", "precio": 2200, "stock": 24}
+       ]},
+      {"nombre": "Cerveza Cristal", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "350ml Botella", "precio": 900, "stock": 48},
+         {"nombre": "Lata 310ml", "precio": 1000, "stock": 24},
+         {"nombre": "6-pack", "precio": 5200, "stock": 12}
+       ]},
+      {"nombre": "Cerveza Escudo", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "350ml", "precio": 850, "stock": 48},
+         {"nombre": "6-pack", "precio": 4800, "stock": 12}
+       ]},
+      {"nombre": "Cerveza Brahma", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "350ml", "precio": 900, "stock": 36}
+       ]},
+      {"nombre": "Cerveza Heineken", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "330ml", "precio": 1900, "stock": 24},
+         {"nombre": "6-pack", "precio": 10500, "stock": 6}
+       ]},
+      {"nombre": "Pisco Control 35°", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "250ml", "precio": 2800, "stock": 18},
+         {"nombre": "500ml", "precio": 5000, "stock": 12},
+         {"nombre": "750ml", "precio": 7200, "stock": 6}
+       ]},
+      {"nombre": "Vino Carta Vieja Blanco", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "750ml", "precio": 3200, "stock": 12}
+       ]},
+      {"nombre": "Vino Casillero del Diablo", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "Cabernet 750ml", "precio": 5500, "stock": 12},
+         {"nombre": "Sauvignon 750ml", "precio": 5500, "stock": 12}
+       ]},
+      {"nombre": "Pan Molde Ideal", "categoria": "Despensa", "subcategoria": "Harinas y granos",
+       "variantes": [
+         {"nombre": "390g", "precio": 1200, "stock": 20},
+         {"nombre": "680g", "precio": 1900, "stock": 15}
+       ]},
+      {"nombre": "Arroz Tucapel", "categoria": "Despensa", "subcategoria": "Harinas y granos",
+       "variantes": [
+         {"nombre": "1kg", "precio": 1800, "stock": 30},
+         {"nombre": "5kg", "precio": 8500, "stock": 10}
+       ]},
+      {"nombre": "Fideos Carozzi", "categoria": "Despensa", "subcategoria": "Harinas y granos",
+       "variantes": [
+         {"nombre": "Espagueti 400g", "precio": 900, "stock": 30},
+         {"nombre": "Tallarin 500g", "precio": 950, "stock": 20}
+       ]},
+      {"nombre": "Harina Selecta", "categoria": "Despensa", "subcategoria": "Harinas y granos",
+       "variantes": [
+         {"nombre": "1kg", "precio": 1200, "stock": 20}
+       ]},
+      {"nombre": "Azúcar Flor", "categoria": "Despensa", "subcategoria": "Harinas y granos",
+       "variantes": [
+         {"nombre": "1kg", "precio": 900, "stock": 25},
+         {"nombre": "2kg", "precio": 1700, "stock": 15}
+       ]},
+      {"nombre": "Sal de Mesa", "categoria": "Despensa", "subcategoria": "Harinas y granos",
+       "variantes": [
+         {"nombre": "1kg", "precio": 500, "stock": 20}
+       ]},
+      {"nombre": "Aceite Cocinero", "categoria": "Despensa", "subcategoria": "Aceites y condimentos",
+       "variantes": [
+         {"nombre": "1L", "precio": 2800, "stock": 20},
+         {"nombre": "2L", "precio": 5200, "stock": 10}
+       ]},
+      {"nombre": "Mayonesa Hellmann's", "categoria": "Despensa", "subcategoria": "Aceites y condimentos",
+       "variantes": [
+         {"nombre": "237g", "precio": 1800, "stock": 15},
+         {"nombre": "450g", "precio": 3200, "stock": 10}
+       ]},
+      {"nombre": "Kétchup Hellmann's", "categoria": "Despensa", "subcategoria": "Aceites y condimentos",
+       "variantes": [
+         {"nombre": "300g", "precio": 1600, "stock": 15}
+       ]},
+      {"nombre": "Café Nescafé Tradición", "categoria": "Despensa", "subcategoria": "Conservas",
+       "variantes": [
+         {"nombre": "100g", "precio": 3500, "stock": 12},
+         {"nombre": "200g", "precio": 6500, "stock": 6}
+       ]},
+      {"nombre": "Té Supremo", "categoria": "Despensa", "subcategoria": "Conservas",
+       "variantes": [
+         {"nombre": "20 sobres", "precio": 900, "stock": 20}
+       ]},
+      {"nombre": "Atún Cuisine & Co", "categoria": "Despensa", "subcategoria": "Conservas",
+       "variantes": [
+         {"nombre": "170g", "precio": 1200, "stock": 24}
+       ]},
+      {"nombre": "Leche Soprole", "categoria": "Lácteos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "1L", "precio": 1000, "stock": 36},
+         {"nombre": "6x1L", "precio": 5600, "stock": 10}
+       ]},
+      {"nombre": "Yogur Soprole Natural", "categoria": "Lácteos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "150g", "precio": 500, "stock": 24},
+         {"nombre": "4x150g", "precio": 1900, "stock": 12}
+       ]},
+      {"nombre": "Queso Gauda", "categoria": "Lácteos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad ~300g", "precio": 2000, "stock": 10}
+       ]},
+      {"nombre": "Mantequilla Colun", "categoria": "Lácteos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "200g", "precio": 1900, "stock": 15}
+       ]},
+      {"nombre": "Papas Lays Clásicas", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "28g", "precio": 550, "stock": 48},
+         {"nombre": "85g", "precio": 1600, "stock": 24}
+       ]},
+      {"nombre": "Doritos Queso", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "26g", "precio": 550, "stock": 36},
+         {"nombre": "75g", "precio": 1500, "stock": 18}
+       ]},
+      {"nombre": "Galletas Soda Selecta", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "180g", "precio": 750, "stock": 24}
+       ]},
+      {"nombre": "Galletas Tritón", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "200g", "precio": 1200, "stock": 20}
+       ]},
+      {"nombre": "Chocolate Besos de Moza", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "200g", "precio": 1800, "stock": 18}
+       ]},
+      {"nombre": "Chocolatín Jack", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "28g", "precio": 550, "stock": 48}
+       ]},
+      {"nombre": "Detergente Omo", "categoria": "Limpieza", "subcategoria": "",
+       "variantes": [
+         {"nombre": "800g", "precio": 3500, "stock": 15},
+         {"nombre": "3kg", "precio": 9800, "stock": 8}
+       ]},
+      {"nombre": "Lavavajillas Quix", "categoria": "Limpieza", "subcategoria": "",
+       "variantes": [
+         {"nombre": "500ml", "precio": 1600, "stock": 15}
+       ]},
+      {"nombre": "Papel Higiénico Confort", "categoria": "Limpieza", "subcategoria": "",
+       "variantes": [
+         {"nombre": "4 rollos", "precio": 1700, "stock": 20},
+         {"nombre": "12 rollos", "precio": 4600, "stock": 8}
+       ]},
+      {"nombre": "Cloro Clorinda", "categoria": "Limpieza", "subcategoria": "",
+       "variantes": [
+         {"nombre": "1L", "precio": 1200, "stock": 15}
+       ]},
+      {"nombre": "Helado Savory", "categoria": "Congelados", "subcategoria": "",
+       "variantes": [
+         {"nombre": "1L", "precio": 3800, "stock": 12}
+       ]},
+      {"nombre": "Jamón Plato San Jorge", "categoria": "Carnes y Fiambres", "subcategoria": "",
+       "variantes": [
+         {"nombre": "150g", "precio": 1500, "stock": 15}
+       ]},
+      {"nombre": "Salchicha Vienesa Loncoleche", "categoria": "Carnes y Fiambres", "subcategoria": "",
+       "variantes": [
+         {"nombre": "500g", "precio": 2300, "stock": 12}
+       ]},
+      {"nombre": "Mortadela Super Cerdo", "categoria": "Carnes y Fiambres", "subcategoria": "",
+       "variantes": [
+         {"nombre": "150g", "precio": 1200, "stock": 15}
+       ]}
+    ]
+  },
+
+  "botilleria": {
+    "nombre": "Botillería",
+    "icono": "🍷",
+    "categorias": [
+      {"nombre": "Cervezas", "icono": "🍺", "color": "#f59e0b", "subcategorias": [
+        {"nombre": "Nacionales"}, {"nombre": "Importadas"}, {"nombre": "Artesanales"}
+      ]},
+      {"nombre": "Vinos", "icono": "🍷", "color": "#9f1239", "subcategorias": [
+        {"nombre": "Tintos"}, {"nombre": "Blancos"}, {"nombre": "Rosés"}
+      ]},
+      {"nombre": "Spirits", "icono": "🥃", "color": "#78350f", "subcategorias": [
+        {"nombre": "Piscos"}, {"nombre": "Rones"}, {"nombre": "Whiskeys"}, {"nombre": "Gin y Vodka"}
+      ]},
+      {"nombre": "Bebidas", "icono": "🥤", "color": "#3b82f6", "subcategorias": []},
+      {"nombre": "Snacks", "icono": "🍿", "color": "#ec4899", "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "Cerveza Cristal", "categoria": "Cervezas", "subcategoria": "Nacionales",
+       "variantes": [
+         {"nombre": "Botella 350ml", "precio": 1000, "stock": 96},
+         {"nombre": "Lata 310ml", "precio": 1100, "stock": 48},
+         {"nombre": "6-pack botella", "precio": 5500, "stock": 24},
+         {"nombre": "Cajón 24u", "precio": 20000, "stock": 4}
+       ]},
+      {"nombre": "Cerveza Escudo", "categoria": "Cervezas", "subcategoria": "Nacionales",
+       "variantes": [
+         {"nombre": "Botella 350ml", "precio": 950, "stock": 96},
+         {"nombre": "6-pack", "precio": 5200, "stock": 18}
+       ]},
+      {"nombre": "Cerveza Brahma", "categoria": "Cervezas", "subcategoria": "Nacionales",
+       "variantes": [
+         {"nombre": "Botella 350ml", "precio": 950, "stock": 72},
+         {"nombre": "Lata 350ml", "precio": 1100, "stock": 48}
+       ]},
+      {"nombre": "Cerveza Royal", "categoria": "Cervezas", "subcategoria": "Nacionales",
+       "variantes": [
+         {"nombre": "Botella 330ml", "precio": 2200, "stock": 36},
+         {"nombre": "Lata 330ml", "precio": 2400, "stock": 24}
+       ]},
+      {"nombre": "Cerveza Heineken", "categoria": "Cervezas", "subcategoria": "Importadas",
+       "variantes": [
+         {"nombre": "330ml", "precio": 1900, "stock": 48},
+         {"nombre": "6-pack", "precio": 10500, "stock": 12}
+       ]},
+      {"nombre": "Cerveza Corona", "categoria": "Cervezas", "subcategoria": "Importadas",
+       "variantes": [
+         {"nombre": "355ml", "precio": 2200, "stock": 36}
+       ]},
+      {"nombre": "Cerveza Budweiser", "categoria": "Cervezas", "subcategoria": "Importadas",
+       "variantes": [
+         {"nombre": "330ml", "precio": 1800, "stock": 36}
+       ]},
+      {"nombre": "Cerveza Kross 5", "categoria": "Cervezas", "subcategoria": "Artesanales",
+       "variantes": [
+         {"nombre": "330ml", "precio": 2800, "stock": 24}
+       ]},
+      {"nombre": "Cerveza Kunstmann Torobayo", "categoria": "Cervezas", "subcategoria": "Artesanales",
+       "variantes": [
+         {"nombre": "330ml", "precio": 2600, "stock": 24}
+       ]},
+      {"nombre": "Cerveza Del Puerto APA", "categoria": "Cervezas", "subcategoria": "Artesanales",
+       "variantes": [
+         {"nombre": "355ml", "precio": 3200, "stock": 18}
+       ]},
+      {"nombre": "Vino Casillero Cabernet", "categoria": "Vinos", "subcategoria": "Tintos",
+       "variantes": [
+         {"nombre": "750ml", "precio": 5500, "stock": 24},
+         {"nombre": "1.5L Magnum", "precio": 10500, "stock": 6}
+       ]},
+      {"nombre": "Vino Santa Rita 120 Carmenère", "categoria": "Vinos", "subcategoria": "Tintos",
+       "variantes": [
+         {"nombre": "750ml", "precio": 4800, "stock": 18}
+       ]},
+      {"nombre": "Vino Concha y Toro Frontera", "categoria": "Vinos", "subcategoria": "Tintos",
+       "variantes": [
+         {"nombre": "750ml", "precio": 3200, "stock": 24},
+         {"nombre": "1.5L", "precio": 5500, "stock": 12}
+       ]},
+      {"nombre": "Vino Carta Vieja Sauvignon Blanc", "categoria": "Vinos", "subcategoria": "Blancos",
+       "variantes": [
+         {"nombre": "750ml", "precio": 3200, "stock": 18}
+       ]},
+      {"nombre": "Vino Tarapacá Chardonnay", "categoria": "Vinos", "subcategoria": "Blancos",
+       "variantes": [
+         {"nombre": "750ml", "precio": 4200, "stock": 18}
+       ]},
+      {"nombre": "Vino Pérez Cruz Rosé", "categoria": "Vinos", "subcategoria": "Rosés",
+       "variantes": [
+         {"nombre": "750ml", "precio": 5800, "stock": 12}
+       ]},
+      {"nombre": "Pisco Control 35°", "categoria": "Spirits", "subcategoria": "Piscos",
+       "variantes": [
+         {"nombre": "250ml", "precio": 2800, "stock": 24},
+         {"nombre": "500ml", "precio": 5000, "stock": 18},
+         {"nombre": "750ml", "precio": 7200, "stock": 12}
+       ]},
+      {"nombre": "Pisco ABA 40°", "categoria": "Spirits", "subcategoria": "Piscos",
+       "variantes": [
+         {"nombre": "500ml", "precio": 5500, "stock": 12},
+         {"nombre": "750ml", "precio": 8000, "stock": 8}
+       ]},
+      {"nombre": "Pisco Mistral Especial", "categoria": "Spirits", "subcategoria": "Piscos",
+       "variantes": [
+         {"nombre": "750ml", "precio": 8500, "stock": 8}
+       ]},
+      {"nombre": "Ron Flor de Caña 7 Años", "categoria": "Spirits", "subcategoria": "Rones",
+       "variantes": [
+         {"nombre": "750ml", "precio": 14500, "stock": 6}
+       ]},
+      {"nombre": "Ron Bacardí Blanco", "categoria": "Spirits", "subcategoria": "Rones",
+       "variantes": [
+         {"nombre": "750ml", "precio": 12500, "stock": 8}
+       ]},
+      {"nombre": "Whisky Johnnie Walker Red Label", "categoria": "Spirits", "subcategoria": "Whiskeys",
+       "variantes": [
+         {"nombre": "750ml", "precio": 16500, "stock": 6}
+       ]},
+      {"nombre": "Whisky Jack Daniel's", "categoria": "Spirits", "subcategoria": "Whiskeys",
+       "variantes": [
+         {"nombre": "750ml", "precio": 22000, "stock": 4}
+       ]},
+      {"nombre": "Gin Beefeater", "categoria": "Spirits", "subcategoria": "Gin y Vodka",
+       "variantes": [
+         {"nombre": "750ml", "precio": 15000, "stock": 6}
+       ]},
+      {"nombre": "Vodka Absolut", "categoria": "Spirits", "subcategoria": "Gin y Vodka",
+       "variantes": [
+         {"nombre": "750ml", "precio": 14500, "stock": 6}
+       ]},
+      {"nombre": "Coca-Cola", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "350ml", "precio": 900, "stock": 48},
+         {"nombre": "1.5L", "precio": 1800, "stock": 24}
+       ]},
+      {"nombre": "Agua Mineral", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "500ml", "precio": 600, "stock": 48}
+       ]},
+      {"nombre": "Jugo Watt's", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "1L", "precio": 1400, "stock": 24}
+       ]},
+      {"nombre": "Papas Lays", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "28g", "precio": 600, "stock": 48},
+         {"nombre": "85g", "precio": 1600, "stock": 24}
+       ]},
+      {"nombre": "Maní Mix", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "150g", "precio": 1500, "stock": 24}
+       ]}
+    ]
+  },
+
+  "panaderia": {
+    "nombre": "Panadería",
+    "icono": "🥖",
+    "categorias": [
+      {"nombre": "Panes", "icono": "🍞", "color": "#f59e0b", "subcategorias": [
+        {"nombre": "Panes simples"}, {"nombre": "Panes especiales"}
+      ]},
+      {"nombre": "Masas y Pasteles", "icono": "🥐", "color": "#ec4899", "subcategorias": []},
+      {"nombre": "Empanadas", "icono": "🥟", "color": "#f97316", "subcategorias": []},
+      {"nombre": "Bebidas", "icono": "☕", "color": "#3b82f6", "subcategorias": []},
+      {"nombre": "Tortas", "icono": "🎂", "color": "#8b5cf6", "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "Marraqueta", "categoria": "Panes", "subcategoria": "Panes simples",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 200, "stock": 200},
+         {"nombre": "Bolsa 4 unidades", "precio": 700, "stock": 50},
+         {"nombre": "Kilo (~8u)", "precio": 1400, "stock": 30}
+       ]},
+      {"nombre": "Hallulla", "categoria": "Panes", "subcategoria": "Panes simples",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 200, "stock": 150},
+         {"nombre": "Bolsa 4 unidades", "precio": 700, "stock": 40}
+       ]},
+      {"nombre": "Pan Molde Artesanal", "categoria": "Panes", "subcategoria": "Panes especiales",
+       "variantes": [
+         {"nombre": "Pequeño", "precio": 2200, "stock": 15},
+         {"nombre": "Grande", "precio": 3500, "stock": 8}
+       ]},
+      {"nombre": "Baguette", "categoria": "Panes", "subcategoria": "Panes especiales",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 1200, "stock": 20}
+       ]},
+      {"nombre": "Pan Ciabatta", "categoria": "Panes", "subcategoria": "Panes especiales",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 1500, "stock": 15}
+       ]},
+      {"nombre": "Pan Integral", "categoria": "Panes", "subcategoria": "Panes especiales",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 300, "stock": 80},
+         {"nombre": "Bolsa 6 unidades", "precio": 1600, "stock": 20}
+       ]},
+      {"nombre": "Factura", "categoria": "Masas y Pasteles", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 450, "stock": 100}
+       ]},
+      {"nombre": "Croissant", "categoria": "Masas y Pasteles", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 700, "stock": 60},
+         {"nombre": "Doble mantequilla", "precio": 900, "stock": 40}
+       ]},
+      {"nombre": "Berlín", "categoria": "Masas y Pasteles", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 500, "stock": 60}
+       ]},
+      {"nombre": "Cuernito", "categoria": "Masas y Pasteles", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 400, "stock": 80}
+       ]},
+      {"nombre": "Muffin", "categoria": "Masas y Pasteles", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Arándano", "precio": 1200, "stock": 24},
+         {"nombre": "Chocolate", "precio": 1200, "stock": 24},
+         {"nombre": "Zanahoria", "precio": 1200, "stock": 24}
+       ]},
+      {"nombre": "Kuchen Manzana", "categoria": "Masas y Pasteles", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Porción", "precio": 1800, "stock": 15},
+         {"nombre": "Torta entera", "precio": 12000, "stock": 3}
+       ]},
+      {"nombre": "Empanada de Pino", "categoria": "Empanadas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Horneada", "precio": 1800, "stock": 30},
+         {"nombre": "Frita", "precio": 1600, "stock": 30}
+       ]},
+      {"nombre": "Empanada de Queso", "categoria": "Empanadas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Horneada", "precio": 1600, "stock": 25}
+       ]},
+      {"nombre": "Empanada de Camarón Queso", "categoria": "Empanadas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Horneada", "precio": 2200, "stock": 20}
+       ]},
+      {"nombre": "Empanada Napolitana", "categoria": "Empanadas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Horneada", "precio": 1800, "stock": 25}
+       ]},
+      {"nombre": "Café de Grano", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Espresso", "precio": 1800, "stock": 999},
+         {"nombre": "Americano", "precio": 2000, "stock": 999},
+         {"nombre": "Cortado", "precio": 2200, "stock": 999}
+       ]},
+      {"nombre": "Té", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Bolsa", "precio": 800, "stock": 999}
+       ]},
+      {"nombre": "Jugo Natural", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Naranja", "precio": 2000, "stock": 999},
+         {"nombre": "Manzana", "precio": 2000, "stock": 999}
+       ]},
+      {"nombre": "Torta de Chocolate", "categoria": "Tortas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Porción", "precio": 2500, "stock": 12},
+         {"nombre": "Torta entera", "precio": 18000, "stock": 2}
+       ]},
+      {"nombre": "Torta de Manjar", "categoria": "Tortas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Porción", "precio": 2200, "stock": 12},
+         {"nombre": "Torta entera", "precio": 16000, "stock": 2}
+       ]}
+    ]
+  },
+
+  "cafe": {
+    "nombre": "Café",
+    "icono": "☕",
+    "categorias": [
+      {"nombre": "Cafés", "icono": "☕", "color": "#78350f", "subcategorias": [
+        {"nombre": "Calientes"}, {"nombre": "Fríos"}
+      ]},
+      {"nombre": "Bebidas", "icono": "🥤", "color": "#3b82f6", "subcategorias": []},
+      {"nombre": "Alimentos", "icono": "🥪", "color": "#22c55e", "subcategorias": [
+        {"nombre": "Dulces"}, {"nombre": "Salados"}
+      ]},
+      {"nombre": "Desayunos", "icono": "🍳", "color": "#f59e0b", "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "Espresso", "categoria": "Cafés", "subcategoria": "Calientes",
+       "variantes": [
+         {"nombre": "Simple", "precio": 1800, "stock": 999},
+         {"nombre": "Doble", "precio": 2500, "stock": 999}
+       ]},
+      {"nombre": "Americano", "categoria": "Cafés", "subcategoria": "Calientes",
+       "variantes": [
+         {"nombre": "Regular", "precio": 2000, "stock": 999},
+         {"nombre": "Grande", "precio": 2500, "stock": 999}
+       ]},
+      {"nombre": "Cappuccino", "categoria": "Cafés", "subcategoria": "Calientes",
+       "variantes": [
+         {"nombre": "Regular", "precio": 2800, "stock": 999},
+         {"nombre": "Grande", "precio": 3400, "stock": 999}
+       ]},
+      {"nombre": "Latte", "categoria": "Cafés", "subcategoria": "Calientes",
+       "variantes": [
+         {"nombre": "Regular", "precio": 3000, "stock": 999},
+         {"nombre": "Grande", "precio": 3600, "stock": 999},
+         {"nombre": "Vainilla", "precio": 3200, "stock": 999},
+         {"nombre": "Caramelo", "precio": 3200, "stock": 999}
+       ]},
+      {"nombre": "Mocha", "categoria": "Cafés", "subcategoria": "Calientes",
+       "variantes": [
+         {"nombre": "Regular", "precio": 3200, "stock": 999},
+         {"nombre": "Grande", "precio": 3800, "stock": 999}
+       ]},
+      {"nombre": "Café Pasado", "categoria": "Cafés", "subcategoria": "Calientes",
+       "variantes": [
+         {"nombre": "Regular", "precio": 2500, "stock": 999}
+       ]},
+      {"nombre": "Flat White", "categoria": "Cafés", "subcategoria": "Calientes",
+       "variantes": [
+         {"nombre": "Regular", "precio": 3000, "stock": 999}
+       ]},
+      {"nombre": "Cold Brew", "categoria": "Cafés", "subcategoria": "Fríos",
+       "variantes": [
+         {"nombre": "Regular", "precio": 3500, "stock": 999}
+       ]},
+      {"nombre": "Frappé de Café", "categoria": "Cafés", "subcategoria": "Fríos",
+       "variantes": [
+         {"nombre": "Regular", "precio": 3200, "stock": 999},
+         {"nombre": "Grande", "precio": 3800, "stock": 999}
+       ]},
+      {"nombre": "Té", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Negro", "precio": 1500, "stock": 999},
+         {"nombre": "Verde", "precio": 1500, "stock": 999},
+         {"nombre": "Frutos del bosque", "precio": 1800, "stock": 999}
+       ]},
+      {"nombre": "Jugo de Naranja", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Regular", "precio": 2500, "stock": 999},
+         {"nombre": "Grande", "precio": 3500, "stock": 999}
+       ]},
+      {"nombre": "Agua Mineral", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Sin gas", "precio": 1500, "stock": 48},
+         {"nombre": "Con gas", "precio": 1500, "stock": 48}
+       ]},
+      {"nombre": "Bebida", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "350ml", "precio": 1200, "stock": 48}
+       ]},
+      {"nombre": "Torta de Chocolate", "categoria": "Alimentos", "subcategoria": "Dulces",
+       "variantes": [
+         {"nombre": "Porción", "precio": 3000, "stock": 10}
+       ]},
+      {"nombre": "Cheesecake", "categoria": "Alimentos", "subcategoria": "Dulces",
+       "variantes": [
+         {"nombre": "Porción Frutos del bosque", "precio": 3500, "stock": 8},
+         {"nombre": "Porción Manjar", "precio": 3200, "stock": 8}
+       ]},
+      {"nombre": "Muffin", "categoria": "Alimentos", "subcategoria": "Dulces",
+       "variantes": [
+         {"nombre": "Arándano", "precio": 1800, "stock": 15},
+         {"nombre": "Chocolate", "precio": 1800, "stock": 15}
+       ]},
+      {"nombre": "Croissant", "categoria": "Alimentos", "subcategoria": "Dulces",
+       "variantes": [
+         {"nombre": "Mantequilla", "precio": 1800, "stock": 20},
+         {"nombre": "Almendras", "precio": 2200, "stock": 15}
+       ]},
+      {"nombre": "Cookie", "categoria": "Alimentos", "subcategoria": "Dulces",
+       "variantes": [
+         {"nombre": "Chocolate chip", "precio": 1500, "stock": 30}
+       ]},
+      {"nombre": "Sandwich Club", "categoria": "Alimentos", "subcategoria": "Salados",
+       "variantes": [
+         {"nombre": "Pollo", "precio": 4500, "stock": 10},
+         {"nombre": "Jamón y Queso", "precio": 4000, "stock": 10},
+         {"nombre": "Veggie", "precio": 4200, "stock": 8}
+       ]},
+      {"nombre": "Tostadas", "categoria": "Alimentos", "subcategoria": "Salados",
+       "variantes": [
+         {"nombre": "Mantequilla", "precio": 2500, "stock": 999},
+         {"nombre": "Palta", "precio": 3500, "stock": 999},
+         {"nombre": "Queso crema", "precio": 3000, "stock": 999}
+       ]},
+      {"nombre": "Desayuno Completo", "categoria": "Desayunos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Básico (tostadas+bebida caliente)", "precio": 4500, "stock": 999},
+         {"nombre": "Completo (huevos+tostadas+jugo)", "precio": 6500, "stock": 999}
+       ]}
+    ]
+  },
+
+  "minimarket": {
+    "nombre": "Minimarket",
+    "icono": "🏬",
+    "categorias": [
+      {"nombre": "Bebidas", "icono": "🥤", "color": "#3b82f6", "subcategorias": [
+        {"nombre": "Sin alcohol"}, {"nombre": "Alcohólicas"}
+      ]},
+      {"nombre": "Despensa", "icono": "🛒", "color": "#f59e0b", "subcategorias": []},
+      {"nombre": "Lácteos y Refrigerados", "icono": "🥛", "color": "#06b6d4", "subcategorias": []},
+      {"nombre": "Frutas y Verduras", "icono": "🥦", "color": "#22c55e", "subcategorias": []},
+      {"nombre": "Carnes", "icono": "🥩", "color": "#ef4444", "subcategorias": []},
+      {"nombre": "Snacks", "icono": "🍿", "color": "#ec4899", "subcategorias": []},
+      {"nombre": "Limpieza e Higiene", "icono": "🧹", "color": "#8b5cf6", "subcategorias": []},
+      {"nombre": "Panadería", "icono": "🍞", "color": "#f97316", "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "Coca-Cola", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "350ml", "precio": 950, "stock": 48},
+         {"nombre": "1.5L", "precio": 1900, "stock": 24},
+         {"nombre": "2L", "precio": 2300, "stock": 18}
+       ]},
+      {"nombre": "Agua Vital", "categoria": "Bebidas", "subcategoria": "Sin alcohol",
+       "variantes": [
+         {"nombre": "500ml", "precio": 650, "stock": 48},
+         {"nombre": "1.5L", "precio": 1200, "stock": 24}
+       ]},
+      {"nombre": "Cerveza Cristal", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "350ml", "precio": 950, "stock": 48},
+         {"nombre": "6-pack", "precio": 5500, "stock": 12}
+       ]},
+      {"nombre": "Pisco Control 35°", "categoria": "Bebidas", "subcategoria": "Alcohólicas",
+       "variantes": [
+         {"nombre": "250ml", "precio": 2900, "stock": 18},
+         {"nombre": "500ml", "precio": 5200, "stock": 10}
+       ]},
+      {"nombre": "Arroz Tucapel", "categoria": "Despensa", "subcategoria": "",
+       "variantes": [
+         {"nombre": "1kg", "precio": 1800, "stock": 30},
+         {"nombre": "5kg", "precio": 8500, "stock": 8}
+       ]},
+      {"nombre": "Aceite Cocinero", "categoria": "Despensa", "subcategoria": "",
+       "variantes": [
+         {"nombre": "1L", "precio": 2900, "stock": 20}
+       ]},
+      {"nombre": "Fideos Carozzi", "categoria": "Despensa", "subcategoria": "",
+       "variantes": [
+         {"nombre": "400g", "precio": 900, "stock": 25}
+       ]},
+      {"nombre": "Azúcar Flor", "categoria": "Despensa", "subcategoria": "",
+       "variantes": [
+         {"nombre": "1kg", "precio": 950, "stock": 20}
+       ]},
+      {"nombre": "Café Nescafé", "categoria": "Despensa", "subcategoria": "",
+       "variantes": [
+         {"nombre": "100g", "precio": 3600, "stock": 12}
+       ]},
+      {"nombre": "Leche Soprole", "categoria": "Lácteos y Refrigerados", "subcategoria": "",
+       "variantes": [
+         {"nombre": "1L", "precio": 1000, "stock": 30}
+       ]},
+      {"nombre": "Yogur", "categoria": "Lácteos y Refrigerados", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Natural 150g", "precio": 500, "stock": 24},
+         {"nombre": "Frutilla 150g", "precio": 550, "stock": 24}
+       ]},
+      {"nombre": "Queso Gauda", "categoria": "Lácteos y Refrigerados", "subcategoria": "",
+       "variantes": [
+         {"nombre": "~300g", "precio": 2100, "stock": 10}
+       ]},
+      {"nombre": "Huevos", "categoria": "Lácteos y Refrigerados", "subcategoria": "",
+       "variantes": [
+         {"nombre": "6 unidades", "precio": 1800, "stock": 20},
+         {"nombre": "12 unidades", "precio": 3400, "stock": 12}
+       ]},
+      {"nombre": "Manzana", "categoria": "Frutas y Verduras", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 500, "stock": 50}
+       ]},
+      {"nombre": "Plátano", "categoria": "Frutas y Verduras", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 300, "stock": 80}
+       ]},
+      {"nombre": "Tomate", "categoria": "Frutas y Verduras", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Kilo", "precio": 900, "stock": 20}
+       ]},
+      {"nombre": "Lechuga", "categoria": "Frutas y Verduras", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 900, "stock": 15}
+       ]},
+      {"nombre": "Papa", "categoria": "Frutas y Verduras", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Kilo", "precio": 1200, "stock": 30}
+       ]},
+      {"nombre": "Pechuga de Pollo", "categoria": "Carnes", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Kilo", "precio": 4800, "stock": 10}
+       ]},
+      {"nombre": "Carne Molida", "categoria": "Carnes", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Kilo", "precio": 5800, "stock": 8}
+       ]},
+      {"nombre": "Papas Lays", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "28g", "precio": 600, "stock": 48},
+         {"nombre": "85g", "precio": 1700, "stock": 24}
+       ]},
+      {"nombre": "Galletas Soda", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "180g", "precio": 800, "stock": 20}
+       ]},
+      {"nombre": "Chocolate Besos", "categoria": "Snacks", "subcategoria": "",
+       "variantes": [
+         {"nombre": "200g", "precio": 1900, "stock": 15}
+       ]},
+      {"nombre": "Detergente Omo", "categoria": "Limpieza e Higiene", "subcategoria": "",
+       "variantes": [
+         {"nombre": "800g", "precio": 3600, "stock": 12}
+       ]},
+      {"nombre": "Papel Higiénico Confort", "categoria": "Limpieza e Higiene", "subcategoria": "",
+       "variantes": [
+         {"nombre": "4 rollos", "precio": 1800, "stock": 15}
+       ]},
+      {"nombre": "Shampoo Head & Shoulders", "categoria": "Limpieza e Higiene", "subcategoria": "",
+       "variantes": [
+         {"nombre": "200ml", "precio": 2200, "stock": 12}
+       ]},
+      {"nombre": "Marraqueta", "categoria": "Panadería", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Unidad", "precio": 200, "stock": 100},
+         {"nombre": "Bolsa 4u", "precio": 750, "stock": 30}
+       ]},
+      {"nombre": "Pan Molde", "categoria": "Panadería", "subcategoria": "",
+       "variantes": [
+         {"nombre": "400g", "precio": 1300, "stock": 15}
+       ]}
+    ]
+  },
+
+  "foodtruck": {
+    "nombre": "Food Truck",
+    "icono": "🚚",
+    "categorias": [
+      {"nombre": "Completos y Hot Dogs", "icono": "🌭", "color": "#f59e0b", "subcategorias": []},
+      {"nombre": "Hamburguesas", "icono": "🍔", "color": "#ef4444", "subcategorias": []},
+      {"nombre": "Papas Fritas", "icono": "🍟", "color": "#f97316", "subcategorias": []},
+      {"nombre": "Bebidas", "icono": "🥤", "color": "#3b82f6", "subcategorias": []},
+      {"nombre": "Extras", "icono": "🧂", "color": "#8b5cf6", "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "Completo Italiano", "categoria": "Completos y Hot Dogs", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Regular", "precio": 2500, "stock": 999}
+       ]},
+      {"nombre": "Completo Alemán", "categoria": "Completos y Hot Dogs", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Regular", "precio": 3200, "stock": 999}
+       ]},
+      {"nombre": "Completo Dinámico", "categoria": "Completos y Hot Dogs", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Regular", "precio": 2800, "stock": 999}
+       ]},
+      {"nombre": "Hot Dog Simple", "categoria": "Completos y Hot Dogs", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Regular", "precio": 1800, "stock": 999}
+       ]},
+      {"nombre": "Choripán", "categoria": "Completos y Hot Dogs", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Solo", "precio": 2500, "stock": 999},
+         {"nombre": "Con todo", "precio": 3000, "stock": 999}
+       ]},
+      {"nombre": "Hamburguesa Clásica", "categoria": "Hamburguesas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Simple", "precio": 3500, "stock": 999},
+         {"nombre": "Doble", "precio": 5000, "stock": 999}
+       ]},
+      {"nombre": "Hamburguesa Especial", "categoria": "Hamburguesas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Con tocino y queso", "precio": 4500, "stock": 999},
+         {"nombre": "Doble", "precio": 6500, "stock": 999}
+       ]},
+      {"nombre": "Hamburguesa Veggie", "categoria": "Hamburguesas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Regular", "precio": 4000, "stock": 999}
+       ]},
+      {"nombre": "Papas Fritas", "categoria": "Papas Fritas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Chica", "precio": 1500, "stock": 999},
+         {"nombre": "Grande", "precio": 2500, "stock": 999},
+         {"nombre": "Familiar", "precio": 4000, "stock": 999}
+       ]},
+      {"nombre": "Papas con Cheddar", "categoria": "Papas Fritas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Regular", "precio": 3000, "stock": 999},
+         {"nombre": "Grande", "precio": 4500, "stock": 999}
+       ]},
+      {"nombre": "Aros de Cebolla", "categoria": "Papas Fritas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Porción", "precio": 2500, "stock": 999}
+       ]},
+      {"nombre": "Bebida", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Lata 350ml", "precio": 1000, "stock": 96}
+       ]},
+      {"nombre": "Agua Mineral", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "500ml", "precio": 800, "stock": 48}
+       ]},
+      {"nombre": "Jugo", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "200ml", "precio": 600, "stock": 48}
+       ]},
+      {"nombre": "Salsa Extra", "categoria": "Extras", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Kétchup", "precio": 200, "stock": 999},
+         {"nombre": "Mayonesa", "precio": 200, "stock": 999},
+         {"nombre": "Ají", "precio": 200, "stock": 999}
+       ]},
+      {"nombre": "Queso Extra", "categoria": "Extras", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Porción", "precio": 500, "stock": 999}
+       ]},
+      {"nombre": "Tocino Extra", "categoria": "Extras", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Porción", "precio": 700, "stock": 999}
+       ]}
+    ]
+  },
+
+  "peluqueria": {
+    "nombre": "Peluquería",
+    "icono": "✂️",
+    "categorias": [
+      {"nombre": "Servicios Hombre", "icono": "💈", "color": "#3b82f6", "subcategorias": []},
+      {"nombre": "Servicios Mujer", "icono": "💇", "color": "#ec4899", "subcategorias": []},
+      {"nombre": "Servicios Niños", "icono": "👶", "color": "#f59e0b", "subcategorias": []},
+      {"nombre": "Tratamientos", "icono": "💆", "color": "#8b5cf6", "subcategorias": []},
+      {"nombre": "Productos", "icono": "🧴", "color": "#06b6d4", "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "Corte de Cabello Hombre", "categoria": "Servicios Hombre", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Básico", "precio": 4500, "stock": 999},
+         {"nombre": "Con diseño", "precio": 6000, "stock": 999}
+       ]},
+      {"nombre": "Corte + Barba", "categoria": "Servicios Hombre", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Completo", "precio": 8000, "stock": 999}
+       ]},
+      {"nombre": "Arreglo de Barba", "categoria": "Servicios Hombre", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Perfilado", "precio": 3500, "stock": 999},
+         {"nombre": "Diseño completo", "precio": 5000, "stock": 999}
+       ]},
+      {"nombre": "Lavado de Cabello", "categoria": "Servicios Hombre", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Solo lavado", "precio": 3000, "stock": 999}
+       ]},
+      {"nombre": "Corte de Cabello Mujer", "categoria": "Servicios Mujer", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Corto", "precio": 8000, "stock": 999},
+         {"nombre": "Largo", "precio": 12000, "stock": 999},
+         {"nombre": "Con brushing", "precio": 15000, "stock": 999}
+       ]},
+      {"nombre": "Tinte", "categoria": "Servicios Mujer", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Raíces", "precio": 18000, "stock": 999},
+         {"nombre": "Completo cabello corto", "precio": 28000, "stock": 999},
+         {"nombre": "Completo cabello largo", "precio": 45000, "stock": 999}
+       ]},
+      {"nombre": "Mechas / Highlights", "categoria": "Servicios Mujer", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Parciales", "precio": 22000, "stock": 999},
+         {"nombre": "Completas", "precio": 38000, "stock": 999}
+       ]},
+      {"nombre": "Brushing", "categoria": "Servicios Mujer", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Corto", "precio": 6000, "stock": 999},
+         {"nombre": "Largo", "precio": 9000, "stock": 999}
+       ]},
+      {"nombre": "Keratina", "categoria": "Servicios Mujer", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Cabello corto", "precio": 35000, "stock": 999},
+         {"nombre": "Cabello largo", "precio": 55000, "stock": 999}
+       ]},
+      {"nombre": "Peinado de Fiesta", "categoria": "Servicios Mujer", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Semi recogido", "precio": 15000, "stock": 999},
+         {"nombre": "Recogido formal", "precio": 20000, "stock": 999}
+       ]},
+      {"nombre": "Corte Niño", "categoria": "Servicios Niños", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Hasta 10 años", "precio": 4000, "stock": 999},
+         {"nombre": "11 a 14 años", "precio": 5000, "stock": 999}
+       ]},
+      {"nombre": "Hidratación Capilar", "categoria": "Tratamientos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Express", "precio": 8000, "stock": 999},
+         {"nombre": "Profunda", "precio": 15000, "stock": 999}
+       ]},
+      {"nombre": "Tratamiento Anti-caída", "categoria": "Tratamientos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "Sesión", "precio": 12000, "stock": 999}
+       ]},
+      {"nombre": "Shampoo Profesional", "categoria": "Productos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "300ml", "precio": 8500, "stock": 15},
+         {"nombre": "1L", "precio": 22000, "stock": 8}
+       ]},
+      {"nombre": "Acondicionador Profesional", "categoria": "Productos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "300ml", "precio": 8500, "stock": 15}
+       ]},
+      {"nombre": "Mascarilla Capilar", "categoria": "Productos", "subcategoria": "",
+       "variantes": [
+         {"nombre": "250g", "precio": 12000, "stock": 10}
+       ]}
+    ]
+  },
+
+  "otro": {
+    "nombre": "Otro negocio",
+    "icono": "🏢",
+    "categorias": [
+      {"nombre": "Productos", "icono": "📦", "color": "#6366f1", "subcategorias": []},
+      {"nombre": "Servicios", "icono": "⚙️", "color": "#22c55e", "subcategorias": []},
+      {"nombre": "Bebidas", "icono": "🥤", "color": "#3b82f6", "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "Producto 1", "categoria": "Productos", "subcategoria": "",
+       "variantes": [{"nombre": "Unidad", "precio": 1000, "stock": 20}]},
+      {"nombre": "Producto 2", "categoria": "Productos", "subcategoria": "",
+       "variantes": [{"nombre": "Unidad", "precio": 2000, "stock": 20}]},
+      {"nombre": "Servicio 1", "categoria": "Servicios", "subcategoria": "",
+       "variantes": [{"nombre": "Básico", "precio": 5000, "stock": 999}]},
+      {"nombre": "Agua Mineral", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [{"nombre": "500ml", "precio": 600, "stock": 24}]},
+      {"nombre": "Café", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [{"nombre": "Regular", "precio": 1500, "stock": 999}]}
+    ]
+  }
+}

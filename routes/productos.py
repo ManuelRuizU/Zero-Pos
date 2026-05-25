@@ -1,6 +1,13 @@
+import json
 import logging
+import urllib.request
+import urllib.error
+from pathlib import Path
 from flask import Blueprint, request, jsonify, session
 from database import db_session
+
+BASE_DIR = Path(__file__).parent.parent
+PRODUCTOS_BASE_FILE = BASE_DIR / "data" / "productos_base.json"
 
 productos_bp = Blueprint("productos", __name__, url_prefix="/api/productos")
 logger = logging.getLogger("zero_pos.productos")
@@ -64,17 +71,116 @@ def obtener(pid):
 
 @productos_bp.route("/barras/<codigo>", methods=["GET"])
 def por_barras(codigo):
+    """Busca en DB local. Para lookup completo usar /barras/<codigo>/lookup."""
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+
+    with db_session() as conn:
+        # Busca en producto padre
+        prod = conn.execute(
+            "SELECT * FROM productos WHERE codigo_barras=? AND activo=1", (codigo,)
+        ).fetchone()
+        if prod:
+            return jsonify(dict(prod))
+        # Busca en variantes
+        variante = conn.execute(
+            """SELECT pv.*, p.nombre as producto_nombre, p.id as producto_id_padre
+               FROM producto_variantes pv
+               JOIN productos p ON pv.producto_id=p.id
+               WHERE pv.codigo_barras=? AND pv.activo=1""",
+            (codigo,)
+        ).fetchone()
+        if variante:
+            return jsonify({**dict(variante), "es_variante": True})
+        return jsonify({"error": "Código no encontrado"}), 404
+
+
+@productos_bp.route("/barras/<codigo>/lookup", methods=["GET"])
+def lookup_barras(codigo):
+    """Lookup progresivo: DB local → productos_base.json → Open Food Facts."""
     if not _require_auth():
         return jsonify({"error": "No autenticado"}), 401
 
     with db_session() as conn:
         prod = conn.execute(
-            "SELECT * FROM productos WHERE codigo_barras=? AND activo=1",
+            "SELECT p.*, c.nombre as categoria_nombre FROM productos p "
+            "LEFT JOIN categorias c ON p.categoria_id=c.id "
+            "WHERE p.codigo_barras=? AND p.activo=1", (codigo,)
+        ).fetchone()
+        if prod:
+            return jsonify({"fuente": "local", "encontrado": True, **dict(prod)})
+
+        variante = conn.execute(
+            """SELECT pv.*, p.nombre as producto_nombre, p.id as producto_id_padre,
+                      p.categoria_id, c.nombre as categoria_nombre
+               FROM producto_variantes pv
+               JOIN productos p ON pv.producto_id=p.id
+               LEFT JOIN categorias c ON p.categoria_id=c.id
+               WHERE pv.codigo_barras=? AND pv.activo=1""",
             (codigo,)
         ).fetchone()
-        if not prod:
-            return jsonify({"error": "Código no encontrado"}), 404
-        return jsonify(dict(prod))
+        if variante:
+            return jsonify({"fuente": "local", "encontrado": True,
+                            "es_variante": True, **dict(variante)})
+
+    # Buscar en productos_base.json
+    resultado_json = _buscar_en_json(codigo)
+    if resultado_json:
+        return jsonify({"fuente": "catalogo_base", "encontrado": True, **resultado_json})
+
+    # Consultar Open Food Facts
+    resultado_off = _buscar_open_food_facts(codigo)
+    if resultado_off:
+        return jsonify({"fuente": "open_food_facts", "encontrado": True, **resultado_off})
+
+    return jsonify({"encontrado": False, "codigo": codigo,
+                    "sugerencia": "Producto no encontrado. Ingresa nombre y precio."})
+
+
+def _buscar_en_json(codigo: str) -> dict | None:
+    if not PRODUCTOS_BASE_FILE.exists():
+        return None
+    try:
+        data = json.loads(PRODUCTOS_BASE_FILE.read_text(encoding="utf-8"))
+        for tipo_data in data.values():
+            for prod in tipo_data.get("productos", []):
+                for v in prod.get("variantes", []):
+                    if v.get("codigo_barras") == codigo:
+                        return {
+                            "nombre": prod["nombre"],
+                            "nombre_variante": v["nombre"],
+                            "precio_sugerido": v["precio"],
+                            "categoria_sugerida": prod.get("categoria", ""),
+                        }
+    except Exception:
+        pass
+    return None
+
+
+def _buscar_open_food_facts(codigo: str) -> dict | None:
+    try:
+        url = f"https://world.openfoodfacts.org/api/v0/product/{codigo}.json"
+        req = urllib.request.Request(url, headers={"User-Agent": "ZeroPOS/1.0"})
+        with urllib.request.urlopen(req, timeout=4) as resp:
+            data = json.loads(resp.read().decode())
+        if data.get("status") != 1:
+            return None
+        product = data.get("product", {})
+        nombre = (product.get("product_name_es")
+                  or product.get("product_name")
+                  or product.get("abbreviated_product_name")
+                  or "").strip()
+        if not nombre:
+            return None
+        return {
+            "nombre": nombre,
+            "marca": product.get("brands", ""),
+            "categoria_sugerida": product.get("categories_tags", [""])[0].replace("en:", "").replace("-", " ").title() if product.get("categories_tags") else "",
+            "imagen_url": product.get("image_thumb_url", ""),
+            "precio_sugerido": None,
+        }
+    except Exception:
+        return None
 
 
 @productos_bp.route("", methods=["POST"])
@@ -242,3 +348,115 @@ def _registrar_movimiento(conn, producto_id, tipo, cantidad, motivo, usuario_id)
            VALUES (?,?,?,?,?)""",
         (producto_id, tipo, cantidad, motivo, usuario_id)
     )
+
+
+# ── Variantes ─────────────────────────────────────────────────────────────────
+
+@productos_bp.route("/<int:pid>/variantes", methods=["GET"])
+def listar_variantes(pid):
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT * FROM producto_variantes WHERE producto_id=? AND activo=1 ORDER BY id",
+            (pid,)
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
+
+
+@productos_bp.route("/<int:pid>/variantes", methods=["POST"])
+def crear_variante(pid):
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    nombre = str(data.get("nombre", "")).strip()
+    if not nombre:
+        return jsonify({"error": "Nombre requerido"}), 400
+
+    with db_session() as conn:
+        cur = conn.execute(
+            """INSERT INTO producto_variantes
+               (producto_id, nombre, precio, precio_costo, stock, stock_minimo, codigo_barras)
+               VALUES (?,?,?,?,?,?,?)""",
+            (pid, nombre,
+             float(data.get("precio", 0)),
+             float(data.get("precio_costo", 0)),
+             int(data.get("stock", 0)),
+             int(data.get("stock_minimo", 5)),
+             data.get("codigo_barras"))
+        )
+        conn.execute(
+            "UPDATE productos SET tiene_variantes=1 WHERE id=?", (pid,)
+        )
+        return jsonify({"ok": True, "id": cur.lastrowid}), 201
+
+
+@productos_bp.route("/<int:pid>/variantes/<int:vid>", methods=["PUT"])
+def actualizar_variante(pid, vid):
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    campos = {}
+    for campo in ("nombre", "precio", "precio_costo", "stock", "stock_minimo",
+                  "codigo_barras", "activo"):
+        if campo in data:
+            campos[campo] = data[campo]
+    if not campos:
+        return jsonify({"error": "Sin cambios"}), 400
+    set_clause = ", ".join(f"{k}=?" for k in campos)
+    with db_session() as conn:
+        conn.execute(
+            f"UPDATE producto_variantes SET {set_clause} WHERE id=? AND producto_id=?",
+            list(campos.values()) + [vid, pid]
+        )
+        return jsonify({"ok": True})
+
+
+@productos_bp.route("/<int:pid>/variantes/<int:vid>/stock", methods=["POST"])
+def ajustar_stock_variante(pid, vid):
+    uid = session.get("usuario_id")
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    tipo = data.get("tipo", "ajuste")
+    cantidad = int(data.get("cantidad", 0))
+
+    with db_session() as conn:
+        v = conn.execute(
+            "SELECT stock FROM producto_variantes WHERE id=? AND producto_id=?", (vid, pid)
+        ).fetchone()
+        if not v:
+            return jsonify({"error": "Variante no encontrada"}), 404
+
+        if tipo == "ajuste":
+            nuevo = cantidad
+        elif tipo == "entrada":
+            nuevo = v["stock"] + cantidad
+        else:
+            nuevo = max(0, v["stock"] - cantidad)
+
+        conn.execute(
+            "UPDATE producto_variantes SET stock=? WHERE id=?", (nuevo, vid)
+        )
+        _registrar_movimiento(conn, pid, tipo, cantidad, data.get("motivo", ""), uid)
+        return jsonify({"ok": True, "stock_nuevo": nuevo})
+
+
+# ── Subcategorías ──────────────────────────────────────────────────────────────
+
+@productos_bp.route("/subcategorias", methods=["GET"])
+def listar_subcategorias():
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    cat_id = request.args.get("categoria_id")
+    with db_session() as conn:
+        if cat_id:
+            rows = conn.execute(
+                "SELECT * FROM subcategorias WHERE categoria_id=? ORDER BY nombre", (int(cat_id),)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT s.*, c.nombre as categoria_nombre FROM subcategorias s "
+                "JOIN categorias c ON s.categoria_id=c.id ORDER BY c.nombre, s.nombre"
+            ).fetchall()
+        return jsonify([dict(r) for r in rows])

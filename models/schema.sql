@@ -41,6 +41,31 @@ CREATE TABLE IF NOT EXISTS categorias (
     icono  TEXT DEFAULT '📦'
 );
 
+-- Subcategorías
+CREATE TABLE IF NOT EXISTS subcategorias (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    categoria_id INTEGER NOT NULL REFERENCES categorias(id),
+    nombre       TEXT NOT NULL,
+    icono        TEXT DEFAULT '📦',
+    UNIQUE(categoria_id, nombre)
+);
+
+-- Variantes de producto (tamaños, presentaciones)
+CREATE TABLE IF NOT EXISTS producto_variantes (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    producto_id   INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    nombre        TEXT NOT NULL,
+    precio        REAL NOT NULL DEFAULT 0,
+    precio_costo  REAL DEFAULT 0,
+    stock         INTEGER NOT NULL DEFAULT 0,
+    stock_minimo  INTEGER NOT NULL DEFAULT 5,
+    codigo_barras TEXT UNIQUE,
+    activo        INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_variantes_producto ON producto_variantes(producto_id);
+CREATE INDEX IF NOT EXISTS idx_variantes_barras ON producto_variantes(codigo_barras);
+
 -- Productos
 CREATE TABLE IF NOT EXISTS productos (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,6 +112,8 @@ CREATE TABLE IF NOT EXISTS venta_items (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     venta_id    INTEGER NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
     producto_id INTEGER NOT NULL REFERENCES productos(id),
+    variante_id INTEGER REFERENCES producto_variantes(id),
+    nombre_variante TEXT,
     cantidad    INTEGER NOT NULL DEFAULT 1,
     precio_unit REAL NOT NULL,
     descuento   REAL NOT NULL DEFAULT 0,

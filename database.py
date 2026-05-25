@@ -42,9 +42,31 @@ def init_db():
             conn.executescript(schema_main.read_text())
         if schema_inv.exists():
             conn.executescript(schema_inv.read_text())
+        _migrate_columns(conn)
         _seed_defaults(conn)
 
     logger.info(f"Base de datos inicializada: {DB_PATH}")
+
+
+def _migrate_columns(conn: sqlite3.Connection):
+    """Agrega columnas nuevas a tablas existentes sin romper instancias ya creadas."""
+    existing = {
+        row[0]
+        for row in conn.execute("PRAGMA table_info(productos)").fetchall()
+        # row[1] es el nombre de la columna
+    }
+    # Re-usamos fetchall directo para obtener los nombres
+    cols_productos = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
+    cols_vitems = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
+
+    if "subcategoria_id" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN subcategoria_id INTEGER REFERENCES subcategorias(id)")
+    if "tiene_variantes" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN tiene_variantes INTEGER NOT NULL DEFAULT 0")
+    if "variante_id" not in cols_vitems:
+        conn.execute("ALTER TABLE venta_items ADD COLUMN variante_id INTEGER REFERENCES producto_variantes(id)")
+    if "nombre_variante" not in cols_vitems:
+        conn.execute("ALTER TABLE venta_items ADD COLUMN nombre_variante TEXT")
 
 
 def _seed_defaults(conn: sqlite3.Connection):
