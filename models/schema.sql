@@ -153,6 +153,17 @@ CREATE TABLE IF NOT EXISTS pagos_khipu (
     actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Historial de comandos de voz
+CREATE TABLE IF NOT EXISTS voz_historial (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    texto      TEXT NOT NULL,
+    accion     TEXT,
+    usuario_id INTEGER REFERENCES usuarios(id),
+    creado_en  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_voz_fecha ON voz_historial(creado_en);
+
 -- Movimientos de caja
 CREATE TABLE IF NOT EXISTS caja_movimientos (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,

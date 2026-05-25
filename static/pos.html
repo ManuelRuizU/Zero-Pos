@@ -285,6 +285,62 @@ body{
 .toast.success{border-color:var(--success);color:var(--success);}
 .toast.error{border-color:var(--danger);color:var(--danger);}
 
+/* ── Asistente de voz ────────────────────────────────── */
+.btn-voz{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text-dim);border-radius:8px;padding:6px 12px;
+  font-size:13px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;gap:6px;
+}
+.btn-voz.activo{
+  background:rgba(34,197,94,0.15);border-color:var(--success);
+  color:var(--success);
+}
+.voz-ondas{
+  display:flex;align-items:center;gap:2px;height:14px;
+}
+.voz-onda{
+  width:2px;background:var(--success);border-radius:2px;
+  animation:vozWave .8s ease-in-out infinite;
+}
+.voz-onda:nth-child(1){height:5px;animation-delay:0s;}
+.voz-onda:nth-child(2){height:10px;animation-delay:.12s;}
+.voz-onda:nth-child(3){height:14px;animation-delay:.24s;}
+.voz-onda:nth-child(4){height:9px;animation-delay:.36s;}
+.voz-onda:nth-child(5){height:5px;animation-delay:.48s;}
+@keyframes vozWave{
+  0%,100%{transform:scaleY(.3);opacity:.5;}
+  50%{transform:scaleY(1);opacity:1;}
+}
+
+/* Tarjeta de confirmación flotante */
+.voz-confirm{
+  position:fixed;top:68px;right:20px;z-index:400;
+  background:#14141f;border:1px solid var(--accent);
+  border-radius:16px;padding:18px 20px;min-width:260px;max-width:320px;
+  box-shadow:0 20px 56px rgba(0,0,0,0.7);
+  animation:slideR .22s ease;
+  display:none;
+}
+@keyframes slideR{from{transform:translateX(16px);opacity:0;}to{transform:none;opacity:1;}}
+.vc-label{font-size:11px;color:var(--text-dim);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.vc-label .voz-ondas{height:10px;}
+.vc-label .voz-onda{background:var(--accent2);}
+.vc-texto{font-size:15px;font-weight:700;margin-bottom:4px;line-height:1.3;}
+.vc-precio{font-size:22px;font-weight:800;color:var(--accent2);margin-bottom:12px;}
+.vc-bar{height:3px;background:var(--surface2);border-radius:2px;margin-bottom:12px;overflow:hidden;}
+.vc-fill{height:100%;background:var(--accent);border-radius:2px;}
+.vc-btns{display:flex;gap:8px;}
+.vc-si{
+  flex:1;background:var(--success);border:none;color:#fff;
+  border-radius:10px;padding:9px;font-size:13px;font-weight:700;cursor:pointer;
+}
+.vc-no{
+  flex:1;background:var(--surface2);border:1px solid var(--border);
+  color:var(--text-dim);border-radius:10px;padding:9px;
+  font-size:13px;cursor:pointer;
+}
+
 /* ── Modal variantes ─────────────────────────────────── */
 .modal-variantes{
   background:#13131a;border:1px solid var(--border);
@@ -371,6 +427,7 @@ body{
   <div class="logo">ZERO<span>POS</span></div>
   <div class="cajero" id="cajeroNombre">Cargando...</div>
   <div class="actions">
+    <button class="btn-voz btn-top" id="btnVoz" onclick="toggleVoz()" title="Asistente de voz">🎤 Voz OFF</button>
     <button class="btn-top" onclick="abrirVentaRapida()" title="Venta rápida sin catálogo">⚡ Rápida</button>
     <button class="btn-top" onclick="verAlertas()" id="btnAlertas">⚠️ Stock</button>
     <button class="btn-top" onclick="location.href='admin.html'">📊</button>
@@ -473,6 +530,25 @@ body{
   </div>
 </div>
 
+<!-- Confirmación de voz -->
+<div class="voz-confirm" id="vozConfirm">
+  <div class="vc-label">
+    <span class="voz-ondas">
+      <span class="voz-onda"></span><span class="voz-onda"></span>
+      <span class="voz-onda"></span><span class="voz-onda"></span>
+      <span class="voz-onda"></span>
+    </span>
+    Entendí:
+  </div>
+  <div class="vc-texto" id="vcTexto"></div>
+  <div class="vc-precio" id="vcPrecio"></div>
+  <div class="vc-bar"><div class="vc-fill" id="vcFill"></div></div>
+  <div class="vc-btns">
+    <button class="vc-si" onclick="confirmarVozSi()">✓ Sí, agregar</button>
+    <button class="vc-no" onclick="confirmarVozNo()">✗ Cancelar</button>
+  </div>
+</div>
+
 <!-- Modal variantes -->
 <div class="modal-overlay" id="modalVariantes">
   <div class="modal-variantes">
@@ -545,6 +621,293 @@ let categoriaActual = '';
 let metodoPago = 'efectivo';
 let total = 0;
 
+// ── Asistente de Voz ZERO ────────────────────────────────────────────
+let vozActiva = localStorage.getItem('voz_activa') === 'true';
+let vozKW = 'ZERO';          // wake word
+let vozVel = 1.0;            // speech rate
+let vozTono_ = 1.0;          // pitch
+let vozRecog = null;         // SpeechRecognition
+let vozSynth = window.speechSynthesis;
+let vozCbOk = null;          // confirm callback
+let vozTimer = null;
+let vozCtxProd = '';         // ultimo producto mencionado en conversación
+
+async function initVoz() {
+  const cfg = await fetch('/api/voz/config', {credentials:'include'})
+    .then(r => r.json()).catch(() => ({}));
+  vozKW = (cfg.voz_palabra_clave || 'ZERO').toUpperCase();
+  vozVel = parseFloat(cfg.voz_velocidad || '1');
+  vozTono_ = parseFloat(cfg.voz_tono || '1');
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    const btn = document.getElementById('btnVoz');
+    if (btn) btn.style.display = 'none';
+    return;
+  }
+
+  vozRecog = new SR();
+  vozRecog.continuous = true;
+  vozRecog.interimResults = false;
+  vozRecog.lang = 'es-CL';
+  vozRecog.maxAlternatives = 1;
+
+  vozRecog.onresult = (e) => {
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (!e.results[i].isFinal) continue;
+      const txt = e.results[i][0].transcript.trim();
+      const up = txt.toUpperCase();
+      const idx = up.indexOf(vozKW);
+      if (idx === -1) continue;
+      const cmd = txt.slice(idx + vozKW.length).trim();
+      if (cmd.length < 2) { hablar('Dime'); return; }
+      procesarVoz(cmd);
+    }
+  };
+  vozRecog.onerror = (e) => {
+    if (e.error !== 'no-speech' && e.error !== 'aborted') console.warn('[VOZ]', e.error);
+  };
+  vozRecog.onend = () => {
+    if (vozActiva) setTimeout(() => { try { vozRecog.start(); } catch(e){} }, 300);
+  };
+
+  actualizarBtnVoz();
+  if (vozActiva) { try { vozRecog.start(); } catch(e){} }
+}
+
+function toggleVoz() {
+  vozActiva = !vozActiva;
+  localStorage.setItem('voz_activa', vozActiva);
+  actualizarBtnVoz();
+  if (vozActiva) {
+    try { vozRecog.start(); } catch(e){}
+    setTimeout(() => hablar(`${vozKW} activado`), 400);
+  } else {
+    try { vozRecog.stop(); } catch(e){}
+  }
+}
+
+function actualizarBtnVoz() {
+  const btn = document.getElementById('btnVoz');
+  if (!btn) return;
+  if (vozActiva) {
+    btn.className = 'btn-voz btn-top activo';
+    btn.innerHTML = `🎤 <span class="voz-ondas">
+      <span class="voz-onda"></span><span class="voz-onda"></span>
+      <span class="voz-onda"></span><span class="voz-onda"></span>
+      <span class="voz-onda"></span>
+    </span> ${vozKW}`;
+  } else {
+    btn.className = 'btn-voz btn-top';
+    btn.innerHTML = '🎤 Voz OFF';
+  }
+}
+
+async function procesarVoz(cmd) {
+  console.log('[VOZ] cmd:', cmd);
+  if (esConsultaVoz(cmd)) return await consultarVoz(cmd);
+
+  let interp;
+  try {
+    const r = await fetch('/api/voz/interpretar', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({texto: cmd}),
+    });
+    interp = await r.json();
+  } catch(e) { hablar('Error de red'); return; }
+
+  const {accion, producto, cantidad, variante} = interp;
+
+  if (accion === 'agregar') return vozAgregar(producto, cantidad || 1, variante || '');
+  if (accion === 'quitar')  return vozQuitar(producto);
+  if (accion === 'cobrar')  { hablar('Abriendo cobro'); abrirCobro(); }
+  if (accion === 'limpiar') {
+    vozConfirmar('¿Limpiar el carrito?', null, () => { limpiarCarrito(); hablar('Carrito limpio'); });
+    return;
+  }
+  if (accion === 'consultar') {
+    const sub = carrito.reduce((s,i) => s + i.precio_unit * i.cantidad, 0);
+    const desc = parseFloat(document.getElementById('descuentoInput').value) || 0;
+    const tot = Math.max(0, sub - desc);
+    hablar(`El carrito va en ${fmt(tot)}`);
+    return;
+  }
+  hablar(`No entendí: ${cmd}`);
+}
+
+function esConsultaVoz(t) {
+  t = t.toLowerCase();
+  const esAccion = /agrega|suma|pon|quita|elimina|cobra|limpia/.test(t);
+  const esQuery  = /cuánto|cuánta|cuántos|cuántas|cuanto|cuanta|quedan|queda|hoy|stock|vendí|vendi|necesito|mañana|manana|más vendido|mas vendido/.test(t);
+  return esQuery && !esAccion;
+}
+
+async function consultarVoz(txt) {
+  try {
+    const r = await fetch('/api/voz/consulta', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({texto: txt, contexto_producto: vozCtxProd}),
+    });
+    const data = await r.json();
+    const resp = data.respuesta || 'No pude obtener esa información';
+    hablar(resp);
+    showToast('🎤 ' + resp, 'success');
+  } catch(e) { hablar('Error al consultar'); }
+}
+
+async function vozAgregar(nombre, qty, variante) {
+  const matches = vozBuscar(nombre);
+  if (!matches.length) { hablar(`No encontré ${nombre}`); return; }
+
+  const prod = matches[0];
+  vozCtxProd = prod.nombre;
+
+  if (prod.tiene_variantes) {
+    const vvs = await fetch(`/api/productos/${prod.id}/variantes`, {credentials:'include'})
+      .then(r => r.json()).catch(() => []);
+
+    let vSel = variante ? vozMatchVariante(vvs, variante) : null;
+    if (!vSel && vvs.length === 1) vSel = vvs[0];
+
+    if (!vSel) {
+      hablar(`${prod.nombre} tiene: ${vvs.map(v => v.nombre).join(', ')}. ¿Cuál?`);
+      return;
+    }
+
+    const subtotal = vSel.precio * qty;
+    vozConfirmar(`${qty > 1 ? qty + 'x ' : ''}${prod.nombre} ${vSel.nombre}`, subtotal, () => {
+      vozSetVariante(prod, vSel, qty);
+      hablar(`${prod.nombre} ${vSel.nombre} agregado. Total: ${fmt(calcCarritoTotal())}`);
+    });
+    return;
+  }
+
+  const subtotal = prod.precio * qty;
+  vozConfirmar(`${qty > 1 ? qty + 'x ' : ''}${prod.nombre}`, subtotal, () => {
+    vozSetProducto(prod, qty);
+    hablar(`${prod.nombre} agregado. Total: ${fmt(calcCarritoTotal())}`);
+  });
+}
+
+function vozSetProducto(prod, qty) {
+  const idx = carrito.findIndex(i => i.producto_id === prod.id && !i.variante_id);
+  if (idx >= 0) {
+    carrito[idx].cantidad = Math.min(carrito[idx].cantidad + qty, prod.stock);
+  } else {
+    carrito.push({
+      producto_id: prod.id, variante_id: null, nombre: prod.nombre,
+      nombre_variante: '', precio_unit: prod.precio,
+      cantidad: Math.min(qty, prod.stock), stock: prod.stock,
+    });
+  }
+  renderCarrito();
+}
+
+function vozSetVariante(prod, v, qty) {
+  const key = `${prod.id}_v${v.id}`;
+  const idx = carrito.findIndex(i => i._key === key);
+  if (idx >= 0) {
+    carrito[idx].cantidad = Math.min(carrito[idx].cantidad + qty, v.stock);
+  } else {
+    carrito.push({
+      _key: key, producto_id: prod.id, variante_id: v.id,
+      nombre: `${prod.nombre} — ${v.nombre}`, nombre_variante: v.nombre,
+      precio_unit: v.precio, cantidad: Math.min(qty, v.stock), stock: v.stock,
+    });
+  }
+  renderCarrito();
+}
+
+function vozQuitar(nombre) {
+  if (!carrito.length) { hablar('El carrito está vacío'); return; }
+  if (!nombre || /último|ultima/.test(nombre.toLowerCase())) {
+    const n = carrito[carrito.length - 1].nombre;
+    carrito.splice(carrito.length - 1, 1);
+    renderCarrito();
+    hablar(`${n} eliminado`);
+    return;
+  }
+  const idx = carrito.findIndex(i => vozNorm(i.nombre).includes(vozNorm(nombre)));
+  if (idx === -1) { hablar(`No encontré ${nombre} en el carrito`); return; }
+  const n = carrito[idx].nombre;
+  carrito.splice(idx, 1);
+  renderCarrito();
+  hablar(`${n} eliminado`);
+}
+
+function vozBuscar(busqueda) {
+  const words = vozNorm(busqueda).split(' ').filter(w => w.length > 2);
+  if (!words.length) return [];
+  return productos.map(p => {
+    const n = vozNorm(p.nombre);
+    let s = 0;
+    words.forEach(w => { if (n.includes(w)) s += 2; else if (n.split(' ').some(t => t.startsWith(w) || w.startsWith(t))) s += 1; });
+    return {p, s};
+  }).filter(x => x.s > 0).sort((a, b) => b.s - a.s).map(x => x.p);
+}
+
+function vozMatchVariante(vvs, texto) {
+  const t = vozNorm(texto);
+  let v = vvs.find(v => vozNorm(v.nombre) === t);
+  if (v) return v;
+  v = vvs.find(v => vozNorm(v.nombre).includes(t) || t.includes(vozNorm(v.nombre)));
+  if (v) return v;
+  if (/chic|peq|small|mini/.test(t)) return vvs.reduce((a, b) => a.precio < b.precio ? a : b);
+  if (/grand|larg|big/.test(t))      return vvs.reduce((a, b) => a.precio > b.precio ? a : b);
+  return null;
+}
+
+function vozNorm(s) {
+  return s.toLowerCase().normalize('NFD')
+    .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function calcCarritoTotal() {
+  const sub = carrito.reduce((s, i) => s + i.precio_unit * i.cantidad, 0);
+  const desc = parseFloat(document.getElementById('descuentoInput').value) || 0;
+  return Math.max(0, sub - desc);
+}
+
+function vozConfirmar(texto, precio, cb) {
+  cerrarVozConfirm();
+  document.getElementById('vcTexto').textContent = texto;
+  document.getElementById('vcPrecio').textContent = precio ? fmt(precio) : '';
+  document.getElementById('vozConfirm').style.display = 'block';
+  vozCbOk = cb;
+
+  // Countdown bar animation: 3s
+  const fill = document.getElementById('vcFill');
+  fill.style.transition = 'none';
+  fill.style.width = '100%';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    fill.style.transition = 'width 3s linear';
+    fill.style.width = '0%';
+  }));
+  vozTimer = setTimeout(() => { if (vozCbOk) { vozCbOk(); } cerrarVozConfirm(); }, 3000);
+}
+
+function confirmarVozSi() { clearTimeout(vozTimer); if (vozCbOk) vozCbOk(); cerrarVozConfirm(); }
+function confirmarVozNo() { clearTimeout(vozTimer); cerrarVozConfirm(); hablar('Cancelado'); }
+function cerrarVozConfirm() {
+  document.getElementById('vozConfirm').style.display = 'none';
+  vozCbOk = null; vozTimer = null;
+}
+
+function hablar(txt) {
+  if (!vozSynth) return;
+  vozSynth.cancel();
+  const u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'es-CL'; u.rate = vozVel; u.pitch = vozTono_;
+  const voices = vozSynth.getVoices();
+  const esV = voices.find(v => v.lang.startsWith('es') && v.localService) ||
+               voices.find(v => v.lang.startsWith('es'));
+  if (esV) u.voice = esV;
+  vozSynth.speak(u);
+}
+
 // ── Init ─────────────────────────────────────────────────────────────
 async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
@@ -563,6 +926,7 @@ async function init() {
   await cargarProductos();
   verificarAlertas();
   verificarTurno(me);
+  initVoz();
 }
 
 async function verificarTurno(me) {

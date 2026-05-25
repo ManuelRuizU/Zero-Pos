@@ -185,6 +185,7 @@ input:checked + .slider:before{transform:translateX(20px);}
     <button class="nav-btn" onclick="showTab('ventas',this)">🧾 Ventas</button>
     <button class="nav-btn" onclick="showTab('ia',this)">🤖 IA</button>
     <button class="nav-btn" onclick="showTab('config',this)">⚙️ Config</button>
+    <button class="nav-btn" onclick="showTab('voz',this)">🎤 Voz</button>
     <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
   </div>
 </div>
@@ -419,6 +420,95 @@ input:checked + .slider:before{transform:translateX(20px);}
     </div>
   </div>
 
+  <!-- Voz -->
+  <div class="tab-content" id="tab-voz">
+    <h2>🎤 Asistente de Voz ZERO</h2>
+    <div class="cfg-grid">
+
+      <!-- Activación y palabra clave -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">⚙️ Configuración del asistente</div>
+        <div class="toggle-row" style="margin-bottom:16px;">
+          <div class="toggle-info">
+            <span class="toggle-label">Asistente activado por defecto</span>
+            <span class="toggle-sub">Si activo, el micrófono inicia cuando abres el POS</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="voz_activa">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Palabra de activación</label>
+          <select id="voz_palabra_preset" onchange="vozPresetChange()">
+            <option value="ZERO">ZERO (por defecto)</option>
+            <option value="HAL">HAL</option>
+            <option value="JARVIS">JARVIS</option>
+            <option value="NOVA">NOVA</option>
+            <option value="custom">Personalizada...</option>
+          </select>
+        </div>
+        <div class="form-group" id="voz_kw_custom_grp" style="display:none;margin-bottom:14px;">
+          <label>Palabra personalizada</label>
+          <input type="text" id="voz_palabra_clave" placeholder="ej: CAJA, ASISTENTE..."
+            style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Velocidad de voz: <span id="voz_vel_label">1.0×</span></label>
+          <input type="range" id="voz_velocidad" min="0.5" max="2.0" step="0.1" value="1.0"
+            oninput="document.getElementById('voz_vel_label').textContent=parseFloat(this.value).toFixed(1)+'×'">
+        </div>
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>Tono de voz: <span id="voz_tono_label">1.0</span></label>
+          <input type="range" id="voz_tono" min="0.5" max="2.0" step="0.1" value="1.0"
+            oninput="document.getElementById('voz_tono_label').textContent=parseFloat(this.value).toFixed(1)">
+        </div>
+
+        <button class="btn sm" onclick="probarVoz()"
+          style="margin-bottom:10px;">▶ Probar voz</button>
+
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_voz">✓ Guardado</span>
+          <button class="btn primary sm" onclick="guardarVoz()">Guardar configuración</button>
+        </div>
+      </div>
+
+      <!-- Comandos disponibles -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">📋 Comandos disponibles</div>
+        <div style="font-size:13px;line-height:1.9;color:var(--text-dim);">
+          <div><strong style="color:var(--accent2);" id="voz_kw_preview">ZERO</strong> agrega [cant] [producto] [variante]</div>
+          <div><strong style="color:var(--accent2);" id="voz_kw_preview2">ZERO</strong> suma dos Coca-Cola 1.5</div>
+          <div><strong style="color:var(--accent2);" id="voz_kw_preview3">ZERO</strong> quita el último</div>
+          <div><strong style="color:var(--accent2);" id="voz_kw_preview4">ZERO</strong> cobra / cobrar</div>
+          <div><strong style="color:var(--accent2);" id="voz_kw_preview5">ZERO</strong> ¿cuánto va?</div>
+          <div><strong style="color:var(--accent2);" id="voz_kw_preview6">ZERO</strong> limpia el carrito</div>
+          <hr style="border-color:var(--border);margin:10px 0;">
+          <div style="color:var(--text);font-weight:600;margin-bottom:4px;">Consultas inteligentes:</div>
+          <div><strong style="color:var(--accent2);">ZERO</strong> ¿cuánto vendí hoy?</div>
+          <div><strong style="color:var(--accent2);">ZERO</strong> ¿qué productos están por agotarse?</div>
+          <div><strong style="color:var(--accent2);">ZERO</strong> ¿cuántas Coca-Cola quedan?</div>
+          <div><strong style="color:var(--accent2);">ZERO</strong> ¿cuánto pan necesito para mañana?</div>
+          <div><strong style="color:var(--accent2);">ZERO</strong> ¿cuál es el producto más vendido?</div>
+        </div>
+      </div>
+
+      <!-- Historial del día -->
+      <div class="cfg-card" style="grid-column:1/-1;">
+        <div class="cfg-card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          📜 Historial de comandos de voz — hoy
+          <button class="btn sm" onclick="cargarHistorialVoz()">Actualizar</button>
+        </div>
+        <div id="vozHistorialList" style="max-height:300px;overflow-y:auto;margin-top:12px;">
+          <p style="color:var(--text-dim);font-size:13px;">Cargando...</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -437,6 +527,7 @@ function showTab(name, btn) {
   btn.classList.add('active');
   if (name==='ventas') cargarVentas();
   if (name==='config') cargarConfig();
+  if (name==='voz') { cargarVozConfig(); cargarHistorialVoz(); }
 }
 
 async function cargarDashboard() {
@@ -635,6 +726,102 @@ async function cargarListaBackups() {
            style="color:var(--accent2);font-size:11px;text-decoration:none;">↓ Descargar</a>
       </div>
     </div>`).join('');
+}
+
+// ── Voz ──────────────────────────────────────────────────────────────
+async function cargarVozConfig() {
+  const cfg = await fetch('/api/voz/config', {credentials:'include'}).then(r=>r.json()).catch(()=>({}));
+  const kw = cfg.voz_palabra_clave || 'ZERO';
+  const presets = ['ZERO','HAL','JARVIS','NOVA'];
+  const sel = document.getElementById('voz_palabra_preset');
+  if (presets.includes(kw)) {
+    sel.value = kw;
+    document.getElementById('voz_kw_custom_grp').style.display = 'none';
+  } else {
+    sel.value = 'custom';
+    document.getElementById('voz_kw_custom_grp').style.display = '';
+    document.getElementById('voz_palabra_clave').value = kw;
+  }
+  document.getElementById('voz_activa').checked = cfg.voz_activa !== '0';
+  const vel = parseFloat(cfg.voz_velocidad || '1.0');
+  const ton = parseFloat(cfg.voz_tono || '1.0');
+  document.getElementById('voz_velocidad').value = vel;
+  document.getElementById('voz_tono').value = ton;
+  document.getElementById('voz_vel_label').textContent = vel.toFixed(1) + '×';
+  document.getElementById('voz_tono_label').textContent = ton.toFixed(1);
+  actualizarPreviews(kw);
+}
+
+function vozPresetChange() {
+  const v = document.getElementById('voz_palabra_preset').value;
+  document.getElementById('voz_kw_custom_grp').style.display = v === 'custom' ? '' : 'none';
+  if (v !== 'custom') actualizarPreviews(v);
+}
+
+function actualizarPreviews(kw) {
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById('voz_kw_preview' + (i === 1 ? '' : i));
+    if (el) el.textContent = kw;
+  }
+}
+
+async function guardarVoz() {
+  let kw = document.getElementById('voz_palabra_preset').value;
+  if (kw === 'custom') kw = document.getElementById('voz_palabra_clave').value.trim() || 'ZERO';
+  const data = {
+    voz_activa:      document.getElementById('voz_activa').checked ? '1' : '0',
+    voz_palabra_clave: kw.toUpperCase(),
+    voz_velocidad:   document.getElementById('voz_velocidad').value,
+    voz_tono:        document.getElementById('voz_tono').value,
+  };
+  const r = await fetch('/api/voz/config', {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data),
+  }).then(r=>r.json());
+  if (r.ok) { showFeedback('fb_voz'); actualizarPreviews(kw.toUpperCase()); }
+  else alert('Error: ' + (r.error || 'desconocido'));
+}
+
+function probarVoz() {
+  const kw = document.getElementById('voz_palabra_preset').value === 'custom'
+    ? document.getElementById('voz_palabra_clave').value || 'ZERO'
+    : document.getElementById('voz_palabra_preset').value;
+  const vel = parseFloat(document.getElementById('voz_velocidad').value);
+  const ton = parseFloat(document.getElementById('voz_tono').value);
+  if (!window.speechSynthesis) { alert('Tu navegador no soporta síntesis de voz'); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(`${kw} listo para ayudarte`);
+  u.lang = 'es-CL'; u.rate = vel; u.pitch = ton;
+  const v = window.speechSynthesis.getVoices().find(v => v.lang.startsWith('es'));
+  if (v) u.voice = v;
+  window.speechSynthesis.speak(u);
+}
+
+async function cargarHistorialVoz() {
+  const list = document.getElementById('vozHistorialList');
+  const rows = await fetch('/api/voz/historial', {credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  if (!rows.length) {
+    list.innerHTML = '<p style="color:var(--text-dim);font-size:13px;padding:8px 0">Sin comandos hoy</p>';
+    return;
+  }
+  list.innerHTML = `<table style="width:100%">
+    <thead><tr><th>Hora</th><th>Texto</th><th>Acción detectada</th><th>Usuario</th></tr></thead>
+    <tbody>
+    ${rows.map(r => {
+      let accionDisplay = '';
+      try {
+        const a = typeof r.accion === 'string' ? JSON.parse(r.accion) : r.accion;
+        accionDisplay = a.accion || a.consulta || a.tipo || JSON.stringify(a).slice(0,40);
+      } catch(e) { accionDisplay = String(r.accion || '').slice(0, 60); }
+      return `<tr>
+        <td>${(r.creado_en||'').slice(11,16)}</td>
+        <td>${r.texto||''}</td>
+        <td style="color:var(--accent2)">${accionDisplay}</td>
+        <td>${r.usuario||'—'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
 }
 
 init();

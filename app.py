@@ -92,12 +92,13 @@ def create_app() -> Flask:
     from routes.multi import multi_bp
     from routes.config import config_bp
     from routes.onboarding import onboarding_bp
+    from routes.voz import voz_bp
 
     for bp in (
         auth_bp, ventas_bp, productos_bp, reportes_bp,
         impresora_bp, backup_bp, inventario_bp, facturas_bp,
         comprobante_bp, qr_bp, khipu_bp, multi_bp, config_bp,
-        onboarding_bp,
+        onboarding_bp, voz_bp,
     ):
         app.register_blueprint(bp)
 
