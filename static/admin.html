@@ -175,6 +175,42 @@ input:checked + .slider:before{transform:translateX(20px);}
 
 .tab-content{display:none;}
 .tab-content.active{display:block;}
+
+/* ── Responsive mobile ──────────────────── */
+@media(max-width:767px){
+  .topbar{flex-wrap:wrap;gap:8px;padding:10px 12px;}
+  .nav{
+    order:2;width:100%;
+    display:flex;overflow-x:auto;flex-wrap:nowrap;gap:4px;
+    scrollbar-width:none;padding-bottom:2px;
+  }
+  .nav::-webkit-scrollbar{display:none;}
+  .nav-btn{white-space:nowrap;flex-shrink:0;padding:6px 12px;font-size:12px;}
+  .content{padding:16px 12px;}
+  h2{font-size:18px;margin-bottom:14px;}
+
+  /* KPI: 2 columns */
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+  .kpi-value{font-size:22px;}
+
+  /* Charts: stack */
+  .chart-row{grid-template-columns:1fr;gap:12px;margin-bottom:18px;}
+
+  /* Tables: horizontal scroll */
+  .table-card{overflow-x:auto;}
+  table{min-width:480px;}
+
+  /* Config: single column */
+  .cfg-grid{grid-template-columns:1fr !important;}
+  .cfg-grid2{grid-template-columns:1fr !important;}
+  .cfg-grid3{grid-template-columns:1fr !important;}
+  .cfg-card-title{font-size:13px;}
+
+  /* Bar label narrower */
+  .bar-label{width:60px;font-size:11px;}
+  .bar-val{width:50px;font-size:11px;}
+
+}
 </style>
 </head>
 <body>
