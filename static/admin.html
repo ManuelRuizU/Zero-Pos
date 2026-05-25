@@ -109,6 +109,69 @@ tr:hover td{background:rgba(255,255,255,0.03);}
 .btn:hover{background:rgba(99,102,241,0.2);border-color:var(--accent);}
 .btn.primary{background:var(--accent);border-color:var(--accent);}
 .btn.primary:hover{filter:brightness(1.1);}
+.btn.success{background:rgba(34,197,94,0.15);border-color:var(--success);color:var(--success);}
+.btn.danger{background:rgba(239,68,68,0.15);border-color:var(--danger);color:var(--danger);}
+.btn.sm{padding:6px 12px;font-size:12px;}
+
+/* Config tab */
+.cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:16px;}
+.cfg-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:22px;
+}
+.cfg-card-title{
+  font-size:14px;font-weight:700;margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.cfg-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.cfg-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group label{font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
+.form-group input,
+.form-group select{
+  background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  border-radius:9px;padding:9px 12px;color:var(--text);font-size:13px;
+  outline:none;transition:border-color .2s;width:100%;
+}
+.form-group input:focus,
+.form-group select:focus{border-color:var(--accent);}
+.form-group select option{background:#13131a;}
+.form-group input[type="password"]{letter-spacing:2px;}
+.cfg-save{
+  margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:10px;
+}
+.save-feedback{font-size:12px;color:var(--success);opacity:0;transition:opacity .3s;}
+.save-feedback.show{opacity:1;}
+
+/* Toggle switch */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;}
+.toggle-row + .toggle-row{border-top:1px solid var(--border);}
+.toggle-info{display:flex;flex-direction:column;gap:2px;}
+.toggle-label{font-size:13px;font-weight:600;}
+.toggle-sub{font-size:11px;color:var(--text-dim);}
+.switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.slider{
+  position:absolute;inset:0;background:rgba(255,255,255,0.12);
+  border-radius:13px;cursor:pointer;transition:.25s;
+  border:1px solid var(--border);
+}
+.slider:before{
+  content:'';position:absolute;height:18px;width:18px;
+  left:3px;bottom:3px;background:#fff;border-radius:50%;
+  transition:.25s;
+}
+input:checked + .slider{background:var(--accent);border-color:var(--accent);}
+input:checked + .slider:before{transform:translateX(20px);}
+
+/* Backup list */
+.backup-list{margin-top:14px;display:flex;flex-direction:column;gap:6px;max-height:180px;overflow-y:auto;}
+.backup-item{
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 12px;font-size:12px;
+}
+.backup-item-name{color:var(--text-dim);font-family:monospace;}
+.backup-item-size{color:var(--text-dim);}
 
 .tab-content{display:none;}
 .tab-content.active{display:block;}
@@ -179,15 +242,180 @@ tr:hover td{background:rgba(255,255,255,0.03);}
   <!-- Config -->
   <div class="tab-content" id="tab-config">
     <h2>Configuración</h2>
-    <div class="ia-panel">
-      <div class="ia-title">💾 Backups</div>
-      <div class="backup-section">
-        <button class="btn primary" onclick="crearBackup()">Crear backup ahora</button>
-        <button class="btn" onclick="location.href='/api/backup/listar'">Ver backups</button>
+    <div class="cfg-grid">
+
+      <!-- Negocio -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">🏪 Negocio</div>
+        <div class="cfg-grid2">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Nombre del negocio</label>
+            <input type="text" id="cfg_nombre_negocio" placeholder="Mi Tienda">
+          </div>
+          <div class="form-group">
+            <label>RUT del negocio</label>
+            <input type="text" id="cfg_rut_negocio" placeholder="12.345.678-9">
+          </div>
+          <div class="form-group">
+            <label>Moneda</label>
+            <select id="cfg_moneda">
+              <option value="CLP">CLP — Peso Chileno</option>
+              <option value="PEN">PEN — Sol Peruano</option>
+              <option value="MXN">MXN — Peso Mexicano</option>
+              <option value="COP">COP — Peso Colombiano</option>
+              <option value="ARS">ARS — Peso Argentino</option>
+              <option value="USD">USD — Dólar</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>IVA (%)</label>
+            <input type="number" id="cfg_iva_porcentaje" placeholder="19" min="0" max="100">
+          </div>
+        </div>
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_negocio">✓ Guardado</span>
+          <button class="btn primary sm" onclick="guardarSeccion('negocio')">Guardar negocio</button>
+        </div>
       </div>
-      <p style="margin-top:12px;font-size:12px;color:var(--text-dim)">
-        Los backups se guardan en <code>/backups/</code> cifrados. Backup automático a las 03:00.
-      </p>
+
+      <!-- Impresora -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">🖨️ Impresora térmica</div>
+        <div class="cfg-grid2">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Tipo de conexión</label>
+            <select id="cfg_impresora_tipo" onchange="toggleImpresora()">
+              <option value="red">Red (WiFi / Ethernet)</option>
+              <option value="usb">USB</option>
+              <option value="archivo">Archivo / Puerto serie</option>
+            </select>
+          </div>
+          <div class="form-group" id="grp_imp_ip">
+            <label>IP de la impresora</label>
+            <input type="text" id="cfg_impresora_ip" placeholder="192.168.1.100">
+          </div>
+          <div class="form-group" id="grp_imp_puerto">
+            <label>Puerto</label>
+            <input type="text" id="cfg_impresora_puerto" placeholder="9100">
+          </div>
+        </div>
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_impresora">✓ Guardado</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn sm" onclick="testImpresora()">Probar conexión</button>
+            <button class="btn primary sm" onclick="guardarSeccion('impresora')">Guardar</button>
+          </div>
+        </div>
+        <div id="imp_test_result" style="margin-top:10px;font-size:12px;display:none;"></div>
+      </div>
+
+      <!-- Khipu -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">🏦 Pagos Khipu <span style="font-size:11px;color:var(--text-dim);font-weight:400">(1% comisión)</span></div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="form-group">
+            <label>Receiver ID</label>
+            <input type="text" id="cfg_khipu_receiver_id" placeholder="Tu ID de receptor Khipu">
+          </div>
+          <div class="form-group">
+            <label>Secret</label>
+            <input type="password" id="cfg_khipu_secret" placeholder="••••••••••••••••••••">
+          </div>
+        </div>
+        <p style="margin-top:10px;font-size:11px;color:var(--text-dim);">
+          Obtén tus credenciales en khipu.com → Mi cuenta → Cobrador.
+        </p>
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_khipu">✓ Guardado</span>
+          <button class="btn primary sm" onclick="guardarSeccion('khipu')">Guardar Khipu</button>
+        </div>
+      </div>
+
+      <!-- Datos bancarios QR -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">💳 Datos bancarios para QR transferencia</div>
+        <div class="cfg-grid2">
+          <div class="form-group">
+            <label>Titular de la cuenta</label>
+            <input type="text" id="cfg_banco_titular" placeholder="Nombre o razón social">
+          </div>
+          <div class="form-group">
+            <label>RUT titular</label>
+            <input type="text" id="cfg_rut_negocio_banco" placeholder="12.345.678-9">
+          </div>
+          <div class="form-group">
+            <label>Banco</label>
+            <input type="text" id="cfg_banco_nombre" placeholder="Banco Estado, BCI, Santander...">
+          </div>
+          <div class="form-group">
+            <label>Tipo de cuenta</label>
+            <select id="cfg_banco_tipo_cuenta">
+              <option value="Cuenta Corriente">Cuenta Corriente</option>
+              <option value="Cuenta Vista">Cuenta Vista / RUT</option>
+              <option value="Cuenta de Ahorro">Cuenta de Ahorro</option>
+            </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Número de cuenta</label>
+            <input type="text" id="cfg_banco_cuenta" placeholder="0000000000">
+          </div>
+        </div>
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_banco">✓ Guardado</span>
+          <button class="btn primary sm" onclick="guardarSeccion('banco')">Guardar banco</button>
+        </div>
+      </div>
+
+      <!-- Pantallas -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">🖥️ Pantallas adicionales</div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Pantalla cliente</span>
+            <span class="toggle-sub">Muestra total y QR al cliente en segundo monitor — <a href="cliente.html" target="_blank" style="color:var(--accent2);">abrir</a></span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="cfg_pantalla_cliente_activa">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Pantalla cocina</span>
+            <span class="toggle-sub">Cola de pedidos para cocina o barra — <a href="cocina.html" target="_blank" style="color:var(--accent2);">abrir</a></span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="cfg_pantalla_cocina_activa">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_pantallas">✓ Guardado</span>
+          <button class="btn primary sm" onclick="guardarSeccion('pantallas')">Guardar pantallas</button>
+        </div>
+      </div>
+
+      <!-- Backup -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">💾 Backup automático</div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label>Hora del backup diario</label>
+          <input type="time" id="cfg_backup_hora" value="03:00">
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">
+          Los backups se cifran con AES-256 y se guardan en <code>backups/</code>. Se mantienen los últimos 7.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn primary sm" onclick="crearBackup()">Crear backup ahora</button>
+          <button class="btn sm" onclick="cargarListaBackups()">Actualizar lista</button>
+        </div>
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_backup">✓ Guardado</span>
+          <button class="btn sm" onclick="guardarSeccion('backup')">Guardar hora</button>
+        </div>
+        <div class="backup-list" id="backupList"></div>
+      </div>
+
     </div>
   </div>
 
@@ -208,6 +436,7 @@ function showTab(name, btn) {
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
   if (name==='ventas') cargarVentas();
+  if (name==='config') cargarConfig();
 }
 
 async function cargarDashboard() {
@@ -275,8 +504,137 @@ async function preguntarIA() {
 }
 
 async function crearBackup() {
+  const btn = event.currentTarget;
+  btn.disabled = true;
+  btn.textContent = 'Creando...';
   const r = await fetch('/api/backup/crear',{method:'POST',credentials:'include'}).then(r=>r.json());
-  alert(r.ok ? `✓ Backup creado: ${r.nombre}` : `Error: ${r.error}`);
+  btn.disabled = false;
+  btn.textContent = 'Crear backup ahora';
+  if (r.ok) {
+    showFeedback('fb_backup', `✓ ${r.nombre} (${r.tamaño_kb} KB)`);
+    cargarListaBackups();
+  } else {
+    alert('Error: ' + r.error);
+  }
+}
+
+// ── Config ────────────────────────────────────────────────────────────
+let cfgActual = {};
+
+async function cargarConfig() {
+  cfgActual = await fetch('/api/config',{credentials:'include'}).then(r=>r.json()).catch(()=>({}));
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+  const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val==='1'||val===true; };
+
+  set('cfg_nombre_negocio',      cfgActual.nombre_negocio);
+  set('cfg_rut_negocio',         cfgActual.rut_negocio);
+  set('cfg_moneda',              cfgActual.moneda || 'CLP');
+  set('cfg_iva_porcentaje',      cfgActual.iva_porcentaje ?? '19');
+  set('cfg_impresora_tipo',      cfgActual.impresora_tipo || 'red');
+  set('cfg_impresora_ip',        cfgActual.impresora_ip);
+  set('cfg_impresora_puerto',    cfgActual.impresora_puerto || '9100');
+  set('cfg_khipu_receiver_id',   cfgActual.khipu_receiver_id);
+  set('cfg_khipu_secret',        cfgActual.khipu_secret ? '••••••••••••' : '');
+  set('cfg_banco_titular',       cfgActual.banco_titular);
+  set('cfg_rut_negocio_banco',   cfgActual.rut_negocio);
+  set('cfg_banco_nombre',        cfgActual.banco_nombre);
+  set('cfg_banco_tipo_cuenta',   cfgActual.banco_tipo_cuenta || 'Cuenta Corriente');
+  set('cfg_banco_cuenta',        cfgActual.banco_cuenta);
+  set('cfg_backup_hora',         cfgActual.backup_hora || '03:00');
+  setChk('cfg_pantalla_cliente_activa', cfgActual.pantalla_cliente_activa);
+  setChk('cfg_pantalla_cocina_activa',  cfgActual.pantalla_cocina_activa);
+
+  toggleImpresora();
+  cargarListaBackups();
+}
+
+function toggleImpresora() {
+  const tipo = document.getElementById('cfg_impresora_tipo')?.value;
+  const showRed = tipo === 'red';
+  document.getElementById('grp_imp_ip').style.display     = showRed ? '' : 'none';
+  document.getElementById('grp_imp_puerto').style.display = showRed ? '' : 'none';
+}
+
+const SECCIONES = {
+  negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje'],
+  impresora: ['impresora_tipo','impresora_ip','impresora_puerto'],
+  khipu:     ['khipu_receiver_id','khipu_secret'],
+  banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
+  pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa'],
+  backup:    ['backup_hora'],
+};
+
+async function guardarSeccion(seccion) {
+  const claves = SECCIONES[seccion];
+  const data = {};
+
+  for (const clave of claves) {
+    const elId = 'cfg_' + clave;
+    // banco_titular y rut_negocio_banco son especiales
+    const el = document.getElementById(elId) || document.getElementById('cfg_rut_negocio_banco');
+    if (!el) continue;
+
+    if (el.type === 'checkbox') {
+      data[clave] = el.checked ? '1' : '0';
+    } else if (el.type === 'password' && el.value === '••••••••••••') {
+      // no sobreescribir si no cambió
+    } else {
+      data[clave] = el.value.trim();
+    }
+  }
+
+  // caso especial: rut en datos bancarios sincroniza rut_negocio
+  if (seccion === 'banco') {
+    const rutBanco = document.getElementById('cfg_rut_negocio_banco')?.value.trim();
+    if (rutBanco) data['rut_negocio'] = rutBanco;
+  }
+
+  const r = await fetch('/api/config', {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data),
+  }).then(r=>r.json());
+
+  if (r.ok) showFeedback('fb_'+seccion);
+  else alert('Error: ' + (r.error || 'desconocido'));
+}
+
+function showFeedback(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg || '✓ Guardado';
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+async function testImpresora() {
+  const res = document.getElementById('imp_test_result');
+  res.style.display = 'block';
+  res.textContent = 'Probando...';
+  res.style.color = 'var(--text-dim)';
+  const r = await fetch('/api/impresora/test',{method:'POST',credentials:'include'}).then(r=>r.json());
+  res.textContent = r.ok ? '✓ Impresora conectada correctamente' : '✗ ' + (r.error || 'Sin respuesta');
+  res.style.color = r.ok ? 'var(--success)' : 'var(--danger)';
+}
+
+async function cargarListaBackups() {
+  const list = document.getElementById('backupList');
+  if (!list) return;
+  const backups = await fetch('/api/backup/listar',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  if (!backups.length) {
+    list.innerHTML = '<p style="color:var(--text-dim);font-size:12px;padding:8px 0">Sin backups todavía</p>';
+    return;
+  }
+  list.innerHTML = backups.map(b => `
+    <div class="backup-item">
+      <span class="backup-item-name">${b.nombre}</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="backup-item-size">${b.tamaño_kb} KB</span>
+        <a href="/api/backup/descargar/${encodeURIComponent(b.nombre)}"
+           style="color:var(--accent2);font-size:11px;text-decoration:none;">↓ Descargar</a>
+      </div>
+    </div>`).join('');
 }
 
 init();

@@ -90,11 +90,12 @@ def create_app() -> Flask:
     from routes.qr import qr_bp
     from routes.khipu import khipu_bp
     from routes.multi import multi_bp
+    from routes.config import config_bp
 
     for bp in (
         auth_bp, ventas_bp, productos_bp, reportes_bp,
         impresora_bp, backup_bp, inventario_bp, facturas_bp,
-        comprobante_bp, qr_bp, khipu_bp, multi_bp,
+        comprobante_bp, qr_bp, khipu_bp, multi_bp, config_bp,
     ):
         app.register_blueprint(bp)
 
