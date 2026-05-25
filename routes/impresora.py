@@ -11,9 +11,6 @@ def imprimir_ticket(venta_id):
     if not session.get("usuario_id"):
         return jsonify({"error": "No autenticado"}), 401
 
-    data = request.get_json(silent=True) or {}
-    config_imp = data.get("config", {})
-
     with db_session() as conn:
         venta = conn.execute(
             "SELECT * FROM ventas WHERE id=?", (venta_id,)
@@ -22,7 +19,7 @@ def imprimir_ticket(venta_id):
             return jsonify({"error": "Venta no encontrada"}), 404
 
         items = conn.execute(
-            """SELECT vi.cantidad, vi.precio_unit, vi.subtotal, p.nombre
+            """SELECT vi.cantidad, vi.precio_unit, vi.subtotal, p.nombre as producto_nombre
                FROM venta_items vi JOIN productos p ON vi.producto_id=p.id
                WHERE vi.venta_id=?""",
             (venta_id,)
@@ -30,6 +27,13 @@ def imprimir_ticket(venta_id):
 
         cfg = conn.execute("SELECT clave, valor FROM config").fetchall()
         config = {r["clave"]: r["valor"] for r in cfg}
+
+    # Leer config de impresora desde DB (misma fuente que test_conexion)
+    config_imp = {
+        "tipo":   config.get("impresora_tipo", "red"),
+        "ip":     config.get("impresora_ip", "192.168.1.100"),
+        "puerto": config.get("impresora_puerto", "9100"),
+    }
 
     from utils.impresora import imprimir_recibo
     resultado = imprimir_recibo(dict(venta), [dict(i) for i in items], config, config_imp)

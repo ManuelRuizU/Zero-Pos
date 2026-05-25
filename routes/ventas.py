@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from flask import Blueprint, request, jsonify, session
 from database import db_session
 
@@ -31,8 +32,13 @@ def crear_venta():
     notas = data.get("notas")
     turno_id = session.get("turno_id")
 
+    venta_id = None
+    total = 0
+    items_para_ticket = []
+    config_negocio = {}
+    config_imp = {}
+
     with db_session() as conn:
-        total = 0
         items_validados = []
 
         for item in items:
@@ -54,6 +60,7 @@ def crear_venta():
             total += subtotal
             items_validados.append({
                 "producto_id": pid,
+                "producto_nombre": prod["nombre"],
                 "cantidad": qty,
                 "precio_unit": precio_unit,
                 "descuento": descuento_item,
@@ -61,10 +68,18 @@ def crear_venta():
             })
 
         total = round(total - descuento_global, 2)
-        iva_pct = float(conn.execute(
-            "SELECT valor FROM config WHERE clave='iva_porcentaje'"
-        ).fetchone()["valor"] or 19)
+        cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+        config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
+
+        iva_pct = float(config_negocio.get("iva_porcentaje") or 19)
         impuesto = round(total * iva_pct / (100 + iva_pct), 2)
+
+        # Leer config de impresora desde DB (misma fuente que usa test_conexion)
+        config_imp = {
+            "tipo": config_negocio.get("impresora_tipo", "red"),
+            "ip":   config_negocio.get("impresora_ip", "192.168.1.100"),
+            "puerto": config_negocio.get("impresora_puerto", "9100"),
+        }
 
         cur = conn.execute(
             """INSERT INTO ventas
@@ -90,8 +105,38 @@ def crear_venta():
             )
             _check_stock_alerta(conn, it["producto_id"])
 
+        items_para_ticket = items_validados
         logger.info(f"Venta #{venta_id} creada por usuario {uid} — total={total}")
-        return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
+
+    # La transacción ya está committed. Imprimir sin afectar la respuesta.
+    _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
+                           config_negocio, config_imp)
+
+    return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
+
+
+def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, config_imp):
+    """Imprime en hilo separado para no bloquear la respuesta HTTP."""
+    import threading
+
+    def _print():
+        try:
+            from utils.impresora import imprimir_recibo
+            venta_data = {
+                "id": venta_id,
+                "total": total,
+                "metodo_pago": metodo_pago,
+                "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            resultado = imprimir_recibo(venta_data, items, config_negocio, config_imp)
+            if resultado.get("ok"):
+                logger.info(f"Ticket venta #{venta_id} impreso OK")
+            else:
+                logger.warning(f"Impresión venta #{venta_id}: {resultado.get('error', 'error desconocido')}")
+        except Exception as e:
+            logger.warning(f"Error al imprimir ticket venta #{venta_id}: {e}")
+
+    threading.Thread(target=_print, daemon=True, name=f"ticket-{venta_id}").start()
 
 
 def _check_stock_alerta(conn, producto_id: int):
