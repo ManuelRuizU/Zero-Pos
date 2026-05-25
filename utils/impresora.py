@@ -1,23 +1,30 @@
+import importlib.util
 import logging
 from pathlib import Path
 
 logger = logging.getLogger("zero_pos.impresora")
 
+# Detecta si el paquete está instalado sin importar sus submódulos de hardware,
+# que requieren pyusb / pyserial y fallan con ImportError aunque escpos esté OK.
 try:
-    from escpos.printer import Network, Usb, File
-    ESCPOS_OK = True
-except ImportError:
-    ESCPOS_OK = False
+    ESCPOS_OK = importlib.util.find_spec("escpos") is not None
+except ValueError:
+    # find_spec lanza ValueError si el módulo ya está en sys.modules sin __spec__
+    ESCPOS_OK = "escpos" in __import__("sys").modules
+if not ESCPOS_OK:
     logger.warning("python-escpos no instalado — impresión desactivada")
 
 try:
-    import bluetooth
+    import bluetooth  # noqa: F401
     BT_OK = True
 except ImportError:
     BT_OK = False
 
 
 def _get_printer(config_imp: dict):
+    # Import lazy: solo cuando se va a imprimir de verdad.
+    from escpos.printer import Network, Usb, File  # noqa: F401
+
     tipo = config_imp.get("tipo", "red")
     if tipo == "red":
         ip = config_imp.get("ip", "192.168.1.100")
