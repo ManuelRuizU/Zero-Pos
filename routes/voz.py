@@ -314,6 +314,84 @@ def _consultar_db(texto: str, ctx: str) -> dict:
     return {"datos": None, "template": "No encontré esa información. Intenta ser más específico."}
 
 
+# ── Saludo matutino ───────────────────────────────────────────────────────────
+
+@voz_bp.route("/saludo", methods=["GET"])
+def saludo():
+    """Saludo con resumen del negocio (ventas ayer, stock bajo, turno)."""
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+
+    with db_session() as conn:
+        ayer = conn.execute(
+            "SELECT COUNT(*) as n, COALESCE(SUM(total),0) as tot "
+            "FROM ventas WHERE DATE(creado_en)=DATE('now','-1 day') AND estado='completada'"
+        ).fetchone()
+        sem_ant = conn.execute(
+            "SELECT COALESCE(SUM(total),0) as tot "
+            "FROM ventas WHERE DATE(creado_en)=DATE('now','-8 days') AND estado='completada'"
+        ).fetchone()
+        bajo_prod = conn.execute(
+            "SELECT nombre, stock FROM productos "
+            "WHERE activo=1 AND stock<=stock_minimo LIMIT 5"
+        ).fetchall()
+        bajo_var = conn.execute(
+            "SELECT p.nombre||' '||pv.nombre as nombre, pv.stock "
+            "FROM producto_variantes pv JOIN productos p ON pv.producto_id=p.id "
+            "WHERE pv.activo=1 AND pv.stock<=pv.stock_minimo LIMIT 5"
+        ).fetchall()
+        bajo = [dict(r) for r in bajo_prod] + [dict(r) for r in bajo_var]
+        turno = conn.execute(
+            "SELECT id FROM turnos WHERE estado='abierto' LIMIT 1"
+        ).fetchone()
+
+    tot_ayer = int(ayer["tot"])
+    n_ayer = ayer["n"]
+    tot_sem = int(sem_ant["tot"])
+
+    diff_txt = ""
+    if tot_sem > 0:
+        diff = ((tot_ayer - tot_sem) / tot_sem) * 100
+        if diff >= 5:
+            diff_txt = f", un {abs(diff):.0f}% más que la semana pasada"
+        elif diff <= -5:
+            diff_txt = f", un {abs(diff):.0f}% menos que la semana pasada"
+
+    bajo_txt = ""
+    if bajo:
+        nombres = ", ".join(b["nombre"] for b in bajo[:3])
+        bajo_txt = f" Hay {len(bajo)} producto{'s' if len(bajo)>1 else ''} con stock bajo: {nombres}."
+
+    turno_txt = "" if turno else " No hay turno abierto. ¿Abrimos la caja?"
+    n_txt = f"{n_ayer} {'venta' if n_ayer == 1 else 'ventas'}"
+    template = f"Buenos días. Ayer vendiste ${tot_ayer:,.0f} en {n_txt}{diff_txt}.{bajo_txt}{turno_txt}".replace(",", ".")
+
+    respuesta = template
+    if _ollama_ok():
+        system = (
+            "Eres ZERO, el asistente del punto de venta. "
+            "Saluda al cajero de manera breve, natural y motivadora en español. "
+            "Máximo 2 oraciones. Solo usa los datos dados."
+        )
+        datos_str = json.dumps({
+            "ventas_ayer": tot_ayer, "num_ventas": n_ayer,
+            "ventas_semana_anterior": tot_sem, "productos_bajo_stock": len(bajo),
+            "turno_abierto": turno is not None,
+        }, ensure_ascii=False)
+        raw = _ollama(f"Datos: {datos_str}\nGenera saludo:", system, 100)
+        if raw:
+            respuesta = raw
+
+    return jsonify({
+        "respuesta": respuesta,
+        "datos": {
+            "ventas_ayer": tot_ayer, "num_ventas_ayer": n_ayer,
+            "ventas_semana_ant": tot_sem, "bajo_stock": len(bajo),
+            "turno": bool(turno),
+        },
+    })
+
+
 # ── Config ────────────────────────────────────────────────────────────────────
 
 _VOZ_KEYS = {"voz_activa", "voz_palabra_clave", "voz_velocidad", "voz_tono"}

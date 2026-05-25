@@ -44,22 +44,32 @@ body {
 }
 .logo { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; white-space: nowrap; }
 .logo span { color: var(--accent); }
-.cajero { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.topbar-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; align-items: center; }
+.topbar-spacer { flex: 1; min-width: 8px; }
 
-/* Voice button — always visible, prominent */
+/* Voice button — solid purple, always visible */
 .btn-voz {
-  background: rgba(99,102,241,.15); border: 1.5px solid rgba(99,102,241,.4);
-  color: #a5b4fc; border-radius: 20px; padding: 7px 12px;
+  background: #6366f1; border: none;
+  color: #fff; border-radius: 20px; padding: 8px 14px;
   font-size: 13px; font-weight: 700; cursor: pointer; transition: all .2s;
-  display: flex; align-items: center; gap: 5px; white-space: nowrap;
-  flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  flex-shrink: 0; box-shadow: 0 2px 12px rgba(99,102,241,.4);
 }
 .btn-voz.activo {
-  background: rgba(34,197,94,.18); border-color: var(--success);
-  color: var(--success); box-shadow: 0 0 0 3px rgba(34,197,94,.12);
+  background: #16a34a;
+  box-shadow: 0 0 0 4px rgba(34,197,94,.2), 0 2px 12px rgba(34,197,94,.4);
+  animation: vozPulse 2s ease-in-out infinite;
 }
-.btn-voz:active { transform: scale(.96); }
+@keyframes vozPulse { 0%,100%{box-shadow:0 0 0 4px rgba(34,197,94,.2),0 2px 12px rgba(34,197,94,.4);}
+  50%{box-shadow:0 0 0 8px rgba(34,197,94,.1),0 2px 16px rgba(34,197,94,.6);} }
+.btn-voz:active { transform: scale(.95); }
+
+/* Hide label text on tiny screens — just show emoji */
+.voz-kw-label { /* always visible by default */ }
+@media (max-width: 399px) {
+  .voz-kw-label { display: none; }
+  .btn-admin-label { display: none; }
+}
+
 .btn-top {
   background: var(--surface); border: 1px solid var(--border);
   color: var(--text); border-radius: 8px; padding: 6px 10px;
@@ -71,10 +81,17 @@ body {
   background: var(--danger); color: #fff;
   border-radius: 99px; padding: 1px 5px; font-size: 11px; margin-left: 2px;
 }
-/* On very narrow screens, hide less critical buttons */
-@media (max-width: 400px) {
-  .btn-top.hide-xs { display: none; }
+
+/* What-I-heard feedback strip */
+.voz-escuche {
+  position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
+  background: rgba(22,163,74,.95); color: #fff; border-radius: 20px;
+  padding: 5px 16px; font-size: 13px; font-weight: 600;
+  z-index: 450; pointer-events: none;
+  opacity: 0; transition: opacity .2s;
+  max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.voz-escuche.show { opacity: 1; }
 
 /* Voice wave animation */
 .voz-ondas { display: flex; align-items: center; gap: 2px; height: 14px; }
@@ -480,8 +497,7 @@ body {
 
 /* ── Desktop overrides (>= 768px) ────────── */
 @media (min-width: 768px) {
-  .topbar { padding: 10px 16px; gap: 12px; }
-  .topbar-actions { gap: 8px; }
+  .topbar { padding: 10px 16px; gap: 10px; }
 
   .layout { flex-direction: row; }
 
@@ -522,15 +538,13 @@ body {
 <!-- Topbar -->
 <div class="topbar">
   <div class="logo">ZERO<span>POS</span></div>
-  <div class="cajero" id="cajeroNombre">Cargando...</div>
-  <div class="topbar-actions">
-    <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Asistente de voz ZERO">🎤 ZERO</button>
-    <button class="btn-top" onclick="abrirVentaRapida()" title="Venta rápida">⚡</button>
-    <button class="btn-top hide-xs" onclick="verAlertas()" id="btnAlertas" title="Alertas de stock">⚠️</button>
-    <button class="btn-top hide-xs" onclick="location.href='admin.html'" title="Admin">📊</button>
-    <button class="btn-top" onclick="cerrarSesion()">Salir</button>
-  </div>
+  <button class="btn-top" onclick="location.href='admin.html'" title="Admin">📊 <span class="btn-admin-label">Admin</span></button>
+  <div class="topbar-spacer"></div>
+  <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Asistente de voz ZERO">🎤 <span class="voz-kw-label">ZERO</span></button>
+  <button class="btn-top" onclick="abrirVentaRapida()" title="Venta rápida">⚡</button>
+  <button class="btn-top" onclick="cerrarSesion()">Salir</button>
 </div>
+<div class="voz-escuche" id="vozEscuche"></div>
 
 <div class="layout">
 
@@ -734,55 +748,155 @@ let total = 0;
 
 // Smart emoji: category icon → name-based keyword → fallback
 function getProductEmoji(prod) {
-  // 1. Category icon from DB
   const catIco = catIconoMap[prod.categoria_id];
   if (catIco && catIco !== '📦') return catIco;
-  // 2. Keyword match on product name
   const n = (prod.nombre || '').toLowerCase();
-  if (/coca|pepsi|fanta|sprite|gaseosa|refresco|bebida/.test(n)) return '🥤';
-  if (/agua\b/.test(n)) return '💧';
-  if (/jugo|nectar|néctar/.test(n)) return '🧃';
+  // Bebidas con gas / soft drinks
+  if (/coca[\s-]?cola|coca/.test(n)) return '🥤';
+  if (/pepsi/.test(n)) return '🥤';
+  if (/fanta/.test(n)) return '🧡';
+  if (/sprite/.test(n)) return '🍋';
+  if (/7[\s-]?up/.test(n)) return '🍋';
+  if (/bilz|pap[iy]/.test(n)) return '🥤';
+  if (/gaseosa|refresco|bebida\s+gaseo/.test(n)) return '🥤';
+  if (/monster|red\s*bull|energizante|energy/.test(n)) return '⚡';
+  // Agua
+  if (/agua\s+min|agua\s+sin\s+gas|agua\s+con\s+gas|agua/.test(n)) return '💧';
+  // Jugos / néctares
+  if (/jugo|n[eé]ctar|limonada|naranjada/.test(n)) return '🧃';
+  // Leche / lácteos
   if (/leche/.test(n)) return '🥛';
-  if (/yogur/.test(n)) return '🍶';
-  if (/pan\b|marraqueta|hallulla|baguette|integral/.test(n)) return '🍞';
-  if (/cafe|café|espresso|latte|cappuccino/.test(n)) return '☕';
-  if (/te\b|té\b|hierba/.test(n)) return '🍵';
-  if (/cerveza|birra/.test(n)) return '🍺';
-  if (/vino/.test(n)) return '🍷';
-  if (/pisco|ron|vodka|whisky|whiskey|spirit/.test(n)) return '🥃';
-  if (/atun|atún|sardina/.test(n)) return '🐟';
-  if (/pollo|pavo/.test(n)) return '🍗';
-  if (/carne|vacuno|cerdo|chuleta/.test(n)) return '🥩';
-  if (/arroz/.test(n)) return '🍚';
-  if (/fideos|pasta|tallarín/.test(n)) return '🍝';
-  if (/aceite/.test(n)) return '🫙';
-  if (/azúcar|azucar/.test(n)) return '🍬';
-  if (/sal\b/.test(n)) return '🧂';
-  if (/harina/.test(n)) return '🌾';
-  if (/huevo|huevos/.test(n)) return '🥚';
-  if (/mantequilla|manteca|margarina/.test(n)) return '🧈';
+  if (/yogur|yoghurt/.test(n)) return '🍶';
   if (/queso/.test(n)) return '🧀';
-  if (/manzana|pera|naranja|platano|plátano|frutilla|fruta/.test(n)) return '🍎';
-  if (/papa|tomate|cebolla|zanahoria|verdura|lechuga|espinaca/.test(n)) return '🥕';
-  if (/jabón|jabon|detergente/.test(n)) return '🧼';
-  if (/shampoo|champu|champú/.test(n)) return '🧴';
-  if (/papel higiénico|papel|servilleta/.test(n)) return '🧻';
-  if (/cigarro|tabaco|cigarrillo/.test(n)) return '🚬';
-  if (/chocolate|galleta|snack/.test(n)) return '🍫';
-  if (/helado|ice/.test(n)) return '🍦';
+  if (/mantequilla|manteca|margarina/.test(n)) return '🧈';
+  if (/crema/.test(n)) return '🥛';
+  // Pan
+  if (/marraqueta|hallulla|baguette|pan\s+integral|pan\s+de\s+molde|pan/.test(n)) return '🍞';
+  if (/tostada|tostado|galleta\s+de\s+agua|galleta\s+sal/.test(n)) return '🥨';
+  // Café / té / infusiones
+  if (/nescaf[eé]|lavazza|starbucks|caf[eé]\s+inst/.test(n)) return '☕';
+  if (/caf[eé]|espresso|latte|cappuccino/.test(n)) return '☕';
+  if (/t[eé]\s+en\s+bolsa|t[eé]\s+negro|t[eé]\s+verde|t[eé]\s+menta|t[eé]/.test(n)) return '🍵';
+  if (/hierba\s+mate|mate/.test(n)) return '🧉';
+  if (/cacao|cocoa|milo|nesquik/.test(n)) return '🍫';
+  // Alcohol
+  if (/cerveza|birra|schop/.test(n)) return '🍺';
+  if (/vino\s+tinto|vino\s+blanco|vino\s+ros[aá]do|vino/.test(n)) return '🍷';
+  if (/pisco|ron|vodka|whisky|whiskey|tequila|gin|brandy|cognac/.test(n)) return '🥃';
+  if (/champa[ñn]a|espumante|cava/.test(n)) return '🍾';
+  if (/sidra/.test(n)) return '🍺';
+  // Conservas / enlatados
+  if (/at[uú]n|sardina|anchoa/.test(n)) return '🐟';
+  if (/tomate\s+en\s+lata|tomate\s+triturado|pasta\s+de\s+tomate/.test(n)) return '🍅';
+  if (/lenteja|garbanzo|poroto|fr[eé]jol|arveja|choclo/.test(n)) return '🫘';
+  // Carnes
+  if (/pollo|pechuga|muslo|pavo/.test(n)) return '🍗';
+  if (/vacuno|carne\s+molida|filete|bistec|asado|lomo\s+vetado|lomo\s+liso/.test(n)) return '🥩';
+  if (/cerdo|chuleta|costilla|tocino|panceta/.test(n)) return '🥓';
+  if (/salchicha|vienesa|hot[\s-]?dog|salami|jamón|jamon/.test(n)) return '🌭';
+  if (/chorizo/.test(n)) return '🌭';
+  // Mariscos / pescados
+  if (/salmon|salm[oó]n/.test(n)) return '🐟';
+  if (/camarón|camaron|langostino|pulpo|calamar/.test(n)) return '🦐';
+  // Cereales / granos
+  if (/arroz/.test(n)) return '🍚';
+  if (/fideos|pasta|tallar[ií]n|espagueti|penne/.test(n)) return '🍝';
+  if (/harina/.test(n)) return '🌾';
+  if (/avena/.test(n)) return '🌾';
+  if (/corn\s*flakes|cereal|muesli/.test(n)) return '🥣';
+  // Condimentos / salsas
+  if (/aceite\s+de\s+oliva|aceite\s+vegetal|aceite/.test(n)) return '🫙';
+  if (/vinagre/.test(n)) return '🫙';
+  if (/sal|sal\s+de\s+mesa/.test(n)) return '🧂';
+  if (/az[uú]car/.test(n)) return '🍬';
+  if (/miel/.test(n)) return '🍯';
+  if (/salsa\s+de\s+tomate|ketchup|ket?chup/.test(n)) return '🍅';
+  if (/mayonesa|mayo/.test(n)) return '🫙';
+  if (/mostaza/.test(n)) return '🌭';
+  if (/mermelada|confit[uú]ra/.test(n)) return '🍓';
+  if (/manjar|dulce\s+de\s+leche/.test(n)) return '🍮';
+  // Frutas y verduras frescas
+  if (/manzana/.test(n)) return '🍎';
+  if (/pera/.test(n)) return '🍐';
+  if (/naranja/.test(n)) return '🍊';
+  if (/pl[aá]tano|banana/.test(n)) return '🍌';
+  if (/frutilla|fresa/.test(n)) return '🍓';
+  if (/uva/.test(n)) return '🍇';
+  if (/lim[oó]n/.test(n)) return '🍋';
+  if (/piña|ananá/.test(n)) return '🍍';
+  if (/melón|melon/.test(n)) return '🍈';
+  if (/sand[ií]a/.test(n)) return '🍉';
+  if (/durazno|duraznos|melocot[oó]n/.test(n)) return '🍑';
+  if (/kiwi/.test(n)) return '🥝';
+  if (/mango/.test(n)) return '🥭';
+  if (/tomate/.test(n)) return '🍅';
+  if (/papa|patata/.test(n)) return '🥔';
+  if (/cebolla/.test(n)) return '🧅';
+  if (/ajo/.test(n)) return '🧄';
+  if (/zanahoria/.test(n)) return '🥕';
+  if (/lechuga|espinaca|acelga|kale/.test(n)) return '🥬';
+  if (/brocol[ií]|coliflor/.test(n)) return '🥦';
+  if (/pepino/.test(n)) return '🥒';
+  if (/pimiento|pimentón|pimt[oó]n/.test(n)) return '🫑';
+  if (/corn[oó]|choclo\s+fresco/.test(n)) return '🌽';
+  if (/champi[ñn][oó]n|hongo/.test(n)) return '🍄';
+  if (/palta|aguacate/.test(n)) return '🥑';
+  // Huevos
+  if (/huevo/.test(n)) return '🥚';
+  // Snacks / dulces
+  if (/chocolate/.test(n)) return '🍫';
+  if (/galleta|cookie/.test(n)) return '🍪';
+  if (/alfajor/.test(n)) return '🍪';
+  if (/caramelo|gomita|gomitas/.test(n)) return '🍬';
+  if (/chupete|lollipop/.test(n)) return '🍭';
+  if (/chicle|goma\s+de\s+mascar/.test(n)) return '🫧';
+  if (/maní|mani|nuez|almendra|castañ[ao]|fruto\s+seco/.test(n)) return '🥜';
+  if (/papas\s+fritas|chips|palitos/.test(n)) return '🍟';
+  if (/kuchen|torta|pastel|queque|cake/.test(n)) return '🎂';
+  if (/helado|ice\s+cream|paleta\s+helada/.test(n)) return '🍦';
+  // Comida preparada
   if (/pizza/.test(n)) return '🍕';
-  if (/hotdog|completo/.test(n)) return '🌭';
-  if (/hamburgu/.test(n)) return '🍔';
-  if (/papas fritas|papas fritas|fritas/.test(n)) return '🍟';
-  if (/café|desayuno|brunch/.test(n)) return '☕';
-  // 3. Category name fallback
-  if (/bebi|drink/.test((prod.categoria_nombre || '').toLowerCase())) return '🥤';
-  if (/pana|bakery/.test((prod.categoria_nombre || '').toLowerCase())) return '🍞';
-  if (/carne|meat/.test((prod.categoria_nombre || '').toLowerCase())) return '🥩';
-  if (/frutas|verdur/.test((prod.categoria_nombre || '').toLowerCase())) return '🥕';
-  if (/limp|clean/.test((prod.categoria_nombre || '').toLowerCase())) return '🧼';
-  if (/snack|dulce/.test((prod.categoria_nombre || '').toLowerCase())) return '🍫';
-  return catIco || '🛒';   // use cart only as absolute last resort
+  if (/hamburgue/.test(n)) return '🍔';
+  if (/hot[\s-]?dog|completo/.test(n)) return '🌭';
+  if (/empanada/.test(n)) return '🥟';
+  if (/sandwich|s[aá]ndwich/.test(n)) return '🥪';
+  if (/sopa|caldo/.test(n)) return '🍲';
+  if (/arroz\s+con\s+leche|postre/.test(n)) return '🍮';
+  // Limpieza / aseo
+  if (/jab[oó]n\s+de\s+mano|jab[oó]n\s+líquido|jab[oó]n/.test(n)) return '🧼';
+  if (/detergente|lava\s+loza|lava-loza|omo|ariel/.test(n)) return '🫧';
+  if (/suavizante|fab|downy/.test(n)) return '🫧';
+  if (/cloro|lejía|lejia|hipoclorito/.test(n)) return '🧪';
+  if (/desinfectante|lysol|pinesol/.test(n)) return '🧪';
+  if (/shampoo|champ[úu]|head\s*&\s*shoulders|pantene|herbal/.test(n)) return '🧴';
+  if (/acondicionador|tratamiento\s+capilar/.test(n)) return '🧴';
+  if (/crema\s+corporal|crema\s+facial|loci[oó]n|body\s+lotion/.test(n)) return '🧴';
+  if (/desodorante|antitranspirante|axe|rexona|dove/.test(n)) return '🧴';
+  if (/pasta\s+dental|cepillo\s+dent|dent[ií]frico|colgate|oral[\s-]?b/.test(n)) return '🪥';
+  if (/papel\s+higi[eé]nico|pa\.hig|toilette/.test(n)) return '🧻';
+  if (/toalla\s+de\s+papel|servilleta/.test(n)) return '🧻';
+  if (/pa[ñn]al|pampers|huggies/.test(n)) return '👶';
+  if (/preservativo|cond[oó]n/.test(n)) return '💊';
+  if (/pila\s+aa|pila\s+aaa|bater[ií]a\s+aa/.test(n)) return '🔋';
+  if (/encendedor|fosforo|f[oó]sforo/.test(n)) return '🔥';
+  if (/cigarro|tabaco|cigarrillo|marlboro|kent|belmont/.test(n)) return '🚬';
+  // Farmacia / salud
+  if (/paracetamol|ibuprofeno|aspirina|analg[eé]sico/.test(n)) return '💊';
+  if (/vitamina|suplemento/.test(n)) return '💊';
+  if (/cura\s+rápida|curita|venda\s+elástica/.test(n)) return '🩹';
+  // Categoría nombre fallback
+  const cn = (prod.categoria_nombre || '').toLowerCase();
+  if (/bebi|drink|bebid/.test(cn)) return '🥤';
+  if (/pan[ae]|bakery|pastel/.test(cn)) return '🍞';
+  if (/carne|meat|pollo/.test(cn)) return '🥩';
+  if (/fruta|verdur|vegetal/.test(cn)) return '🥕';
+  if (/limp|clean|aseo|higiene/.test(cn)) return '🧼';
+  if (/snack|dulce|confite/.test(cn)) return '🍫';
+  if (/l[aá]cteo|queso|leche/.test(cn)) return '🥛';
+  if (/licor|alcohol|vino|cerveza/.test(cn)) return '🍷';
+  if (/congelado/.test(cn)) return '🧊';
+  return catIco || '📦';
+}
 }
 
 // ── Asistente de Voz ZERO ────────────────────────────────────
@@ -851,12 +965,22 @@ async function initVoz() {
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (!e.results[i].isFinal) continue;
       const txt = e.results[i][0].transcript.trim();
-      const up = txt.toUpperCase();
-      const idx = up.indexOf(vozKW);
-      if (idx === -1) continue;
-      const cmd = txt.slice(idx + vozKW.length).trim();
-      if (cmd.length < 2) { hablar('Dime'); return; }
-      procesarVoz(cmd);
+      if (!txt) continue;
+      mostrarEscuche(txt);
+      if (vozActiva) {
+        // Button ON: process directly, no wake word needed
+        if (esSaludo(txt)) { saludarVoz(); return; }
+        procesarVoz(txt);
+      } else {
+        // Background mode: require wake word
+        const up = txt.toUpperCase();
+        const idx = up.indexOf(vozKW);
+        if (idx === -1) continue;
+        const cmd = txt.slice(idx + vozKW.length).trim();
+        if (cmd.length < 2) { hablar('Dime'); return; }
+        if (esSaludo(cmd)) { saludarVoz(); return; }
+        procesarVoz(cmd);
+      }
     }
   };
   vozRecog.onerror = (e) => {
@@ -888,10 +1012,36 @@ function actualizarBtnVoz() {
   if (!btn) return;
   if (vozActiva) {
     btn.className = 'btn-voz activo';
-    btn.innerHTML = `🎤 <span class="voz-ondas"><span class="voz-onda"></span><span class="voz-onda"></span><span class="voz-onda"></span><span class="voz-onda"></span><span class="voz-onda"></span></span> Escuchando...`;
+    btn.innerHTML = `<span class="voz-ondas"><span class="voz-onda"></span><span class="voz-onda"></span><span class="voz-onda"></span><span class="voz-onda"></span><span class="voz-onda"></span></span><span class="voz-kw-label"> Escuchando...</span>`;
   } else {
     btn.className = 'btn-voz';
-    btn.innerHTML = `🎤 ${vozKW}`;
+    btn.innerHTML = `🎤 <span class="voz-kw-label">${vozKW}</span>`;
+  }
+}
+
+function mostrarEscuche(txt) {
+  const el = document.getElementById('vozEscuche');
+  if (!el) return;
+  el.textContent = `🎤 "${txt}"`;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function esSaludo(t) {
+  t = t.toLowerCase();
+  return /\b(hola|buenos\s*d[ií]as|buenas\s*tardes|buenas\s*noches|oye|hey|c[oó]mo\s*est[aá]s|qu[eé]\s*tal)\b/.test(t);
+}
+
+async function saludarVoz() {
+  try {
+    const r = await fetch('/api/voz/saludo', {credentials: 'include'});
+    const j = r.ok ? await r.json() : null;
+    const resp = (j && j.respuesta) || 'Buenos días. Listo para ayudarte.';
+    hablar(resp);
+    showToast('🎤 ' + resp.slice(0, 80), 'success');
+  } catch(e) {
+    hablar('Buenos días. Listo para ayudarte.');
   }
 }
 
