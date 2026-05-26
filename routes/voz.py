@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import unicodedata
 import urllib.request
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, session
@@ -42,6 +43,182 @@ def _ollama(prompt: str, system: str = "", max_tokens: int = 200) -> str | None:
         return None
 
 
+# ── Parser de intenciones por keywords (sin LLM) ─────────────────────────────
+
+_WAKE_WORDS = frozenset({'zero', 'jarvis', 'hal', 'nova', 'oye', 'hola', 'hey'})
+
+_PAT_AGREGAR = re.compile(
+    r'\b(agrega|agrega|agregame|agregame|pon(?:me|le|nos|te)?|'
+    r'annade|anade|suma|quiero|dame|deme|metele|meteme|trae|traeme|dale|agrega)\b', re.I
+)
+_PAT_QUITAR = re.compile(
+    r'\b(quita|quitame|saca|elimina|borra(?!\s+todo)\b|remueve|quitar|sacar)\b', re.I
+)
+_PAT_COBRAR = re.compile(
+    r'\b(cobra|cobrar|a\s+cobrar|cerramos|eso\s+es\s+todo|eso\s+nomas?|'
+    r'listo\b|pagar|paga|factura|boleta|cuanto\s+va|cuanto\s+es|el\s+total)\b', re.I
+)
+_PAT_LIMPIAR = re.compile(
+    r'\b(limpia|vacia|borra\s+todo|de\s+nuevo|empezar\s+de\s+nuevo|'
+    r'nuevo\s+cliente|limpiar|vaciar)\b', re.I
+)
+_PAT_VENTAS = re.compile(
+    r'\b(cuanto\s+vendi|vendi\s+hoy|ventas\s+hoy|total\s+del\s+dia|cuanto\s+llevamos)\b', re.I
+)
+_PAT_STOCK = re.compile(
+    r'\b(cuanto\s+queda|cuantos\s+quedan|quedan\s+de|hay\s+de|stock\s+de)\b', re.I
+)
+
+_VARIANTE_EXACTA = [
+    (re.compile(r'3\s*(?:litros?|l\b)|tres\s*litros?|3000\s*(?:ml|cc)?', re.I), '3L'),
+    (re.compile(r'2\s*(?:litros?|l\b)|dos\s*litros?|2000\s*(?:ml|cc)?|familiar\b|mega\b', re.I), '2L'),
+    (re.compile(r'1[.,]5\s*(?:litros?|l\b)?|1500\s*(?:ml|cc)?|litro\s+y\s+medio|uno\s+(?:y\s+)?medio|uno\s+coma\s+cinco', re.I), '1.5L'),
+    (re.compile(r'\bun\s*litro\b|1000\s*(?:ml|cc)?|\b1\s*l\b|de\s+litro\b', re.I), '1L'),
+    (re.compile(r'500\s*(?:ml|cc)?|medio\s*litro|botella\s+chica\b', re.I), '500ml'),
+    (re.compile(r'35[05]\s*(?:ml|cc)?|en\s+lata\b|\blata\b', re.I), '350ml'),
+    # Weight — medio kilo before kilo so "medio kilo" doesn't match bare "kilo"
+    (re.compile(r'medio\s+kilo|500\s*(?:g|gr|gramos?)', re.I), '500g'),
+    (re.compile(r'un\s+cuarto|250\s*(?:g|gr|gramos?)', re.I), '250g'),
+    (re.compile(r'\bun\s*kilo\b|\b1\s*kg\b|\bkilo\b', re.I), '1kg'),
+]
+_VARIANTE_RELATIVA = [
+    # patterns work on accent-stripped text (ñ→n, etc.)
+    (re.compile(r'\bchic[ao]s?\b|\bpeque[nñ][ao]s?\b|\bmini\b|\bchiquit[ao]s?\b', re.I), 'pequeña'),
+    (re.compile(r'\bmedian[ao]s?\b|\bdel\s+medio\b', re.I), 'mediana'),
+    (re.compile(r'\bgrandes?\b|\bfamiliar\b|\bmega\b', re.I), 'grande'),
+]
+
+# Phrases to strip before quantity detection so "tres litros" isn't counted as qty=3
+_SIZE_STRIP_PATS = [
+    re.compile(r'\b(?:tres|dos|un(?:o|a)?)\s+litros?\b', re.I),
+    re.compile(r'\btres\s+kilos?\b|\bdos\s+kilos?\b', re.I),
+    re.compile(r'\d+\s*(?:ml|cc|litros?|kilos?|kg|gr|gramos?)\b', re.I),
+    re.compile(r'litro\s+y\s+medio\b', re.I),
+    re.compile(r'medio\s+kilo\b', re.I),
+    re.compile(r'un\s+cuarto\b', re.I),
+]
+
+def _strip_size_phrases(t: str) -> str:
+    for pat in _SIZE_STRIP_PATS:
+        t = pat.sub(' ', t)
+    return ' '.join(t.split())
+_NUMEROS_PALABRAS = [
+    (re.compile(r'\buna\s+docena\b', re.I), 12),
+    (re.compile(r'\bmedia\s+docena\b', re.I), 6),
+    (re.compile(r'\bdiez\b', re.I), 10), (re.compile(r'\bnueve\b', re.I), 9),
+    (re.compile(r'\bocho\b', re.I), 8),  (re.compile(r'\bsiete\b', re.I), 7),
+    (re.compile(r'\bseis\b', re.I), 6),  (re.compile(r'\bcinco\b', re.I), 5),
+    (re.compile(r'\bcuatro\b', re.I), 4),(re.compile(r'\btres\b', re.I), 3),
+    (re.compile(r'\bun\s+par\b', re.I), 2),(re.compile(r'\bdos\b', re.I), 2),
+    (re.compile(r'\bun[ao]?\b', re.I), 1),
+]
+_SIZE_DIGITS = frozenset({350, 355, 500, 1000, 1500, 2000, 3000})
+
+
+def _normalizar(t: str) -> str:
+    t = t.lower()
+    t = unicodedata.normalize('NFD', t)
+    t = ''.join(c for c in t if unicodedata.category(c) != 'Mn')
+    t = re.sub(r'[^a-z0-9\s]', ' ', t)
+    return ' '.join(t.split())
+
+
+def _detectar_accion(t: str) -> str:
+    # Check unambiguous actions first so "dame el total y cobra" → cobrar, not agregar
+    if _PAT_LIMPIAR.search(t): return 'limpiar'
+    if _PAT_COBRAR.search(t):  return 'cobrar'
+    if _PAT_VENTAS.search(t):  return 'ventas_hoy'
+    if _PAT_STOCK.search(t):   return 'stock'
+    if _PAT_QUITAR.search(t):  return 'quitar'
+    if _PAT_AGREGAR.search(t): return 'agregar'
+    return 'desconocido'
+
+
+def _detectar_cantidad(t: str) -> int:
+    for pat, n in _NUMEROS_PALABRAS:
+        if pat.search(t):
+            return n
+    m = re.search(r'\b(\d+)\b', t)
+    if m:
+        n = int(m.group(1))
+        if n not in _SIZE_DIGITS:
+            return max(1, min(n, 99))
+    return 1
+
+
+def _detectar_variante_hint(t: str) -> dict | None:
+    for pat, val in _VARIANTE_EXACTA:
+        if pat.search(t):
+            return {'tipo': 'exacta', 'valor': val}
+    for pat, tipo in _VARIANTE_RELATIVA:
+        if pat.search(t):
+            return {'tipo': tipo, 'valor': None}
+    return None
+
+
+def _match_productos(t_norm: str, conn) -> list[dict]:
+    """Fuzzy-match products by word overlap. Threshold 60%."""
+    rows = conn.execute(
+        "SELECT id, nombre, precio, tiene_variantes FROM productos WHERE activo=1"
+    ).fetchall()
+    matches = []
+    for p in rows:
+        palabras = [w for w in _normalizar(p['nombre']).split() if len(w) > 2]
+        if not palabras:
+            continue
+        hits = sum(1 for w in palabras if w in t_norm)
+        score = hits / len(palabras)
+        if score >= 0.6:
+            matches.append({
+                'id': p['id'],
+                'nombre': p['nombre'],
+                'precio': float(p['precio']),
+                'tiene_variantes': bool(p['tiene_variantes']),
+                'score': round(score, 2),
+            })
+    matches.sort(key=lambda x: (-x['score'], -len(x['nombre'])))
+    return matches
+
+
+def _parsear_v2(texto: str, conn) -> dict:
+    t = _normalizar(texto)
+    # Strip leading wake words
+    words = t.split()
+    while words and words[0] in _WAKE_WORDS:
+        words.pop(0)
+    t = ' '.join(words)
+
+    accion = _detectar_accion(t)
+    hint = _detectar_variante_hint(t)
+    cantidad = _detectar_cantidad(_strip_size_phrases(t))
+    matches = _match_productos(t, conn)
+
+    resultado: dict = {
+        'accion': accion,
+        'cantidad': cantidad,
+        'variante': hint['valor'] if hint and hint['tipo'] == 'exacta' else '',
+        'variante_hint': hint,
+        'producto': '',
+        'producto_id': None,
+        'candidatos': [],
+        'ambiguo': False,
+    }
+
+    if len(matches) == 1:
+        resultado['producto'] = matches[0]['nombre']
+        resultado['producto_id'] = matches[0]['id']
+    elif len(matches) > 1:
+        gap = matches[0]['score'] - matches[1]['score']
+        if gap >= 0.35:
+            resultado['producto'] = matches[0]['nombre']
+            resultado['producto_id'] = matches[0]['id']
+        else:
+            resultado['candidatos'] = [{'id': m['id'], 'nombre': m['nombre']} for m in matches[:3]]
+            resultado['ambiguo'] = True
+
+    return resultado
+
+
 # ── Interpretar ───────────────────────────────────────────────────────────────
 
 @voz_bp.route("/interpretar", methods=["POST"])
@@ -55,93 +232,37 @@ def interpretar():
     if not texto:
         return jsonify({"error": "texto requerido"}), 400
 
-    accion = None
-    if _ollama_ok():
+    uid = session.get("usuario_id")
+    with db_session() as conn:
+        resultado = _parsear_v2(texto, conn)
+        conn.execute(
+            "INSERT INTO voz_historial (texto, accion, usuario_id) VALUES (?,?,?)",
+            (texto, json.dumps(resultado, ensure_ascii=False), uid),
+        )
+
+    # TinyLlama only as last resort for completely unrecognized commands
+    if resultado['accion'] == 'desconocido' and not resultado['producto_id'] and _ollama_ok():
         system = (
             "Eres un asistente de punto de venta. Dado un comando de voz en español, "
             "extrae la intención. Responde ÚNICAMENTE con JSON válido, sin texto extra.\n"
-            'Formato exacto: {"accion":"agregar|quitar|cobrar|consultar|limpiar",'
-            '"producto":"nombre del producto o vacío","cantidad":1,"variante":""}'
+            'Formato: {"accion":"agregar|quitar|cobrar|consultar|limpiar","producto":"nombre","cantidad":1,"variante":""}'
         )
         raw = _ollama(f'Comando: "{texto}"', system, 120)
         if raw:
             m = re.search(r'\{[^{}]+\}', raw, re.DOTALL)
             if m:
                 try:
-                    accion = json.loads(m.group())
+                    llm = json.loads(m.group())
+                    if llm.get('accion') and llm['accion'] != 'desconocido':
+                        resultado['accion'] = llm['accion']
+                    if not resultado['producto']:
+                        resultado['producto'] = llm.get('producto', '')
+                    if not resultado['variante']:
+                        resultado['variante'] = llm.get('variante', '')
                 except Exception:
                     pass
 
-    if not accion:
-        accion = _parsear_keywords(texto)
-
-    uid = session.get("usuario_id")
-    with db_session() as conn:
-        conn.execute(
-            "INSERT INTO voz_historial (texto, accion, usuario_id) VALUES (?,?,?)",
-            (texto, json.dumps(accion, ensure_ascii=False), uid),
-        )
-
-    return jsonify(accion)
-
-
-def _parsear_keywords(texto: str) -> dict:
-    t = texto.lower()
-
-    if any(p in t for p in ["agrega", "agregar", "suma", "sumar", "añade", "añadir", "pon ", "poner", "mete", "meter"]):
-        accion = "agregar"
-    elif any(p in t for p in ["quita", "quitar", "elimina", "eliminar", "saca", "sacar", "borra", "borrar", "remueve"]):
-        accion = "quitar"
-    elif any(p in t for p in ["cobra", "cobrar", "paga", "pagar", "cobro", "cobro"]):
-        accion = "cobrar"
-    elif any(p in t for p in ["limpia", "limpiar", "vacía", "vaciar", "borra todo", "borrar todo", "nuevo cliente"]):
-        accion = "limpiar"
-    elif any(p in t for p in ["cuánto va", "cuanto va", "total", "cuánto llevo", "cuanto llevo", "cuánto hay"]):
-        accion = "consultar"
-    else:
-        accion = "desconocido"
-
-    # Cantidad
-    numeros = {"un ": 1, "una ": 1, "dos": 2, "tres": 3, "cuatro": 4,
-               "cinco": 5, "seis": 6, "siete": 7, "ocho": 8, "nueve": 9, "diez": 10}
-    cantidad = 1
-    for palabra, num in numeros.items():
-        if palabra in t:
-            cantidad = num
-            break
-    m = re.search(r'\b(\d+)\b', t)
-    if m:
-        cantidad = int(m.group(1))
-
-    # Variante por tamaño
-    variante = ""
-    for patron, nombre in [
-        (r"350\s*m?l", "350ml"), (r"500\s*m?l|media\s*litro|medio\s*litro", "500ml"),
-        (r"1[.,]5\s*l|litro\s*y\s*medio|1\s*y\s*medio", "1.5L"),
-        (r"2\s*litros?|2\s*l\b", "2L"), (r"3\s*litros?", "3L"),
-        (r"\bun\s*litro|\b1\s*litro", "1L"),
-        (r"\bgrande\b|\bgrands\b", "grande"),
-        (r"\bchic[ao]\b|\bpequeñ[ao]\b|\bmini\b", "chico"),
-        (r"\blat[ai]\b", "lata"),
-    ]:
-        if re.search(patron, t, re.IGNORECASE):
-            variante = nombre
-            break
-
-    # Producto: eliminar palabras de comando
-    stop = {
-        "zero", "hal", "jarvis", "nova",
-        "agrega", "agregar", "suma", "sumar", "añade", "añadir", "pon", "poner", "mete",
-        "quita", "quitar", "elimina", "eliminar", "saca", "borra",
-        "cobra", "cobrar", "limpia", "limpiar",
-        "un", "una", "uno", "dos", "tres", "cuatro", "cinco",
-        "el", "la", "los", "las", "de", "del", "al", "por", "favor",
-        "me", "te", "se", "que", "y", "a", "en",
-    }
-    palabras = [p for p in t.split() if p not in stop and not p.isdigit() and len(p) > 1]
-    producto = " ".join(palabras).strip()
-
-    return {"accion": accion, "producto": producto, "cantidad": cantidad, "variante": variante}
+    return jsonify(resultado)
 
 
 # ── Consulta ──────────────────────────────────────────────────────────────────

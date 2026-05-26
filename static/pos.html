@@ -959,18 +959,24 @@ async function initVoz() {
   vozRecog.continuous = true;
   vozRecog.interimResults = false;
   vozRecog.lang = 'es-CL';
-  vozRecog.maxAlternatives = 1;
+  vozRecog.maxAlternatives = 3;
 
   vozRecog.onresult = (e) => {
     for (let i = e.resultIndex; i < e.results.length; i++) {
       if (!e.results[i].isFinal) continue;
-      const txt = e.results[i][0].transcript.trim();
-      if (!txt) continue;
+      // Collect up to 3 alternatives
+      const alts = [];
+      for (let j = 0; j < e.results[i].length; j++) {
+        const t = e.results[i][j].transcript.trim();
+        if (t) alts.push(t);
+      }
+      if (!alts.length) continue;
+      const txt = alts[0];
       mostrarEscuche(txt);
       if (vozActiva) {
         // Button ON: process directly, no wake word needed
         if (esSaludo(txt)) { saludarVoz(); return; }
-        procesarVoz(txt);
+        procesarVoz(txt, alts.slice(1));
       } else {
         // Background mode: require wake word
         const up = txt.toUpperCase();
@@ -979,7 +985,7 @@ async function initVoz() {
         const cmd = txt.slice(idx + vozKW.length).trim();
         if (cmd.length < 2) { hablar('Dime'); return; }
         if (esSaludo(cmd)) { saludarVoz(); return; }
-        procesarVoz(cmd);
+        procesarVoz(cmd, []);
       }
     }
   };
@@ -1045,37 +1051,49 @@ async function saludarVoz() {
   }
 }
 
-async function procesarVoz(cmd) {
-  console.log('[VOZ] cmd:', cmd);
+async function procesarVoz(cmd, alternativas = []) {
+  console.log('[VOZ] cmd:', cmd, 'alts:', alternativas);
   if (esConsultaVoz(cmd)) return await consultarVoz(cmd);
 
-  let interp;
-  try {
-    const r = await fetch('/api/voz/interpretar', {
-      method: 'POST', credentials: 'include',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({texto: cmd}),
-    });
-    interp = r.ok ? await r.json() : _kwFallback(cmd);
-  } catch(e) {
-    // Network error or server down: use local fallback, voice still works
-    interp = _kwFallback(cmd);
+  const textos = [cmd, ...alternativas];
+  let interp = null;
+
+  for (const txt of textos) {
+    try {
+      const r = await fetch('/api/voz/interpretar', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({texto: txt}),
+      });
+      if (!r.ok) continue;
+      const data = await r.json();
+      // Accept result if we have a recognized action or a product match
+      if (data.accion !== 'desconocido' || data.producto_id || data.ambiguo) {
+        interp = data;
+        if (txt !== cmd) mostrarEscuche(txt);
+        break;
+      }
+      if (!interp) interp = data;  // keep first as fallback
+    } catch(e) {
+      if (!interp) interp = _kwFallback(txt);
+    }
   }
 
-  const {accion, producto, cantidad, variante} = interp;
+  if (!interp) interp = _kwFallback(cmd);
 
-  if (accion === 'agregar') return vozAgregar(producto, cantidad || 1, variante || '');
+  const {accion, producto, producto_id, candidatos, ambiguo, cantidad, variante, variante_hint} = interp;
+
+  if (accion === 'agregar') return vozAgregar(producto, cantidad || 1, variante || '', variante_hint || null, producto_id || null, ambiguo ? candidatos : []);
   if (accion === 'quitar')  return vozQuitar(producto);
   if (accion === 'cobrar')  { hablar('Abriendo cobro'); abrirCobro(); return; }
   if (accion === 'limpiar') {
     vozConfirmar('¿Limpiar el carrito?', null, () => { limpiarCarrito(); hablar('Carrito limpio'); });
     return;
   }
-  if (accion === 'consultar') {
-    hablar(`El carrito va en ${fmt(total)}`);
-    return;
+  if (accion === 'consultar' || accion === 'ventas_hoy' || accion === 'stock') {
+    return await consultarVoz(cmd);
   }
-  hablar(`No entendí: ${cmd}`);
+  hablar(`No entendí el comando. Intenta: "agrega una coca cola"`);
 }
 
 function esConsultaVoz(t) {
@@ -1099,11 +1117,29 @@ async function consultarVoz(txt) {
   } catch(e) { hablar('Error al consultar'); }
 }
 
-async function vozAgregar(nombre, qty, variante) {
-  const matches = vozBuscar(nombre);
-  if (!matches.length) { hablar(`No encontré ${nombre}`); return; }
+async function vozAgregar(nombre, qty, variante, varianteHint, productoId, candidatos) {
+  // Ambiguous: multiple matches from server — ask for clarification
+  if (candidatos && candidatos.length > 1) {
+    const nombres = candidatos.slice(0, 2).map(c => c.nombre).join(' o ');
+    hablar(`Tengo ${nombres}. ¿Cuál quieres?`);
+    return;
+  }
 
-  const prod = matches[0];
+  // Resolve product: prefer server-matched id, fall back to client search
+  let prod = null;
+  if (productoId && productoMap[productoId]) {
+    prod = productoMap[productoId];
+  } else if (candidatos && candidatos.length === 1 && productoMap[candidatos[0].id]) {
+    prod = productoMap[candidatos[0].id];
+  } else {
+    const matches = vozBuscar(nombre);
+    if (!matches.length) {
+      hablar(`No encontré ${nombre || 'el producto'}. ¿Puedes repetir?`);
+      return;
+    }
+    prod = matches[0];
+  }
+
   vozCtxProd = prod.nombre;
 
   if (prod.tiene_variantes) {
@@ -1113,10 +1149,12 @@ async function vozAgregar(nombre, qty, variante) {
           .then(r => r.json()).catch(() => []);
 
     let vSel = variante ? vozMatchVariante(vvs, variante) : null;
+    if (!vSel && varianteHint) vSel = vozSelectByHint(vvs, varianteHint);
     if (!vSel && vvs.length === 1) vSel = vvs[0];
 
     if (!vSel) {
-      hablar(`${prod.nombre} tiene: ${vvs.map(v => v.nombre).join(', ')}. ¿Cuál?`);
+      const sizes = vvs.map(v => v.nombre).join(', ');
+      hablar(`Tengo ${prod.nombre} en: ${sizes}. ¿Cuál quieres?`);
       return;
     }
 
@@ -1198,6 +1236,21 @@ function vozMatchVariante(vvs, texto) {
   if (v) return v;
   if (/chic|peq|small|mini/.test(t)) return vvs.reduce((a, b) => a.precio < b.precio ? a : b);
   if (/grand|larg|big/.test(t))      return vvs.reduce((a, b) => a.precio > b.precio ? a : b);
+  return null;
+}
+
+function vozSelectByHint(vvs, hint) {
+  if (!hint || !vvs.length) return null;
+  if (hint.tipo === 'exacta') {
+    const val = vozNorm(hint.valor || '');
+    return vvs.find(v => vozNorm(v.nombre).includes(val))
+        || vvs.find(v => val.includes(vozNorm(v.nombre)))
+        || null;
+  }
+  const sorted = [...vvs].sort((a, b) => a.precio - b.precio);
+  if (hint.tipo === 'pequeña') return sorted[0];
+  if (hint.tipo === 'grande')  return sorted[sorted.length - 1];
+  if (hint.tipo === 'mediana') return sorted[Math.floor(sorted.length / 2)];
   return null;
 }
 
