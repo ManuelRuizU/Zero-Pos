@@ -8,6 +8,10 @@ from flask import Flask, redirect, url_for, send_from_directory
 from flask_cors import CORS
 from flask_session import Session
 
+SSL_DIR = Path(__file__).parent / "ssl"
+SSL_CERT = SSL_DIR / "cert.pem"
+SSL_KEY  = SSL_DIR / "key.pem"
+
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_FILE = BASE_DIR / ".secret_key"
 
@@ -17,6 +21,66 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("zero_pos")
+
+
+def get_or_create_ssl_cert() -> tuple[Path, Path]:
+    """Generate a persistent self-signed cert (only on first run)."""
+    SSL_DIR.mkdir(exist_ok=True)
+    if SSL_CERT.exists() and SSL_KEY.exists():
+        return SSL_CERT, SSL_KEY
+    try:
+        import datetime
+        import ipaddress
+        from cryptography import x509
+        from cryptography.x509.oid import NameOID
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+    except ImportError:
+        logger.warning("cryptography no disponible — iniciando sin HTTPS")
+        return None, None
+
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+    local_ip = get_ip_local()
+    san_ips = {ipaddress.IPv4Address("127.0.0.1")}
+    try:
+        san_ips.add(ipaddress.IPv4Address(local_ip))
+    except ValueError:
+        pass
+
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "zero-pos-local")])
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(subject)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now)
+        .not_valid_after(now + datetime.timedelta(days=5 * 365))
+        .add_extension(
+            x509.SubjectAlternativeName(
+                [x509.DNSName("localhost")]
+                + [x509.IPAddress(ip) for ip in san_ips]
+            ),
+            critical=False,
+        )
+        .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+        .sign(key, hashes.SHA256())
+    )
+
+    SSL_CERT.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    SSL_KEY.write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.TraditionalOpenSSL,
+            serialization.NoEncryption(),
+        )
+    )
+    SSL_CERT.chmod(0o644)
+    SSL_KEY.chmod(0o600)
+    logger.info(f"Certificado SSL generado → {SSL_CERT} (SAN: localhost, {local_ip})")
+    return SSL_CERT, SSL_KEY
 
 
 def get_or_create_secret_key() -> bytes:
@@ -137,14 +201,23 @@ if __name__ == "__main__":
     app = create_app()
     start_backup_scheduler(app)
 
-    port = find_free_port(5000)
+    cert_path, key_path = get_or_create_ssl_cert()
+    ssl_ctx = (str(cert_path), str(key_path)) if cert_path else None
+
+    port = find_free_port(5001 if ssl_ctx else 5000)
     local_ip = get_ip_local()
+    scheme = "https" if ssl_ctx else "http"
 
     logger.info("=" * 60)
     logger.info("  ZERO POS  —  Sin internet. Sin comisiones. Tuyo.")
     logger.info("=" * 60)
-    logger.info(f"  Local :  http://127.0.0.1:{port}")
-    logger.info(f"  Red   :  http://{local_ip}:{port}")
+    logger.info(f"  Local :  {scheme}://127.0.0.1:{port}")
+    logger.info(f"  Red   :  {scheme}://{local_ip}:{port}")
+    if ssl_ctx:
+        logger.info("  HTTPS activo — acepta el certificado en Chrome una vez")
+    else:
+        logger.info("  HTTP (micrófono solo en localhost)")
     logger.info("=" * 60)
 
-    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False,
+            ssl_context=ssl_ctx)

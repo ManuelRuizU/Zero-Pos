@@ -6,6 +6,9 @@ venv/
 .venv/
 env/
 
+# Certificados SSL (generados localmente, no versionar)
+ssl/
+
 # Base de datos y datos sensibles
 zero_pos.db
 zero_pos.db-wal
