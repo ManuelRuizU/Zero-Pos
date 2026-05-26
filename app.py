@@ -4,7 +4,7 @@ import socket
 import threading
 import logging
 from pathlib import Path
-from flask import Flask, redirect, url_for, send_from_directory
+from flask import Flask, redirect, url_for, send_from_directory, request
 from flask_cors import CORS
 from flask_session import Session
 
@@ -133,11 +133,25 @@ def create_app() -> Flask:
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         MAX_CONTENT_LENGTH=50 * 1024 * 1024,
+        # Flask-Compress
+        COMPRESS_MIMETYPES=[
+            "text/html", "text/css", "application/javascript",
+            "application/json", "text/plain",
+        ],
+        COMPRESS_LEVEL=6,
+        COMPRESS_MIN_SIZE=512,
     )
 
     (BASE_DIR / "flask_sessions").mkdir(exist_ok=True)
     Session(app)
     CORS(app, supports_credentials=True)
+
+    try:
+        from flask_compress import Compress
+        Compress(app)
+        logger.info("Flask-Compress activo (gzip)")
+    except ImportError:
+        logger.warning("flask-compress no disponible — respuestas sin comprimir")
 
     from database import init_db
     init_db()
@@ -173,6 +187,14 @@ def create_app() -> Flask:
     @app.route("/health")
     def health():
         return {"status": "ok", "version": "1.0.0"}
+
+    # Cache static files in the browser for 1 hour
+    @app.after_request
+    def add_cache_headers(response):
+        if request.path.startswith("/static/"):
+            response.cache_control.max_age = 3600
+            response.cache_control.public = True
+        return response
 
     return app
 

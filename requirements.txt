@@ -1,13 +1,12 @@
 flask>=3.0.0
 flask-cors>=4.0.0
 flask-session>=0.6.0
+flask-compress>=1.14.0
 bcrypt>=4.0.0
 cryptography>=41.0.0
 python-escpos>=3.0.0
 pdfplumber>=0.10.0
-PyPDF2>=3.0.0
 qrcode[pil]>=7.4.0
 Pillow>=10.0.0
 schedule>=1.2.0
 requests>=2.31.0
-python-dateutil>=2.8.0

@@ -27,7 +27,13 @@ def _ollama(prompt: str, system: str = "", max_tokens: int = 200) -> str | None:
         "prompt": prompt,
         "system": system,
         "stream": False,
-        "options": {"temperature": 0.1, "num_predict": max_tokens},
+        "options": {
+            "temperature": 0.1,
+            "num_predict": max_tokens,
+            "num_ctx": 512,
+            "top_p": 0.9,
+            "repeat_penalty": 1.1,
+        },
     }).encode()
     try:
         req = urllib.request.Request(

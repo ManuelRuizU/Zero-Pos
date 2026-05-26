@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -11,6 +12,31 @@ PRODUCTOS_BASE_FILE = BASE_DIR / "data" / "productos_base.json"
 
 productos_bp = Blueprint("productos", __name__, url_prefix="/api/productos")
 logger = logging.getLogger("zero_pos.productos")
+
+@productos_bp.after_request
+def _invalidate_on_write(response):
+    if request.method in ("POST", "PUT", "DELETE", "PATCH") and response.status_code < 400:
+        cache_invalidate()
+    return response
+
+# Simple in-process cache for the full product list (no filters)
+_CACHE: dict = {}
+_CACHE_TS: dict = {}
+_CACHE_TTL = 60  # seconds
+
+def _cache_get(key: str):
+    if key in _CACHE and time.monotonic() - _CACHE_TS.get(key, 0) < _CACHE_TTL:
+        return _CACHE[key]
+    return None
+
+def _cache_set(key: str, value):
+    _CACHE[key] = value
+    _CACHE_TS[key] = time.monotonic()
+
+def cache_invalidate():
+    """Call after any product write (create/update/delete/stock change)."""
+    _CACHE.clear()
+    _CACHE_TS.clear()
 
 
 def _require_auth():
@@ -26,6 +52,14 @@ def listar():
     categoria_id = request.args.get("categoria_id")
     solo_activos = request.args.get("activos", "1") == "1"
     alerta_stock = request.args.get("alerta_stock", "0") == "1"
+
+    # Cache only the standard POS load (no filters, active only)
+    cache_key = None
+    if not busqueda and not categoria_id and solo_activos and not alerta_stock:
+        cache_key = "productos_activos"
+        cached = _cache_get(cache_key)
+        if cached is not None:
+            return jsonify(cached)
 
     query = """
         SELECT p.*, c.nombre as categoria_nombre
@@ -48,8 +82,12 @@ def listar():
     query += " ORDER BY p.nombre"
 
     with db_session() as conn:
-        rows = conn.execute(query, params).fetchall()
-        return jsonify([dict(r) for r in rows])
+        rows = [dict(r) for r in conn.execute(query, params).fetchall()]
+
+    if cache_key:
+        _cache_set(cache_key, rows)
+
+    return jsonify(rows)
 
 
 @productos_bp.route("/<int:pid>", methods=["GET"])

@@ -2,8 +2,15 @@ import logging
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
 from database import db_session
+from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
+
+@ventas_bp.after_request
+def _invalidate_on_venta(response):
+    if request.method == "POST" and response.status_code < 400:
+        _invalidate_productos()
+    return response
 logger = logging.getLogger("zero_pos.ventas")
 
 
