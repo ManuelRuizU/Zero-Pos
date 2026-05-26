@@ -540,6 +540,7 @@ body {
   <div class="logo">ZERO<span>POS</span></div>
   <button class="btn-top" onclick="location.href='admin.html'" title="Admin">📊 <span class="btn-admin-label">Admin</span></button>
   <div class="topbar-spacer"></div>
+  <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"></span>
   <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Asistente de voz ZERO">🎤 <span class="voz-kw-label">ZERO</span></button>
   <button class="btn-top" onclick="abrirVentaRapida()" title="Venta rápida">⚡</button>
   <button class="btn-top" onclick="cerrarSesion()">Salir</button>
@@ -1828,8 +1829,10 @@ function confirmarVentaRapida() {
 // ── Extras ───────────────────────────────────────────────────
 async function verificarAlertas() {
   const data = await fetch('/api/productos/alertas', {credentials:'include'}).then(r => r.json()).catch(() => []);
-  if (data.length > 0)
-    document.getElementById('btnAlertas').innerHTML = `⚠️ <span class="badge-alert">${data.length}</span>`;
+  if (data.length > 0) {
+    const btn = document.getElementById('btnAlertas');
+    if (btn) btn.innerHTML = `⚠️ <span class="badge-alert">${data.length}</span>`;
+  }
 }
 
 function verAlertas() { location.href = 'inventario.html'; }
