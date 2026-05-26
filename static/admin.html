@@ -542,6 +542,20 @@ input:checked + .slider:before{transform:translateX(20px);}
         </div>
       </div>
 
+      <!-- Vocabulario aprendido -->
+      <div class="cfg-card" style="grid-column:1/-1;">
+        <div class="cfg-card-title" style="display:flex;justify-content:space-between;align-items:center;">
+          🧠 Vocabulario aprendido de tu negocio
+          <button class="btn sm" onclick="cargarAprendizaje()">Actualizar</button>
+        </div>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
+          Cuando ZERO no entiende un comando y tú confirmas la sugerencia, aprende esa palabra para siempre.
+        </p>
+        <div id="aprendizajeContainer">
+          <p style="color:var(--text-dim);font-size:13px;">Cargando...</p>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -563,7 +577,7 @@ function showTab(name, btn) {
   btn.classList.add('active');
   if (name==='ventas') cargarVentas();
   if (name==='config') cargarConfig();
-  if (name==='voz') { cargarVozConfig(); cargarHistorialVoz(); }
+  if (name==='voz') { cargarVozConfig(); cargarHistorialVoz(); cargarAprendizaje(); }
 }
 
 async function cargarDashboard() {
@@ -832,6 +846,52 @@ function probarVoz() {
   const v = window.speechSynthesis.getVoices().find(v => v.lang.startsWith('es'));
   if (v) u.voice = v;
   window.speechSynthesis.speak(u);
+}
+
+async function cargarAprendizaje() {
+  const container = document.getElementById('aprendizajeContainer');
+  const data = await fetch('/api/voz/aprendizaje', {credentials:'include'}).then(r=>r.json()).catch(()=>({acciones:[],productos:[],variantes:[]}));
+
+  const todas = [
+    ...(data.acciones  || []).map(r => ({...r, tipo:'Acción',  tipo_key:'accion',   color:'#6366f1'})),
+    ...(data.productos || []).map(r => ({...r, tipo:'Producto', tipo_key:'producto', color:'#22c55e'})),
+    ...(data.variantes || []).map(r => ({...r, tipo:'Variante', tipo_key:'variante', color:'#f59e0b'})),
+  ];
+
+  if (!todas.length) {
+    container.innerHTML = `<p style="color:var(--text-dim);font-size:13px;padding:8px 0">
+      ZERO aún no ha aprendido palabras nuevas.<br>
+      Cuando digas algo que no entienda y confirmes la sugerencia, aparecerá aquí automáticamente.
+    </p>`;
+    return;
+  }
+
+  container.innerHTML = `<div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th>Dijiste</th><th>Significa</th><th>Tipo</th><th>Usos</th><th>Aprendido</th><th></th>
+      </tr></thead>
+      <tbody>
+      ${todas.map(r => `<tr>
+        <td><strong style="color:var(--text)">"${r.palabra}"</strong></td>
+        <td style="color:var(--accent2)">${r.significa}</td>
+        <td><span style="color:${r.color};font-size:11px;font-weight:600">${r.tipo}</span></td>
+        <td style="color:var(--text-dim)">${r.veces_usado || 0}×</td>
+        <td style="color:var(--text-dim);font-size:12px">${r.aprendido || '—'}</td>
+        <td><button class="btn sm danger" onclick="olvidarPalabra(${r.id},'${r.tipo_key}')">🗑 Olvidar</button></td>
+      </tr>`).join('')}
+      </tbody>
+    </table>
+  </div>`;
+}
+
+async function olvidarPalabra(id, tipo) {
+  if (!confirm('¿Quieres que ZERO olvide esta palabra aprendida?')) return;
+  const r = await fetch(`/api/voz/aprendizaje/${id}?tipo=${tipo}`, {
+    method:'DELETE', credentials:'include'
+  }).then(r=>r.json()).catch(()=>({ok:false}));
+  if (r.ok) cargarAprendizaje();
+  else alert('Error al eliminar');
 }
 
 async function cargarHistorialVoz() {

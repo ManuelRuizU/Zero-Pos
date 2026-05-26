@@ -164,6 +164,35 @@ CREATE TABLE IF NOT EXISTS voz_historial (
 
 CREATE INDEX IF NOT EXISTS idx_voz_fecha ON voz_historial(creado_en);
 
+-- Vocabulario de acciones aprendido por el asistente de voz
+CREATE TABLE IF NOT EXISTS voz_aprendizaje (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    palabra     TEXT NOT NULL UNIQUE,
+    accion      TEXT NOT NULL,
+    confirmado  INTEGER NOT NULL DEFAULT 0,
+    veces_usado INTEGER NOT NULL DEFAULT 0,
+    creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sinónimos de nombres de productos aprendidos por voz
+CREATE TABLE IF NOT EXISTS voz_sinonimos_producto (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    palabra     TEXT NOT NULL UNIQUE,
+    producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    veces_usado INTEGER NOT NULL DEFAULT 0,
+    creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Sinónimos de variantes/unidades aprendidos por voz
+CREATE TABLE IF NOT EXISTS voz_sinonimos_variante (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    palabra     TEXT NOT NULL,
+    producto_id INTEGER REFERENCES productos(id) ON DELETE CASCADE,
+    variante_id INTEGER REFERENCES producto_variantes(id) ON DELETE CASCADE,
+    veces_usado INTEGER NOT NULL DEFAULT 0,
+    creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Movimientos de caja
 CREATE TABLE IF NOT EXISTS caja_movimientos (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,

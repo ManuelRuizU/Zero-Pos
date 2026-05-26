@@ -4,6 +4,7 @@ import re
 import unicodedata
 import urllib.request
 from datetime import datetime, timedelta
+from difflib import SequenceMatcher
 from flask import Blueprint, request, jsonify, session
 from database import db_session
 
@@ -111,6 +112,45 @@ _PAT_VENTAS = re.compile(
 _PAT_STOCK = re.compile(
     r'\b(cuanto\s+queda|cuantos\s+quedan|quedan\s+de|hay\s+de|stock\s+de)\b', re.I
 )
+
+# Flat keyword → accion map — used for difflib similarity matching on unknown words
+_ALL_KEYWORDS: dict[str, str] = {
+    **{k: 'agregar' for k in (
+        'agrega', 'agregar', 'agregame', 'agregue', 'agregueme',
+        'poner', 'ponme', 'ponle', 'pongan', 'pongame',
+        'anadir', 'anade', 'anademe', 'sumar', 'suma',
+        'necesito', 'quisiera', 'quiero', 'dame', 'deme', 'dar',
+        'meter', 'mete', 'metele', 'traer', 'traeme',
+        'incluir', 'incluye', 'dale',
+    )},
+    **{k: 'quitar' for k in (
+        'quitar', 'quita', 'quitame', 'sacar', 'saca', 'sacame',
+        'eliminar', 'elimina', 'borrar', 'borra', 'remover', 'remueve', 'descontar',
+    )},
+    **{k: 'cobrar' for k in (
+        'cobrar', 'cobra', 'cerrar', 'cerramos',
+        'listo', 'pagar', 'paga', 'pagamos', 'pagan',
+        'factura', 'boleta', 'total',
+    )},
+    **{k: 'limpiar' for k in ('limpia', 'limpiar', 'vaciar', 'vacia', 'nuevo')},
+}
+
+_PAT_AFIRMAR = re.compile(
+    r'\b(si|s[ií]|correcto|exacto|eso|afirmativo|dale|claro|ok|okay|sip|'
+    r'exactamente|genial|perfecto|bueno|va|sale|anda)\b', re.I
+)
+_PAT_NEGAR = re.compile(
+    r'\b(no|negativo|incorrecto|otro|otra|equivocado|error|nop|nope|para)\b', re.I
+)
+
+
+def _es_afirmacion(t: str) -> bool:
+    return bool(_PAT_AFIRMAR.search(t)) and not bool(_PAT_NEGAR.search(t))
+
+
+def _es_negacion(t: str) -> bool:
+    return bool(_PAT_NEGAR.search(t)) and not bool(_PAT_AFIRMAR.search(t))
+
 
 _VARIANTE_EXACTA = [
     # Volume — units are REQUIRED to avoid matching bare numbers like "3g" or "2000g"
@@ -256,6 +296,29 @@ def _match_productos(t_norm: str, conn) -> list[dict]:
                 })
             matches.sort(key=lambda x: -len(x['nombre']))
 
+    # Learned product synonym fallback
+    if not matches:
+        try:
+            seen_ids = set()
+            for row in conn.execute(
+                "SELECT palabra, producto_id FROM voz_sinonimos_producto"
+            ).fetchall():
+                if row['palabra'] in t_norm and row['producto_id'] not in seen_ids:
+                    p = conn.execute(
+                        "SELECT id, nombre, precio, tiene_variantes FROM productos WHERE id=? AND activo=1",
+                        (row['producto_id'],)
+                    ).fetchone()
+                    if p:
+                        seen_ids.add(p['id'])
+                        matches.append({
+                            'id': p['id'], 'nombre': p['nombre'],
+                            'precio': float(p['precio']),
+                            'tiene_variantes': bool(p['tiene_variantes']),
+                            'score': 0.9,
+                        })
+        except Exception:
+            pass
+
     return matches
 
 
@@ -272,6 +335,20 @@ def _parsear_v2(texto: str, conn) -> dict:
     metodo = _detectar_metodo_pago(t)
     if metodo:
         accion = 'seleccionar_pago'
+
+    # Apply learned action words from DB when still unknown
+    if accion == 'desconocido':
+        try:
+            for row in conn.execute(
+                "SELECT palabra, accion FROM voz_aprendizaje WHERE confirmado=1"
+            ).fetchall():
+                if row['palabra'] in t.split():
+                    accion = row['accion']
+                    logger.info(f"[aprendizaje] '{row['palabra']}' → {accion}")
+                    break
+        except Exception:
+            pass  # table may not exist on first run before init_db
+
     logger.info(f"[voz] accion='{accion}' metodo={metodo}")
     hint = _detectar_variante_hint(t)
     cantidad = _detectar_cantidad(_strip_size_phrases(t))
@@ -320,6 +397,25 @@ def interpretar():
 
     logger.info(f"[voz] interpretar texto='{texto}'")
     uid = session.get("usuario_id")
+
+    # ── Confirmación pendiente ────────────────────────────────────────────────
+    pendiente = session.get('voz_pendiente')
+    if pendiente:
+        t_norm = _normalizar(texto)
+        if _es_afirmacion(t_norm):
+            return _ejecutar_confirmacion(pendiente, uid)
+        elif _es_negacion(t_norm):
+            session.pop('voz_pendiente', None)
+            return jsonify({
+                'accion': 'desconocido', 'metodo': None, 'cantidad': 1,
+                'variante': '', 'variante_hint': None,
+                'producto': '', 'producto_id': None, 'candidatos': [], 'ambiguo': False,
+                'respuesta_voz': '¿Qué quisiste decir? Prueba: agrega, quita o cobra',
+            })
+        # Not a yes/no — clear pending and process the new command normally
+        session.pop('voz_pendiente', None)
+
+    # ── Parseo principal ──────────────────────────────────────────────────────
     with db_session() as conn:
         resultado = _parsear_v2(texto, conn)
         conn.execute(
@@ -327,7 +423,7 @@ def interpretar():
             (texto, json.dumps(resultado, ensure_ascii=False), uid),
         )
 
-    # TinyLlama only as last resort for completely unrecognized commands
+    # ── TinyLlama: last resort for truly unknown commands ─────────────────────
     if resultado['accion'] == 'desconocido' and not resultado['producto_id'] and _ollama_ok():
         system = (
             "Eres un asistente de punto de venta. Dado un comando de voz en español, "
@@ -348,6 +444,13 @@ def interpretar():
                         resultado['variante'] = llm.get('variante', '')
                 except Exception:
                     pass
+
+    # ── Aprendizaje adaptativo: sugerir corrección ────────────────────────────
+    if resultado['accion'] == 'desconocido':
+        sugerencia = _sugerir_correccion(texto, resultado)
+        if sugerencia:
+            logger.info(f"[aprendizaje] Sugerencia: '{sugerencia['respuesta_voz']}'")
+            return jsonify(sugerencia)
 
     resultado['respuesta_voz'] = _build_respuesta_voz(resultado)
     logger.info(f"[voz] resultado final accion={resultado['accion']} producto_id={resultado['producto_id']} respuesta='{resultado['respuesta_voz']}'")
@@ -377,6 +480,124 @@ def _build_respuesta_voz(r: dict) -> str:
     if accion in ('ventas_hoy', 'stock', 'consultar'):
         return "Consultando..."
     return "No entendí. Intenta: agrega una Coca-Cola"
+
+
+def _sugerir_correccion(texto: str, resultado: dict) -> dict | None:
+    """Find closest known keyword via difflib. Returns suggestion dict (+ sets session) or None."""
+    t = _normalizar(texto)
+    words = [w for w in t.split() if w not in _WAKE_WORDS and len(w) > 2]
+
+    mejor_score = 0.0
+    mejor_kw = None
+    mejor_accion = None
+    mejor_palabra = None
+
+    for word in words:
+        for kw, accion in _ALL_KEYWORDS.items():
+            score = SequenceMatcher(None, word, kw).ratio()
+            if score > mejor_score and score >= 0.75:
+                mejor_score = score
+                mejor_kw = kw
+                mejor_accion = accion
+                mejor_palabra = word
+
+    if not mejor_accion:
+        return None
+
+    nombre_prod = resultado.get('producto', '')
+    prod_id     = resultado.get('producto_id')
+
+    if nombre_prod:
+        respuesta = f"¿Quisiste decir {mejor_accion.upper()} {nombre_prod}?"
+    else:
+        respuesta = f"¿Quisiste decir '{mejor_kw}'? Prueba: agrega, quita o cobra"
+
+    session['voz_pendiente'] = {
+        'tipo':          'accion',
+        'accion':        mejor_accion,
+        'metodo':        None,
+        'producto':      nombre_prod,
+        'producto_id':   prod_id,
+        'variante_id':   None,
+        'variante':      resultado.get('variante', ''),
+        'variante_hint': resultado.get('variante_hint'),
+        'cantidad':      resultado.get('cantidad', 1),
+        'palabra_aprender': mejor_palabra,
+        'kw_conocida':   mejor_kw,
+    }
+
+    return {
+        'accion':        'esperando_confirmacion',
+        'estado':        'esperando_confirmacion',
+        'metodo':        None,
+        'cantidad':      resultado.get('cantidad', 1),
+        'variante':      resultado.get('variante', ''),
+        'variante_hint': resultado.get('variante_hint'),
+        'producto':      nombre_prod,
+        'producto_id':   prod_id,
+        'candidatos':    [],
+        'ambiguo':       False,
+        'respuesta_voz': respuesta,
+    }
+
+
+def _ejecutar_confirmacion(pendiente: dict, uid: int):
+    """Execute a pending voice confirmation and save the learned word."""
+    session.pop('voz_pendiente', None)
+    tipo    = pendiente.get('tipo', 'accion')
+    palabra = pendiente.get('palabra_aprender', '')
+    accion  = pendiente.get('accion', 'desconocido')
+    kw      = pendiente.get('kw_conocida', accion)
+    nombre  = pendiente.get('producto', '')
+    prod_id = pendiente.get('producto_id')
+
+    if tipo == 'accion' and palabra:
+        try:
+            with db_session() as conn:
+                conn.execute(
+                    """INSERT INTO voz_aprendizaje (palabra, accion, confirmado, veces_usado)
+                       VALUES (?,?,1,1)
+                       ON CONFLICT(palabra) DO UPDATE SET
+                         accion=excluded.accion, confirmado=1, veces_usado=veces_usado+1""",
+                    (palabra, accion),
+                )
+            logger.info(f"[aprendizaje] Aprendido: '{palabra}' → {accion}")
+        except Exception as e:
+            logger.warning(f"[aprendizaje] Error guardando '{palabra}': {e}")
+
+    if nombre:
+        accion_pp = {'agregar': 'agregado', 'quitar': 'quitado', 'cobrar': 'cobrar', 'limpiar': 'limpiar'}.get(accion, accion)
+        resp = f"Listo. {nombre} {accion_pp}. Aprendí que '{palabra}' es {kw}."
+    else:
+        resp = f"Listo. Aprendí que '{palabra}' significa {kw}."
+
+    resultado = {
+        'accion':        accion,
+        'metodo':        pendiente.get('metodo'),
+        'cantidad':      pendiente.get('cantidad', 1),
+        'variante':      pendiente.get('variante', ''),
+        'variante_hint': pendiente.get('variante_hint'),
+        'producto':      nombre,
+        'producto_id':   prod_id,
+        'candidatos':    [],
+        'ambiguo':       False,
+        'aprendido':     True,
+        'respuesta_voz': resp,
+    }
+    return jsonify(resultado)
+
+
+def _tiempo_relativo(dt_str: str) -> str:
+    if not dt_str:
+        return '—'
+    try:
+        dt = datetime.fromisoformat(str(dt_str))
+        mins = int((datetime.now() - dt).total_seconds() / 60)
+        if mins < 60:  return f"hace {mins} min"
+        if mins < 1440: return f"hace {mins // 60} h"
+        return f"hace {mins // 1440} días"
+    except Exception:
+        return '—'
 
 
 # ── Consulta ──────────────────────────────────────────────────────────────────
@@ -659,6 +880,74 @@ def config_post():
                     "INSERT OR REPLACE INTO config (clave, valor) VALUES (?,?)",
                     (clave, str(valor))
                 )
+    return jsonify({"ok": True})
+
+
+# ── Aprendizaje ───────────────────────────────────────────────────────────────
+
+@voz_bp.route("/aprendizaje", methods=["GET"])
+def listar_aprendizaje():
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+    with db_session() as conn:
+        try:
+            acciones = [
+                {
+                    'id': r['id'], 'palabra': r['palabra'],
+                    'significa': r['accion'], 'veces_usado': r['veces_usado'],
+                    'aprendido': _tiempo_relativo(r['creado_en']),
+                }
+                for r in conn.execute(
+                    "SELECT id, palabra, accion, veces_usado, creado_en "
+                    "FROM voz_aprendizaje WHERE confirmado=1 ORDER BY veces_usado DESC"
+                ).fetchall()
+            ]
+            productos = [
+                {
+                    'id': r['id'], 'palabra': r['palabra'],
+                    'significa': r['nombre'], 'veces_usado': r['veces_usado'],
+                    'aprendido': _tiempo_relativo(r['creado_en']),
+                }
+                for r in conn.execute(
+                    "SELECT s.id, s.palabra, p.nombre, s.veces_usado, s.creado_en "
+                    "FROM voz_sinonimos_producto s JOIN productos p ON s.producto_id=p.id "
+                    "ORDER BY s.veces_usado DESC"
+                ).fetchall()
+            ]
+            variantes = [
+                {
+                    'id': r['id'], 'palabra': r['palabra'],
+                    'significa': (r['vnombre'] or '?') + (f" ({r['pnombre']})" if r['pnombre'] else ''),
+                    'veces_usado': r['veces_usado'],
+                    'aprendido': _tiempo_relativo(r['creado_en']),
+                }
+                for r in conn.execute(
+                    "SELECT s.id, s.palabra, v.nombre as vnombre, p.nombre as pnombre, "
+                    "s.veces_usado, s.creado_en "
+                    "FROM voz_sinonimos_variante s "
+                    "LEFT JOIN producto_variantes v ON s.variante_id=v.id "
+                    "LEFT JOIN productos p ON s.producto_id=p.id "
+                    "ORDER BY s.veces_usado DESC"
+                ).fetchall()
+            ]
+        except Exception as e:
+            logger.warning(f"[aprendizaje] Error leyendo tablas: {e}")
+            acciones, productos, variantes = [], [], []
+    return jsonify({'acciones': acciones, 'productos': productos, 'variantes': variantes})
+
+
+@voz_bp.route("/aprendizaje/<int:aid>", methods=["DELETE"])
+def olvidar_palabra(aid):
+    if session.get("usuario_rol") != "admin":
+        return jsonify({"error": "Sin permisos"}), 403
+    tipo = request.args.get("tipo", "accion")
+    with db_session() as conn:
+        if tipo == "producto":
+            conn.execute("DELETE FROM voz_sinonimos_producto WHERE id=?", (aid,))
+        elif tipo == "variante":
+            conn.execute("DELETE FROM voz_sinonimos_variante WHERE id=?", (aid,))
+        else:
+            conn.execute("DELETE FROM voz_aprendizaje WHERE id=?", (aid,))
     return jsonify({"ok": True})
 
 
