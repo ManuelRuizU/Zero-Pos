@@ -158,8 +158,8 @@ _VARIANTE_EXACTA = [
     # Volume — units are REQUIRED to avoid matching bare numbers like "3g" or "2000g"
     (re.compile(r'3\s*(?:litros?|l\b)|tres\s*litros?|3000\s*(?:ml|cc)', re.I), '3L'),
     (re.compile(r'2\s*(?:litros?|l\b)|dos\s*litros?|2000\s*(?:ml|cc)|familiar\b|mega\b', re.I), '2L'),
-    (re.compile(r'1[.,]5\s*(?:litros?|l\b)|1500\s*(?:ml|cc)|litro\s+y\s+medio|uno\s+(?:y\s+)?medio|uno\s+coma\s+cinco', re.I), '1.5L'),
-    (re.compile(r'\bun\s*litro\b|1000\s*(?:ml|cc)|\b1\s*l\b|de\s+litro\b', re.I), '1L'),
+    (re.compile(r'1[.,]5\s*(?:litros?|l\b)|1500\s*(?:ml|cc)|litro\s+y\s+medio|1\s+l\s+y\s+medio|uno\s+(?:y\s+)?medio|uno\s+coma\s+cinco', re.I), '1.5L'),
+    (re.compile(r'\bun\s+(?:litro|l)\b|1000\s*(?:ml|cc)|\b1\s*l\b|de\s+litro\b', re.I), '1L'),
     (re.compile(r'500\s*(?:ml|cc)|medio\s*litro|botella\s+chica\b', re.I), '500ml'),
     (re.compile(r'35[05]\s*(?:ml|cc)|en\s+lata\b|\blata\b', re.I), '350ml'),
     # Weight — medio kilo before kilo so "medio kilo" doesn't match bare "kilo"
@@ -195,8 +195,12 @@ def _strip_size_phrases(t: str) -> str:
         t = pat.sub(' ', t)
     return ' '.join(t.split())
 _NUMEROS_PALABRAS = [
-    (re.compile(r'\buna\s+docena\b', re.I), 12),
-    (re.compile(r'\bmedia\s+docena\b', re.I), 6),
+    # Pack/docena compuestos — van ANTES que los números simples para no ambigüar
+    (re.compile(r'\buna?\s+docena\b|\b12\s+pack\b|\bdoce\s+pack\b', re.I), 12),
+    (re.compile(r'\bmedia\s+docena\b|\bsix\s+pack\b|\bseis\s+pack\b|\b6\s+pack\b', re.I), 6),
+    (re.compile(r'\bun\s+pack\b|\b1\s+pack\b', re.I), 1),
+    # Números simples
+    (re.compile(r'\bdoce\b', re.I), 12), (re.compile(r'\bonce\b', re.I), 11),
     (re.compile(r'\bdiez\b', re.I), 10), (re.compile(r'\bnueve\b', re.I), 9),
     (re.compile(r'\bocho\b', re.I), 8),  (re.compile(r'\bsiete\b', re.I), 7),
     (re.compile(r'\bseis\b', re.I), 6),  (re.compile(r'\bcinco\b', re.I), 5),
@@ -205,6 +209,11 @@ _NUMEROS_PALABRAS = [
     (re.compile(r'\bun[ao]?\b', re.I), 1),
 ]
 _SIZE_DIGITS = frozenset({350, 355, 500, 1000, 1500, 2000, 3000})
+
+# Detect pack-only commands ("seis pack", "six pack") with no product context — BUG 3
+_PAT_PACK_SOLO = re.compile(
+    r'\b(?:six|seis|doce|un|una|dos|tres|cuatro|cinco|\d+)\s+packs?\b', re.I
+)
 
 
 def _normalizar(t: str) -> str:
@@ -522,7 +531,7 @@ def _parsear_v2(texto: str, conn) -> dict:
     if accion == 'desconocido':
         try:
             for row in conn.execute(
-                "SELECT palabra, accion FROM voz_aprendizaje WHERE confirmado=1"
+                "SELECT palabra, accion FROM voz_aprendizaje WHERE confirmado=1 AND tipo='accion'"
             ).fetchall():
                 if row['palabra'] in t.split():
                     accion = row['accion']
@@ -625,6 +634,42 @@ def interpretar():
                 'producto': '', 'producto_id': None, 'candidatos': [], 'ambiguo': False,
             })
 
+        # BUG 1 — Selección de producto entre candidatos
+        if tipo_pend == 'seleccion_producto':
+            opciones_ids = set(pendiente.get('opciones', []))
+            accion_pend  = pendiente.get('accion', 'agregar')
+            with db_session() as _conn:
+                matched = [m for m in _match_productos(_normalizar(texto), _conn)
+                           if m['id'] in opciones_ids]
+            if matched:
+                session.pop('voz_pendiente', None)
+                prod = matched[0]
+                hint = pendiente.get('variante_hint')
+                r = {
+                    'accion': accion_pend,
+                    'metodo': None, 'monto_recibido': None,
+                    'cantidad': pendiente.get('cantidad', 1),
+                    'variante': hint['valor'] if hint and hint.get('tipo') == 'exacta' else '',
+                    'variante_hint': hint,
+                    'producto': prod['nombre'],
+                    'producto_id': prod['id'],
+                    'candidatos': [], 'ambiguo': False,
+                }
+                r['respuesta_voz'] = _build_respuesta_voz(r)
+                if accion_pend == 'agregar':
+                    session['voz_ultimo_producto'] = {'id': prod['id'], 'nombre': prod['nombre']}
+                return jsonify(r)
+            # No match among options — re-ask
+            nombres = ' o '.join(pendiente.get('opciones_nombres', [])[:2])
+            return jsonify({
+                'accion': 'desconocido',
+                'respuesta_voz': f"¿Cuál de estos? {nombres}",
+                'candidatos': [{'id': i, 'nombre': n} for i, n in zip(
+                    pendiente.get('opciones', []), pendiente.get('opciones_nombres', []))],
+                'ambiguo': True, 'metodo': None, 'cantidad': 1,
+                'variante': '', 'variante_hint': None, 'producto': '', 'producto_id': None,
+            })
+
         # Sí / No
         t_norm = _normalizar(texto)
         if _es_afirmacion(t_norm):
@@ -687,13 +732,66 @@ def interpretar():
                 except Exception:
                     pass
 
-    # ── BUG 1 — Sugerencia inteligente (siempre responde, threshold 0.65) ────────
+    # ── BUG 1 — Producto ambiguo: guardar contexto de selección ─────────────────
+    if resultado.get('ambiguo') and resultado.get('candidatos'):
+        accion_inf = resultado['accion'] if resultado['accion'] != 'desconocido' else 'agregar'
+        session['voz_pendiente'] = {
+            'tipo': 'seleccion_producto',
+            'accion': accion_inf,
+            'opciones': [c['id'] for c in resultado['candidatos']],
+            'opciones_nombres': [c['nombre'] for c in resultado['candidatos']],
+            'variante_hint': resultado.get('variante_hint'),
+            'cantidad': resultado.get('cantidad', 1),
+        }
+        opts = ' o '.join(c['nombre'] for c in resultado['candidatos'][:2])
+        return jsonify({**resultado, 'respuesta_voz': f"Tengo {opts}. ¿Cuál quieres?"})
+
+    # ── BUG 2+3 — Sólo variante/pack: aplicar al último producto conocido ────────
+    if resultado['accion'] == 'desconocido' and not resultado['producto_id']:
+        hint     = resultado.get('variante_hint')
+        cantidad = resultado.get('cantidad', 1)
+        is_variant_only = hint is not None or bool(_PAT_PACK_SOLO.search(_normalizar(texto)))
+        if is_variant_only:
+            ultimo = session.get('voz_ultimo_producto')
+            if ultimo:
+                r = {
+                    'accion': 'agregar',
+                    'metodo': None, 'monto_recibido': None,
+                    'cantidad': cantidad,
+                    'variante': hint['valor'] if hint and hint.get('tipo') == 'exacta' else '',
+                    'variante_hint': hint,
+                    'producto': ultimo['nombre'],
+                    'producto_id': ultimo['id'],
+                    'candidatos': [], 'ambiguo': False,
+                }
+                r['respuesta_voz'] = _build_respuesta_voz(r)
+                session['voz_ultimo_producto'] = ultimo  # keep context alive
+                return jsonify(r)
+            return jsonify({
+                'accion': 'variante_ultimo',
+                'variante': hint['valor'] if hint and hint.get('tipo') == 'exacta' else '',
+                'variante_hint': hint,
+                'cantidad': cantidad,
+                'respuesta_voz': '¿Eso es para qué producto?',
+                'metodo': None, 'monto_recibido': None,
+                'producto': '', 'producto_id': None, 'candidatos': [], 'ambiguo': False,
+            })
+
+    # ── Sugerencia inteligente (siempre responde, threshold 0.65) ────────────────
     if resultado['accion'] == 'desconocido':
         sugerencia = _sugerir_correccion(texto, resultado)
         logger.info(f"[aprendizaje] Sugerencia: '{sugerencia['respuesta_voz']}'")
         return jsonify(sugerencia)
 
     resultado['respuesta_voz'] = _build_respuesta_voz(resultado)
+
+    # Guardar último producto agregado para contexto de variante (BUG 2)
+    if resultado['accion'] == 'agregar' and resultado.get('producto_id'):
+        session['voz_ultimo_producto'] = {
+            'id': resultado['producto_id'],
+            'nombre': resultado['producto'],
+        }
+
     logger.info(f"[voz] resultado final accion={resultado['accion']} producto_id={resultado['producto_id']} respuesta='{resultado['respuesta_voz']}'")
     return jsonify(resultado)
 
