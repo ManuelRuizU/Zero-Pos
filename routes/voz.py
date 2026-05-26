@@ -326,6 +326,23 @@ def _match_productos(t_norm: str, conn) -> list[dict]:
 
 # ── Conversión de montos en texto → número ────────────────────────────────────
 
+# Word → integer for lucas patterns (Chilean variants: "die"=10, "vente"=20, "tre"=3)
+_NUM_ES: dict[str, int] = {
+    'una': 1, 'un': 1, 'uno': 1,
+    'dos': 2, 'tres': 3, 'tre': 3,
+    'cuatro': 4, 'cinco': 5, 'seis': 6,
+    'siete': 7, 'ocho': 8, 'nueve': 9,
+    'diez': 10, 'die': 10,
+    'once': 11, 'doce': 12, 'trece': 13,
+    'catorce': 14, 'quince': 15,
+    'dieciseis': 16, 'diecisiete': 17, 'dieciocho': 18, 'diecinueve': 19,
+    'veinte': 20, 'vente': 20, 'veintiuno': 21, 'veintidos': 22,
+    'veintitres': 23, 'veinticuatro': 24, 'veinticinco': 25,
+    'veintiseis': 26, 'veintisiete': 27, 'veintiocho': 28, 'veintinueve': 29,
+    'treinta': 30, 'cuarenta': 40, 'cincuenta': 50,
+    'sesenta': 60, 'setenta': 70, 'ochenta': 80, 'noventa': 90, 'cien': 100,
+}
+
 _MONTOS_PALABRAS: list[tuple[str, int]] = sorted([
     ('ciento cincuenta mil', 150000), ('cien mil', 100000),
     ('noventa mil', 90000),  ('ochenta mil', 80000),  ('setenta mil', 70000),
@@ -337,35 +354,154 @@ _MONTOS_PALABRAS: list[tuple[str, int]] = sorted([
     ('diez mil', 10000), ('nueve mil', 9000), ('ocho mil', 8000),
     ('siete mil', 7000), ('seis mil', 6000), ('cinco mil', 5000),
     ('cuatro mil', 4000), ('tres mil', 3000), ('dos mil', 2000),
-    ('mil quinientos', 1500), ('mil', 1000),
+    ('mil quinientos', 1500), ('mil y medio', 1500), ('mil y media', 1500), ('mil', 1000),
     ('novecientos', 900), ('ochocientos', 800), ('setecientos', 700),
     ('seiscientos', 600), ('quinientos', 500), ('cuatrocientos', 400),
     ('trescientos', 300), ('doscientos', 200), ('ciento', 100), ('cien', 100),
-], key=lambda x: -len(x[0]))  # longest first to avoid "mil" consuming "dos mil"
+], key=lambda x: -len(x[0]))
 
 
-def _texto_a_numero(texto: str) -> int | None:
-    # Digit-first: strip thousand separators then find 3-7 digit number
+def _texto_a_numero(texto: str, conn=None) -> int | None:
+    """Parse a Chilean Spanish money amount. Returns pesos (CLP) or None."""
+    # 0. DB lookup — user-taught montos (tipo='monto')
+    if conn is not None:
+        try:
+            t_db = _normalizar(texto)
+            for row in conn.execute(
+                "SELECT palabra, accion FROM voz_aprendizaje WHERE tipo='monto' AND confirmado=1"
+            ).fetchall():
+                if row['palabra'] in t_db:
+                    return int(row['accion'])
+        except Exception:
+            pass
+
+    # 1. Digit-first: strip thousand separators then find 3–7 digit run
     raw = re.sub(r'[.,\s]', '', texto)
-    m = re.search(r'\b(\d{3,7})\b', raw)
+    m = re.search(r'(\d{3,7})', raw)
     if m:
         n = int(m.group(1))
         if 100 <= n <= 9_999_999:
             return n
-    # "5 mil" / "3 mil" style
+
     t = _normalizar(texto)
+
+    # 2. "un palo" = 1,000,000 CLP
+    if re.search(r'\bun\s+palo\b', t):
+        return 1_000_000
+
+    # 3. Lucas (1 luca = 1,000 CLP) — handles "die", "vente", "tre" variants
+    # "media luca" / "meia luca" → 500
+    if re.search(r'\b(media|meia)\s+luca\b', t):
+        return 500
+    # "luca y media/meia" → 1,500
+    if re.search(r'\bluca\s+y\s+(media|meia)\b', t):
+        return 1_500
+    # "N lucas y media/meia" → N×1000 + 500
+    m = re.search(r'\b(\w+)\s+lucas?\s+y\s+(media|meia)\b', t)
+    if m:
+        factor = _NUM_ES.get(m.group(1))
+        if factor is None:
+            try: factor = int(m.group(1))
+            except (ValueError, TypeError): pass
+        if factor:
+            return factor * 1000 + 500
+    # "N lucas" / "N luca" → N×1000
+    m = re.search(r'\b(\w+)\s+lucas?\b', t)
+    if m:
+        factor = _NUM_ES.get(m.group(1))
+        if factor is None:
+            try: factor = int(m.group(1))
+            except (ValueError, TypeError): pass
+        if factor:
+            return factor * 1000
+
+    # 4. "N mil quinientos" / "N mil y medio|media" → N×1000 + 500
+    m = re.search(r'\b(\w+)\s+mil\s+(?:quinientos|y\s+(?:medio|media))\b', t)
+    if m:
+        factor = _NUM_ES.get(m.group(1))
+        if factor is None:
+            try: factor = int(m.group(1))
+            except (ValueError, TypeError): pass
+        if factor:
+            return factor * 1000 + 500
+
+    # 5. Bare digit before "mil" ("5 mil", "3 mil")
     m = re.search(r'\b(\d+)\s+mil\b', t)
     if m:
         return int(m.group(1)) * 1000
-    # Word-based (longest match wins)
+
+    # 6. _MONTOS_PALABRAS — longest-match table for all standard amounts
     for phrase, value in _MONTOS_PALABRAS:
         if phrase in t:
             return value
+
     return None
 
 
 def _fmt_pesos(n: int | float) -> str:
     return f"${int(n):,}".replace(',', '.')
+
+
+# ── Número → texto en español para TTS (vuelto en voz) ───────────────────────
+
+_UNIDADES_VOZ: dict[int, str] = {
+    1: 'uno', 2: 'dos', 3: 'tres', 4: 'cuatro', 5: 'cinco',
+    6: 'seis', 7: 'siete', 8: 'ocho', 9: 'nueve',
+    10: 'diez', 11: 'once', 12: 'doce', 13: 'trece', 14: 'catorce',
+    15: 'quince', 16: 'dieciseis', 17: 'diecisiete', 18: 'dieciocho', 19: 'diecinueve',
+    20: 'veinte', 21: 'veintiuno', 22: 'veintidos', 23: 'veintitres',
+    24: 'veinticuatro', 25: 'veinticinco', 26: 'veintiseis',
+    27: 'veintisiete', 28: 'veintiocho', 29: 'veintinueve',
+}
+_DECENAS_VOZ: dict[int, str] = {
+    30: 'treinta', 40: 'cuarenta', 50: 'cincuenta',
+    60: 'sesenta', 70: 'setenta', 80: 'ochenta', 90: 'noventa',
+}
+_CENTENAS_VOZ: dict[int, str] = {
+    100: 'cien', 200: 'doscientos', 300: 'trescientos', 400: 'cuatrocientos',
+    500: 'quinientos', 600: 'seiscientos', 700: 'setecientos',
+    800: 'ochocientos', 900: 'novecientos',
+}
+
+
+def _num_menor_mil(n: int) -> str:
+    if n <= 0:
+        return ''
+    parts = []
+    c = (n // 100) * 100
+    if c:
+        if c == 100 and n % 100 != 0:
+            parts.append('ciento')
+        else:
+            parts.append(_CENTENAS_VOZ[c])
+    resto = n % 100
+    if resto:
+        if resto in _UNIDADES_VOZ:
+            parts.append(_UNIDADES_VOZ[resto])
+        else:
+            dec = (resto // 10) * 10
+            uni = resto % 10
+            parts.append(_DECENAS_VOZ[dec] + (f' y {_UNIDADES_VOZ[uni]}' if uni else ''))
+    return ' '.join(parts)
+
+
+def _numero_a_texto(n: int) -> str:
+    """Convert a peso amount to natural Spanish words for TTS."""
+    n = abs(int(round(n)))
+    if n == 0:
+        return 'cero pesos'
+    if n >= 1_000_000:
+        return _fmt_pesos(n)
+    miles = n // 1000
+    resto = n % 1000
+    parts: list[str] = []
+    if miles == 1:
+        parts.append('mil')
+    elif miles > 1:
+        parts.append(f'{_num_menor_mil(miles)} mil')
+    if resto:
+        parts.append(_num_menor_mil(resto))
+    return ' '.join(parts) + ' pesos'
 
 
 def _parsear_v2(texto: str, conn) -> dict:
@@ -412,7 +548,7 @@ def _parsear_v2(texto: str, conn) -> dict:
     # BUG 3 — Extraer monto recibido cuando el método de pago es efectivo
     monto_recibido = None
     if accion == 'seleccionar_pago' and metodo == 'efectivo':
-        monto_recibido = _texto_a_numero(texto)
+        monto_recibido = _texto_a_numero(texto, conn)
 
     resultado: dict = {
         'accion':         accion,
@@ -467,7 +603,8 @@ def interpretar():
 
         # BUG 3 — Esperando monto en efectivo
         if tipo_pend == 'esperando_monto':
-            monto = _texto_a_numero(texto)
+            with db_session() as _conn:
+                monto = _texto_a_numero(texto, _conn)
             if monto:
                 session.pop('voz_pendiente', None)
                 metodo = pendiente['metodo']
@@ -590,9 +727,15 @@ def _build_respuesta_voz(r: dict) -> str:
         if metodo in ('transferencia', 'tarjeta'):
             return f"Pagando con {metodo}"
         if monto and vuelto is not None:
-            return f"Recibiste {_fmt_pesos(monto)}. Vuelto: {_fmt_pesos(vuelto)}"
+            monto_txt = _numero_a_texto(monto)
+            if vuelto == 0:
+                return f"Recibiste {monto_txt}. Monto exacto"
+            elif vuelto > 0:
+                return f"Recibiste {monto_txt}. Vuelto: {_numero_a_texto(vuelto)}"
+            else:
+                return f"Recibiste {monto_txt}. Faltan {_numero_a_texto(-vuelto)}"
         if monto:
-            return f"Recibiste {_fmt_pesos(monto)}"
+            return f"Recibiste {_numero_a_texto(monto)}"
         return "¿Cuánto te dieron?"
     if accion == 'esperando_monto':
         return "¿Cuánto te dieron?"
@@ -627,13 +770,14 @@ def _sugerir_correccion(texto: str, resultado: dict) -> dict:
     }
 
     if mejor_score >= 0.65:
-        nombre_prod = resultado.get('producto', '')
-        prod_id     = resultado.get('producto_id')
+        nombre_prod   = resultado.get('producto', '')
+        prod_id       = resultado.get('producto_id')
+        palabra_dicha = mejor_palabra or (words[0] if words else texto[:20])
 
         if nombre_prod:
-            respuesta = f"¿Quisiste decir {mejor_accion.upper()} {nombre_prod}?"
+            respuesta = f"No entendí '{palabra_dicha}'. ¿Quisiste decir {mejor_accion.upper()} {nombre_prod}?"
         else:
-            respuesta = f"¿Quisiste decir '{mejor_kw}'?"
+            respuesta = f"No entendí '{palabra_dicha}'. ¿Quisiste decir '{mejor_kw}'?"
 
         session['voz_pendiente'] = {
             'tipo':          'accion',
@@ -651,10 +795,8 @@ def _sugerir_correccion(texto: str, resultado: dict) -> dict:
         return {**_base, 'accion': 'esperando_confirmacion', 'estado': 'esperando_confirmacion',
                 'respuesta_voz': respuesta}
 
-    # BUG 1c — Score too low: mention what they said, not Coca-Cola
-    palabra_dicha = mejor_palabra or (words[0] if words else texto[:20])
     return {**_base, 'accion': 'desconocido',
-            'respuesta_voz': f"No entendí '{palabra_dicha}'. Prueba: agrega, quita o cobra"}
+            'respuesta_voz': "No entendí. Prueba con: agrega, quita o cobra"}
 
 
 def _ejecutar_confirmacion(pendiente: dict, uid: int):

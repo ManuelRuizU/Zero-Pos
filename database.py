@@ -51,14 +51,9 @@ def init_db():
 
 def _migrate_columns(conn: sqlite3.Connection):
     """Agrega columnas nuevas a tablas existentes sin romper instancias ya creadas."""
-    existing = {
-        row[0]
-        for row in conn.execute("PRAGMA table_info(productos)").fetchall()
-        # row[1] es el nombre de la columna
-    }
-    # Re-usamos fetchall directo para obtener los nombres
-    cols_productos = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
-    cols_vitems = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
+    cols_productos  = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
+    cols_vitems     = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
+    cols_aprendizaje = {r[1] for r in conn.execute("PRAGMA table_info(voz_aprendizaje)").fetchall()}
 
     if "subcategoria_id" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN subcategoria_id INTEGER REFERENCES subcategorias(id)")
@@ -68,6 +63,8 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE venta_items ADD COLUMN variante_id INTEGER REFERENCES producto_variantes(id)")
     if "nombre_variante" not in cols_vitems:
         conn.execute("ALTER TABLE venta_items ADD COLUMN nombre_variante TEXT")
+    if "tipo" not in cols_aprendizaje:
+        conn.execute("ALTER TABLE voz_aprendizaje ADD COLUMN tipo TEXT NOT NULL DEFAULT 'accion'")
 
 
 def _seed_defaults(conn: sqlite3.Connection):
@@ -101,3 +98,25 @@ def _seed_defaults(conn: sqlite3.Connection):
             ("Admin", hashed, "admin")
         )
         logger.info("Usuario admin creado con PIN por defecto: 1234")
+
+    _seed_montos_chilenos(conn)
+
+
+def _seed_montos_chilenos(conn: sqlite3.Connection):
+    """Pre-carga modismos chilenos para montos de dinero (funcionan desde el día 1)."""
+    montos = [
+        ('die luca',    '10000'), ('die lucas',   '10000'),
+        ('vente luca',  '20000'), ('vente lucas', '20000'),
+        ('tre luca',    '3000'),  ('tre lucas',   '3000'),
+        ('luca y meia', '1500'),  ('meia luca',   '500'),
+    ]
+    try:
+        for palabra, valor in montos:
+            conn.execute(
+                """INSERT OR IGNORE INTO voz_aprendizaje
+                   (palabra, accion, tipo, confirmado, veces_usado)
+                   VALUES (?, ?, 'monto', 1, 0)""",
+                (palabra, valor),
+            )
+    except Exception as e:
+        logger.debug(f"seed_montos_chilenos: {e}")
