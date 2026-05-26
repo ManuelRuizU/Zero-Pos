@@ -55,16 +55,16 @@ _WAKE_WORDS = frozenset({'zero', 'jarvis', 'hal', 'nova', 'oye', 'hola', 'hey'})
 
 _PAT_AGREGAR = re.compile(
     r'\b('
-    r'agregar?|agrega(?:me|nos|le)?|agrega|'    # agregar / agrega / agregame
-    r'poner|pon(?:me|le|nos|te)?|'              # poner / ponme / ponle
-    r'an[aá]d(?:e|ir)|an[aá]deme|'             # añadir / añade / anademe
-    r'sumar?|'                                  # sumar / suma
-    r'quisiera|quiero|'                         # quiero / quisiera
-    r'dame|deme|dar|'                           # dame / deme / dar
-    r'met(?:er|e|ele|eme)|'                     # meter / mete / metele
-    r'traer|traeme?|'                           # traer / traeme
-    r'incluir|incluye|'                         # incluir / incluye
-    r'dale'                                     # dale
+    r'agregar?|agrega(?:me|nos|le)?|agregu(?:e|eme|enos)|'  # agregar/agrega/agregue/agregueme
+    r'poner|pon(?:me|le|nos|te|gan)?|pong(?:a|ame|anos)|'   # poner/ponme/pongan/póngame
+    r'an[aá]d(?:e|ir)|an[aá]deme|'                          # añadir/añade
+    r'sumar?|'                                               # sumar/suma
+    r'necesito|quisiera|quiero|'                             # necesito/quisiera/quiero
+    r'dame|d[eé]me|dar|'                                     # dame/déme/dar
+    r'met(?:er|e|ele|eme)|'                                  # meter/mete/métele
+    r'traer|traeme?|'                                        # traer/traeme
+    r'incluir|incluye|'                                      # incluir/incluye
+    r'dale'                                                  # dale
     r')\b', re.I
 )
 _PAT_QUITAR = re.compile(
@@ -79,16 +79,28 @@ _PAT_QUITAR = re.compile(
 )
 _PAT_COBRAR = re.compile(
     r'\b('
-    r'cobrar?|'                                 # cobrar / cobra
-    r'a\s+(?:cobrar|pagar)|para\s+pagar|'       # a cobrar / a pagar / para pagar
-    r'cerrar?(?:mos)?|'                         # cerrar / cerramos
-    r'eso\s+es\s+todo|eso\s+nomas?|'            # eso es todo / eso nomás
-    r'ya\s+(?:est[aá]|listo)|listo\b|'          # ya está / ya listo / listo
-    r'pagar?|paga\b|'                           # pagar / paga
-    r'factura|boleta|'                          # factura / boleta
-    r'cu[aá]nto\s+(?:va|es|sale)|el\s+total|total\b'  # cuánto va/es/sale / el total
+    r'cobrar?|'                                           # cobrar / cobra
+    r'a\s+(?:cobrar|pagar)|para\s+pagar|'                 # a cobrar / a pagar / para pagar
+    r'cerrar?(?:mos)?|'                                   # cerrar / cerramos
+    r'eso\s+es\s+todo|eso\s+nomas?|'                      # eso es todo / eso nomás
+    r'ya\s+(?:est[aá]|listo)|listo\b|'                    # ya está / ya listo / listo
+    r'pagar?|paga\b|pagamos|pagan|'                       # pagar/paga/pagamos/pagan
+    r'factura|boleta|'                                    # factura / boleta
+    r'cu[aá]nto\s+(?:va|es|sale)|el\s+total|total\b'     # cuánto va/es/sale / el total
     r')\b', re.I
 )
+
+# ── Detección de método de pago ──────────────────────────────────────────────
+_PAT_PAGO_EFECTIVO      = re.compile(r'\b(efectivo|cash|billetes?)\b', re.I)
+_PAT_PAGO_TRANSFERENCIA = re.compile(r'\b(transferencia|transfe|transfer)\b', re.I)
+_PAT_PAGO_TARJETA       = re.compile(r'\b(tarjeta|d[eé]bito|cr[eé]dito)\b', re.I)
+
+
+def _detectar_metodo_pago(t: str) -> str | None:
+    if _PAT_PAGO_EFECTIVO.search(t):      return 'efectivo'
+    if _PAT_PAGO_TRANSFERENCIA.search(t): return 'transferencia'
+    if _PAT_PAGO_TARJETA.search(t):       return 'tarjeta'
+    return None
 _PAT_LIMPIAR = re.compile(
     r'\b(limpia|vacia|borra\s+todo|de\s+nuevo|empezar\s+de\s+nuevo|'
     r'nuevo\s+cliente|limpiar|vaciar)\b', re.I
@@ -101,12 +113,13 @@ _PAT_STOCK = re.compile(
 )
 
 _VARIANTE_EXACTA = [
-    (re.compile(r'3\s*(?:litros?|l\b)|tres\s*litros?|3000\s*(?:ml|cc)?', re.I), '3L'),
-    (re.compile(r'2\s*(?:litros?|l\b)|dos\s*litros?|2000\s*(?:ml|cc)?|familiar\b|mega\b', re.I), '2L'),
-    (re.compile(r'1[.,]5\s*(?:litros?|l\b)?|1500\s*(?:ml|cc)?|litro\s+y\s+medio|uno\s+(?:y\s+)?medio|uno\s+coma\s+cinco', re.I), '1.5L'),
-    (re.compile(r'\bun\s*litro\b|1000\s*(?:ml|cc)?|\b1\s*l\b|de\s+litro\b', re.I), '1L'),
-    (re.compile(r'500\s*(?:ml|cc)?|medio\s*litro|botella\s+chica\b', re.I), '500ml'),
-    (re.compile(r'35[05]\s*(?:ml|cc)?|en\s+lata\b|\blata\b', re.I), '350ml'),
+    # Volume — units are REQUIRED to avoid matching bare numbers like "3g" or "2000g"
+    (re.compile(r'3\s*(?:litros?|l\b)|tres\s*litros?|3000\s*(?:ml|cc)', re.I), '3L'),
+    (re.compile(r'2\s*(?:litros?|l\b)|dos\s*litros?|2000\s*(?:ml|cc)|familiar\b|mega\b', re.I), '2L'),
+    (re.compile(r'1[.,]5\s*(?:litros?|l\b)|1500\s*(?:ml|cc)|litro\s+y\s+medio|uno\s+(?:y\s+)?medio|uno\s+coma\s+cinco', re.I), '1.5L'),
+    (re.compile(r'\bun\s*litro\b|1000\s*(?:ml|cc)|\b1\s*l\b|de\s+litro\b', re.I), '1L'),
+    (re.compile(r'500\s*(?:ml|cc)|medio\s*litro|botella\s+chica\b', re.I), '500ml'),
+    (re.compile(r'35[05]\s*(?:ml|cc)|en\s+lata\b|\blata\b', re.I), '350ml'),
     # Weight — medio kilo before kilo so "medio kilo" doesn't match bare "kilo"
     (re.compile(r'medio\s+kilo|500\s*(?:g|gr|gramos?)', re.I), '500g'),
     (re.compile(r'un\s+cuarto|250\s*(?:g|gr|gramos?)', re.I), '250g'),
@@ -119,11 +132,17 @@ _VARIANTE_RELATIVA = [
     (re.compile(r'\bgrandes?\b|\bfamiliar\b|\bmega\b', re.I), 'grande'),
 ]
 
-# Phrases to strip before quantity detection so "tres litros" isn't counted as qty=3
+# Dynamic weight patterns for arbitrary gram/ml values ("100g", "200ml", etc.)
+# Checked AFTER _VARIANTE_EXACTA so specific values (500ml, 1kg) take precedence.
+_PAT_PESO_DINAMICO = re.compile(r'\b(\d+)\s*(?:g|gr|gramos?)\b', re.I)
+_PAT_ML_DINAMICO   = re.compile(r'\b(\d+)\s*(?:ml|cc)\b', re.I)
+
+# Phrases to strip before quantity detection so "tres litros" / "100g" isn't counted as qty
 _SIZE_STRIP_PATS = [
     re.compile(r'\b(?:tres|dos|un(?:o|a)?)\s+litros?\b', re.I),
     re.compile(r'\btres\s+kilos?\b|\bdos\s+kilos?\b', re.I),
-    re.compile(r'\d+\s*(?:ml|cc|litros?|kilos?|kg|gr|gramos?)\b', re.I),
+    # \b before digit, then number+unit — includes bare "g" to cover "100g"
+    re.compile(r'\d+\s*(?:ml|cc|litros?|kilos?|kg|g(?:r(?:amos?)?)?\b)', re.I),
     re.compile(r'litro\s+y\s+medio\b', re.I),
     re.compile(r'medio\s+kilo\b', re.I),
     re.compile(r'un\s+cuarto\b', re.I),
@@ -184,6 +203,14 @@ def _detectar_variante_hint(t: str) -> dict | None:
     for pat, tipo in _VARIANTE_RELATIVA:
         if pat.search(t):
             return {'tipo': tipo, 'valor': None}
+    # Dynamic weight: "100g", "200gr", "150 gramos" → variante "100g" etc.
+    m = _PAT_PESO_DINAMICO.search(t)
+    if m:
+        return {'tipo': 'exacta', 'valor': f'{m.group(1)}g'}
+    # Dynamic ml: "330ml", "473cc" → variante "330ml" etc.
+    m = _PAT_ML_DINAMICO.search(t)
+    if m:
+        return {'tipo': 'exacta', 'valor': f'{m.group(1)}ml'}
     return None
 
 
@@ -242,7 +269,10 @@ def _parsear_v2(texto: str, conn) -> dict:
 
     logger.info(f"[voz] texto_norm='{t}'")
     accion = _detectar_accion(t)
-    logger.info(f"[voz] accion='{accion}'")
+    metodo = _detectar_metodo_pago(t)
+    if metodo:
+        accion = 'seleccionar_pago'
+    logger.info(f"[voz] accion='{accion}' metodo={metodo}")
     hint = _detectar_variante_hint(t)
     cantidad = _detectar_cantidad(_strip_size_phrases(t))
     matches = _match_productos(t, conn)
@@ -250,6 +280,7 @@ def _parsear_v2(texto: str, conn) -> dict:
 
     resultado: dict = {
         'accion': accion,
+        'metodo': metodo,
         'cantidad': cantidad,
         'variante': hint['valor'] if hint and hint['tipo'] == 'exacta' else '',
         'variante_hint': hint,
