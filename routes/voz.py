@@ -163,7 +163,7 @@ def _detectar_variante_hint(t: str) -> dict | None:
 
 
 def _match_productos(t_norm: str, conn) -> list[dict]:
-    """Fuzzy-match products by word overlap. Threshold 60%."""
+    """Fuzzy-match products by word overlap (≥60%). Falls back to SQL LIKE."""
     rows = conn.execute(
         "SELECT id, nombre, precio, tiene_variantes FROM productos WHERE activo=1"
     ).fetchall()
@@ -183,6 +183,27 @@ def _match_productos(t_norm: str, conn) -> list[dict]:
                 'score': round(score, 2),
             })
     matches.sort(key=lambda x: (-x['score'], -len(x['nombre'])))
+
+    # SQL LIKE fallback when fuzzy finds nothing
+    if not matches:
+        words = [w for w in t_norm.split() if len(w) > 2]
+        if words:
+            conds = ' OR '.join(
+                "LOWER(REPLACE(REPLACE(nombre,'-',' '),',',' ')) LIKE ?" for _ in words
+            )
+            params = [f'%{w}%' for w in words]
+            for p in conn.execute(
+                f"SELECT id, nombre, precio, tiene_variantes FROM productos WHERE activo=1 AND ({conds})",
+                params,
+            ).fetchall():
+                matches.append({
+                    'id': p['id'], 'nombre': p['nombre'],
+                    'precio': float(p['precio']),
+                    'tiene_variantes': bool(p['tiene_variantes']),
+                    'score': 0.5,
+                })
+            matches.sort(key=lambda x: -len(x['nombre']))
+
     return matches
 
 
@@ -194,10 +215,13 @@ def _parsear_v2(texto: str, conn) -> dict:
         words.pop(0)
     t = ' '.join(words)
 
+    logger.info(f"[voz] texto_norm='{t}'")
     accion = _detectar_accion(t)
+    logger.info(f"[voz] accion='{accion}'")
     hint = _detectar_variante_hint(t)
     cantidad = _detectar_cantidad(_strip_size_phrases(t))
     matches = _match_productos(t, conn)
+    logger.info(f"[voz] matches={[(m['nombre'], m['score']) for m in matches[:3]]}")
 
     resultado: dict = {
         'accion': accion,
@@ -238,6 +262,7 @@ def interpretar():
     if not texto:
         return jsonify({"error": "texto requerido"}), 400
 
+    logger.info(f"[voz] interpretar texto='{texto}'")
     uid = session.get("usuario_id")
     with db_session() as conn:
         resultado = _parsear_v2(texto, conn)
@@ -268,7 +293,34 @@ def interpretar():
                 except Exception:
                     pass
 
+    resultado['respuesta_voz'] = _build_respuesta_voz(resultado)
+    logger.info(f"[voz] resultado final accion={resultado['accion']} producto_id={resultado['producto_id']} respuesta='{resultado['respuesta_voz']}'")
     return jsonify(resultado)
+
+
+def _build_respuesta_voz(r: dict) -> str:
+    accion = r.get('accion', 'desconocido')
+    nombre = r.get('producto', '')
+    cantidad = r.get('cantidad', 1)
+    variante = r.get('variante', '')
+    if r.get('ambiguo') and r.get('candidatos'):
+        opts = ' o '.join(c['nombre'] for c in r['candidatos'][:2])
+        return f"Tengo {opts}. ¿Cuál quieres?"
+    if accion == 'agregar':
+        if nombre:
+            qty_str = f"{cantidad}x " if cantidad > 1 else ""
+            var_str = f" {variante}" if variante else ""
+            return f"Agregando {qty_str}{nombre}{var_str}"
+        return "¿Qué producto quieres agregar?"
+    if accion == 'quitar':
+        return f"Quitando {nombre}" if nombre else "¿Qué quieres quitar?"
+    if accion == 'cobrar':
+        return "Abriendo cobro"
+    if accion == 'limpiar':
+        return "¿Limpiar el carrito?"
+    if accion in ('ventas_hoy', 'stock', 'consultar'):
+        return "Consultando..."
+    return "No entendí. Intenta: agrega una Coca-Cola"
 
 
 # ── Consulta ──────────────────────────────────────────────────────────────────

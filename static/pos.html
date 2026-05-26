@@ -744,6 +744,8 @@ let categoriaActual = '';
 let subcatActual = '';
 let catIconoMap = {};
 let productoMap = {};
+let todosProductos = [];    // always the full unfiltered list, for voice search
+let todosProductosMap = {}; // id → product, from todosProductos
 let metodoPago = 'efectivo';
 let total = 0;
 
@@ -1081,7 +1083,7 @@ async function procesarVoz(cmd, alternativas = []) {
 
   if (!interp) interp = _kwFallback(cmd);
 
-  const {accion, producto, producto_id, candidatos, ambiguo, cantidad, variante, variante_hint} = interp;
+  const {accion, producto, producto_id, candidatos, ambiguo, cantidad, variante, variante_hint, respuesta_voz} = interp;
 
   if (accion === 'agregar') return vozAgregar(producto, cantidad || 1, variante || '', variante_hint || null, producto_id || null, ambiguo ? candidatos : []);
   if (accion === 'quitar')  return vozQuitar(producto);
@@ -1093,7 +1095,7 @@ async function procesarVoz(cmd, alternativas = []) {
   if (accion === 'consultar' || accion === 'ventas_hoy' || accion === 'stock') {
     return await consultarVoz(cmd);
   }
-  hablar(`No entendí el comando. Intenta: "agrega una coca cola"`);
+  hablar(respuesta_voz || `No entendí el comando. Intenta: "agrega una coca cola"`);
 }
 
 function esConsultaVoz(t) {
@@ -1125,13 +1127,16 @@ async function vozAgregar(nombre, qty, variante, varianteHint, productoId, candi
     return;
   }
 
-  // Resolve product: prefer server-matched id, fall back to client search
+  // Resolve product: prefer server-matched id, check full catalogue, fall back to text search
   let prod = null;
-  if (productoId && productoMap[productoId]) {
-    prod = productoMap[productoId];
-  } else if (candidatos && candidatos.length === 1 && productoMap[candidatos[0].id]) {
-    prod = productoMap[candidatos[0].id];
-  } else {
+  if (productoId) {
+    prod = productoMap[productoId] || todosProductosMap[productoId] || null;
+  }
+  if (!prod && candidatos && candidatos.length === 1) {
+    const cid = candidatos[0].id;
+    prod = productoMap[cid] || todosProductosMap[cid] || null;
+  }
+  if (!prod) {
     const matches = vozBuscar(nombre);
     if (!matches.length) {
       hablar(`No encontré ${nombre || 'el producto'}. ¿Puedes repetir?`);
@@ -1220,7 +1225,9 @@ function vozQuitar(nombre) {
 function vozBuscar(busqueda) {
   const words = vozNorm(busqueda).split(' ').filter(w => w.length > 2);
   if (!words.length) return [];
-  return productos.map(p => {
+  // Always search the full catalogue, not just the current category view
+  const fuente = todosProductos.length ? todosProductos : productos;
+  return fuente.map(p => {
     const n = vozNorm(p.nombre);
     let s = 0;
     words.forEach(w => { if (n.includes(w)) s += 2; else if (n.split(' ').some(t => t.startsWith(w) || w.startsWith(t))) s += 1; });
@@ -1398,6 +1405,13 @@ async function cargarProductos() {
   const q = document.getElementById('searchInput').value;
   const url = `/api/productos?activos=1${categoriaActual ? '&categoria_id=' + categoriaActual : ''}${q ? '&q=' + encodeURIComponent(q) : ''}`;
   let prods = await fetch(url, {credentials:'include'}).then(r => r.json()).catch(() => []);
+
+  // Snapshot full list for voice search before any client-side filtering
+  if (!categoriaActual && !q) {
+    todosProductos = prods;
+    todosProductosMap = {};
+    prods.forEach(p => { todosProductosMap[p.id] = p; });
+  }
 
   // Client-side subcategory filter
   if (subcatActual) {
