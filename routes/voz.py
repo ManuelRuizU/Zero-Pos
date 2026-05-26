@@ -54,15 +54,40 @@ def _ollama(prompt: str, system: str = "", max_tokens: int = 200) -> str | None:
 _WAKE_WORDS = frozenset({'zero', 'jarvis', 'hal', 'nova', 'oye', 'hola', 'hey'})
 
 _PAT_AGREGAR = re.compile(
-    r'\b(agrega|agrega|agregame|agregame|pon(?:me|le|nos|te)?|'
-    r'annade|anade|suma|quiero|dame|deme|metele|meteme|trae|traeme|dale|agrega)\b', re.I
+    r'\b('
+    r'agregar?|agrega(?:me|nos|le)?|agrega|'    # agregar / agrega / agregame
+    r'poner|pon(?:me|le|nos|te)?|'              # poner / ponme / ponle
+    r'an[aá]d(?:e|ir)|an[aá]deme|'             # añadir / añade / anademe
+    r'sumar?|'                                  # sumar / suma
+    r'quisiera|quiero|'                         # quiero / quisiera
+    r'dame|deme|dar|'                           # dame / deme / dar
+    r'met(?:er|e|ele|eme)|'                     # meter / mete / metele
+    r'traer|traeme?|'                           # traer / traeme
+    r'incluir|incluye|'                         # incluir / incluye
+    r'dale'                                     # dale
+    r')\b', re.I
 )
 _PAT_QUITAR = re.compile(
-    r'\b(quita|quitame|saca|elimina|borra(?!\s+todo)\b|remueve|quitar|sacar)\b', re.I
+    r'\b('
+    r'quitar?|quita(?:me|nos)?|'                # quitar / quita / quitame
+    r'sacar?|saca(?:me|nos)?|'                  # sacar / saca / sacame
+    r'eliminar?|'                               # eliminar / elimina
+    r'borrar?(?!\s+todo)|borra(?!\s+todo)|'     # borrar/borra (no "borrar todo")
+    r'remover?|remueve|'                        # remover / remueve
+    r'descontar?'                               # descontar / desconta
+    r')\b', re.I
 )
 _PAT_COBRAR = re.compile(
-    r'\b(cobra|cobrar|a\s+cobrar|cerramos|eso\s+es\s+todo|eso\s+nomas?|'
-    r'listo\b|pagar|paga|factura|boleta|cuanto\s+va|cuanto\s+es|el\s+total)\b', re.I
+    r'\b('
+    r'cobrar?|'                                 # cobrar / cobra
+    r'a\s+(?:cobrar|pagar)|para\s+pagar|'       # a cobrar / a pagar / para pagar
+    r'cerrar?(?:mos)?|'                         # cerrar / cerramos
+    r'eso\s+es\s+todo|eso\s+nomas?|'            # eso es todo / eso nomás
+    r'ya\s+(?:est[aá]|listo)|listo\b|'          # ya está / ya listo / listo
+    r'pagar?|paga\b|'                           # pagar / paga
+    r'factura|boleta|'                          # factura / boleta
+    r'cu[aá]nto\s+(?:va|es|sale)|el\s+total|total\b'  # cuánto va/es/sale / el total
+    r')\b', re.I
 )
 _PAT_LIMPIAR = re.compile(
     r'\b(limpia|vacia|borra\s+todo|de\s+nuevo|empezar\s+de\s+nuevo|'
