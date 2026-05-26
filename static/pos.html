@@ -1065,7 +1065,7 @@ async function procesarVoz(cmd, alternativas = []) {
       const r = await fetch('/api/voz/interpretar', {
         method: 'POST', credentials: 'include',
         headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({texto: txt}),
+        body: JSON.stringify({texto: txt, total_carrito: calcCarritoTotal()}),
       });
       if (!r.ok) continue;
       const data = await r.json();
@@ -1083,7 +1083,8 @@ async function procesarVoz(cmd, alternativas = []) {
 
   if (!interp) interp = _kwFallback(cmd);
 
-  const {accion, producto, producto_id, candidatos, ambiguo, cantidad, variante, variante_hint, respuesta_voz} = interp;
+  const {accion, producto, producto_id, candidatos, ambiguo, cantidad, variante, variante_hint,
+         respuesta_voz, metodo, monto_recibido, vuelto} = interp;
 
   if (accion === 'agregar') return vozAgregar(producto, cantidad || 1, variante || '', variante_hint || null, producto_id || null, ambiguo ? candidatos : []);
   if (accion === 'quitar')  return vozQuitar(producto);
@@ -1095,7 +1096,31 @@ async function procesarVoz(cmd, alternativas = []) {
   if (accion === 'consultar' || accion === 'ventas_hoy' || accion === 'stock') {
     return await consultarVoz(cmd);
   }
-  hablar(respuesta_voz || `No entendí el comando. Intenta: "agrega una coca cola"`);
+
+  // BUG 3 — Cobro con método de pago por voz
+  if (accion === 'seleccionar_pago' && metodo) {
+    hablar(respuesta_voz);
+    if (carrito.length) {
+      abrirCobro();
+      // Pre-select the detected payment method
+      const btnMet = document.querySelector(`[data-met="${metodo}"]`);
+      if (btnMet) selMetodo(btnMet);
+      // Pre-fill monto if provided
+      if (monto_recibido) {
+        const inp = document.getElementById('montoRecibido');
+        if (inp) { inp.value = monto_recibido; inp.dispatchEvent(new Event('input')); }
+      }
+    }
+    return;
+  }
+
+  // BUG 3 — Esperando monto: sólo hablar, el siguiente comando lo aportará
+  if (accion === 'esperando_monto') {
+    hablar(respuesta_voz || '¿Cuánto te dieron?');
+    return;
+  }
+
+  hablar(respuesta_voz || 'No entendí. Prueba: agrega, quita o cobra');
 }
 
 function esConsultaVoz(t) {

@@ -65,6 +65,7 @@ _PAT_AGREGAR = re.compile(
     r'met(?:er|e|ele|eme)|'                                  # meter/mete/métele
     r'traer|traeme?|'                                        # traer/traeme
     r'incluir|incluye|'                                      # incluir/incluye
+    r'coloc(?:ar?|a(?:me|le|nos)?|amos|que(?:me|nos)?)|'    # colocar/coloca/coloque
     r'dale'                                                  # dale
     r')\b', re.I
 )
@@ -122,6 +123,7 @@ _ALL_KEYWORDS: dict[str, str] = {
         'necesito', 'quisiera', 'quiero', 'dame', 'deme', 'dar',
         'meter', 'mete', 'metele', 'traer', 'traeme',
         'incluir', 'incluye', 'dale',
+        'colocar', 'coloca', 'colocame', 'coloque', 'coloqueme',
     )},
     **{k: 'quitar' for k in (
         'quitar', 'quita', 'quitame', 'sacar', 'saca', 'sacame',
@@ -322,6 +324,50 @@ def _match_productos(t_norm: str, conn) -> list[dict]:
     return matches
 
 
+# ── Conversión de montos en texto → número ────────────────────────────────────
+
+_MONTOS_PALABRAS: list[tuple[str, int]] = sorted([
+    ('ciento cincuenta mil', 150000), ('cien mil', 100000),
+    ('noventa mil', 90000),  ('ochenta mil', 80000),  ('setenta mil', 70000),
+    ('sesenta mil', 60000),  ('cincuenta mil', 50000), ('cuarenta mil', 40000),
+    ('treinta y cinco mil', 35000), ('treinta mil', 30000),
+    ('veinticinco mil', 25000), ('veinte mil', 20000),
+    ('dieciseis mil', 16000), ('quince mil', 15000), ('catorce mil', 14000),
+    ('trece mil', 13000), ('doce mil', 12000), ('once mil', 11000),
+    ('diez mil', 10000), ('nueve mil', 9000), ('ocho mil', 8000),
+    ('siete mil', 7000), ('seis mil', 6000), ('cinco mil', 5000),
+    ('cuatro mil', 4000), ('tres mil', 3000), ('dos mil', 2000),
+    ('mil quinientos', 1500), ('mil', 1000),
+    ('novecientos', 900), ('ochocientos', 800), ('setecientos', 700),
+    ('seiscientos', 600), ('quinientos', 500), ('cuatrocientos', 400),
+    ('trescientos', 300), ('doscientos', 200), ('ciento', 100), ('cien', 100),
+], key=lambda x: -len(x[0]))  # longest first to avoid "mil" consuming "dos mil"
+
+
+def _texto_a_numero(texto: str) -> int | None:
+    # Digit-first: strip thousand separators then find 3-7 digit number
+    raw = re.sub(r'[.,\s]', '', texto)
+    m = re.search(r'\b(\d{3,7})\b', raw)
+    if m:
+        n = int(m.group(1))
+        if 100 <= n <= 9_999_999:
+            return n
+    # "5 mil" / "3 mil" style
+    t = _normalizar(texto)
+    m = re.search(r'\b(\d+)\s+mil\b', t)
+    if m:
+        return int(m.group(1)) * 1000
+    # Word-based (longest match wins)
+    for phrase, value in _MONTOS_PALABRAS:
+        if phrase in t:
+            return value
+    return None
+
+
+def _fmt_pesos(n: int | float) -> str:
+    return f"${int(n):,}".replace(',', '.')
+
+
 def _parsear_v2(texto: str, conn) -> dict:
     t = _normalizar(texto)
     # Strip leading wake words
@@ -352,19 +398,33 @@ def _parsear_v2(texto: str, conn) -> dict:
     logger.info(f"[voz] accion='{accion}' metodo={metodo}")
     hint = _detectar_variante_hint(t)
     cantidad = _detectar_cantidad(_strip_size_phrases(t))
-    matches = _match_productos(t, conn)
-    logger.info(f"[voz] matches={[(m['nombre'], m['score']) for m in matches[:3]]}")
+
+    # BUG 2 — Acciones de cobro/consulta tienen prioridad: no buscar productos
+    _ACCIONES_SIN_PRODUCTO = frozenset({
+        'seleccionar_pago', 'cobrar', 'ventas_hoy', 'stock', 'limpiar',
+    })
+    if accion in _ACCIONES_SIN_PRODUCTO:
+        matches = []
+    else:
+        matches = _match_productos(t, conn)
+        logger.info(f"[voz] matches={[(m['nombre'], m['score']) for m in matches[:3]]}")
+
+    # BUG 3 — Extraer monto recibido cuando el método de pago es efectivo
+    monto_recibido = None
+    if accion == 'seleccionar_pago' and metodo == 'efectivo':
+        monto_recibido = _texto_a_numero(texto)
 
     resultado: dict = {
-        'accion': accion,
-        'metodo': metodo,
-        'cantidad': cantidad,
-        'variante': hint['valor'] if hint and hint['tipo'] == 'exacta' else '',
-        'variante_hint': hint,
-        'producto': '',
-        'producto_id': None,
-        'candidatos': [],
-        'ambiguo': False,
+        'accion':         accion,
+        'metodo':         metodo,
+        'monto_recibido': monto_recibido,
+        'cantidad':       cantidad,
+        'variante':       hint['valor'] if hint and hint['tipo'] == 'exacta' else '',
+        'variante_hint':  hint,
+        'producto':       '',
+        'producto_id':    None,
+        'candidatos':     [],
+        'ambiguo':        False,
     }
 
     if len(matches) == 1:
@@ -398,9 +458,37 @@ def interpretar():
     logger.info(f"[voz] interpretar texto='{texto}'")
     uid = session.get("usuario_id")
 
+    total_carrito = float(body.get('total_carrito', 0) or 0)
+
     # ── Confirmación pendiente ────────────────────────────────────────────────
     pendiente = session.get('voz_pendiente')
     if pendiente:
+        tipo_pend = pendiente.get('tipo', 'accion')
+
+        # BUG 3 — Esperando monto en efectivo
+        if tipo_pend == 'esperando_monto':
+            monto = _texto_a_numero(texto)
+            if monto:
+                session.pop('voz_pendiente', None)
+                metodo = pendiente['metodo']
+                vuelto = round(monto - total_carrito) if total_carrito else None
+                r = {
+                    'accion': 'seleccionar_pago', 'metodo': metodo,
+                    'monto_recibido': monto, 'vuelto': vuelto,
+                    'cantidad': 1, 'variante': '', 'variante_hint': None,
+                    'producto': '', 'producto_id': None, 'candidatos': [], 'ambiguo': False,
+                }
+                r['respuesta_voz'] = _build_respuesta_voz(r)
+                return jsonify(r)
+            # Can't parse — keep waiting
+            return jsonify({
+                'accion': 'esperando_monto', 'metodo': pendiente['metodo'],
+                'respuesta_voz': '¿Cuánto te dieron? Di el monto, por ejemplo "diez mil"',
+                'cantidad': 1, 'variante': '', 'variante_hint': None,
+                'producto': '', 'producto_id': None, 'candidatos': [], 'ambiguo': False,
+            })
+
+        # Sí / No
         t_norm = _normalizar(texto)
         if _es_afirmacion(t_norm):
             return _ejecutar_confirmacion(pendiente, uid)
@@ -422,6 +510,23 @@ def interpretar():
             "INSERT INTO voz_historial (texto, accion, usuario_id) VALUES (?,?,?)",
             (texto, json.dumps(resultado, ensure_ascii=False), uid),
         )
+
+    # ── BUG 3 — Flujo cobro con efectivo ─────────────────────────────────────
+    if resultado['accion'] == 'seleccionar_pago' and resultado.get('metodo') == 'efectivo':
+        monto = resultado.get('monto_recibido')
+        if monto:
+            vuelto = round(monto - total_carrito) if total_carrito else None
+            resultado['vuelto'] = vuelto
+        else:
+            # No monto in text → ask for it
+            session['voz_pendiente'] = {'tipo': 'esperando_monto', 'metodo': 'efectivo'}
+            return jsonify({
+                'accion': 'esperando_monto', 'metodo': 'efectivo',
+                'respuesta_voz': '¿Cuánto te dieron?',
+                'monto_recibido': None, 'vuelto': None,
+                'cantidad': 1, 'variante': '', 'variante_hint': None,
+                'producto': '', 'producto_id': None, 'candidatos': [], 'ambiguo': False,
+            })
 
     # ── TinyLlama: last resort for truly unknown commands ─────────────────────
     if resultado['accion'] == 'desconocido' and not resultado['producto_id'] and _ollama_ok():
@@ -445,12 +550,11 @@ def interpretar():
                 except Exception:
                     pass
 
-    # ── Aprendizaje adaptativo: sugerir corrección ────────────────────────────
+    # ── BUG 1 — Sugerencia inteligente (siempre responde, threshold 0.65) ────────
     if resultado['accion'] == 'desconocido':
         sugerencia = _sugerir_correccion(texto, resultado)
-        if sugerencia:
-            logger.info(f"[aprendizaje] Sugerencia: '{sugerencia['respuesta_voz']}'")
-            return jsonify(sugerencia)
+        logger.info(f"[aprendizaje] Sugerencia: '{sugerencia['respuesta_voz']}'")
+        return jsonify(sugerencia)
 
     resultado['respuesta_voz'] = _build_respuesta_voz(resultado)
     logger.info(f"[voz] resultado final accion={resultado['accion']} producto_id={resultado['producto_id']} respuesta='{resultado['respuesta_voz']}'")
@@ -458,8 +562,8 @@ def interpretar():
 
 
 def _build_respuesta_voz(r: dict) -> str:
-    accion = r.get('accion', 'desconocido')
-    nombre = r.get('producto', '')
+    accion  = r.get('accion', 'desconocido')
+    nombre  = r.get('producto', '')
     cantidad = r.get('cantidad', 1)
     variante = r.get('variante', '')
     if r.get('ambiguo') and r.get('candidatos'):
@@ -479,66 +583,78 @@ def _build_respuesta_voz(r: dict) -> str:
         return "¿Limpiar el carrito?"
     if accion in ('ventas_hoy', 'stock', 'consultar'):
         return "Consultando..."
-    return "No entendí. Intenta: agrega una Coca-Cola"
+    if accion == 'seleccionar_pago':
+        metodo = r.get('metodo', '')
+        monto  = r.get('monto_recibido')
+        vuelto = r.get('vuelto')
+        if metodo in ('transferencia', 'tarjeta'):
+            return f"Pagando con {metodo}"
+        if monto and vuelto is not None:
+            return f"Recibiste {_fmt_pesos(monto)}. Vuelto: {_fmt_pesos(vuelto)}"
+        if monto:
+            return f"Recibiste {_fmt_pesos(monto)}"
+        return "¿Cuánto te dieron?"
+    if accion == 'esperando_monto':
+        return "¿Cuánto te dieron?"
+    return "No entendí. Prueba: agrega, quita o cobra"
 
 
-def _sugerir_correccion(texto: str, resultado: dict) -> dict | None:
-    """Find closest known keyword via difflib. Returns suggestion dict (+ sets session) or None."""
+def _sugerir_correccion(texto: str, resultado: dict) -> dict:
+    """BUG 1 — Always returns a response. Uses threshold 0.65 for suggestions.
+    Below threshold returns a message with the actual word the user said."""
     t = _normalizar(texto)
     words = [w for w in t.split() if w not in _WAKE_WORDS and len(w) > 2]
 
     mejor_score = 0.0
-    mejor_kw = None
+    mejor_kw    = None
     mejor_accion = None
     mejor_palabra = None
 
     for word in words:
         for kw, accion in _ALL_KEYWORDS.items():
             score = SequenceMatcher(None, word, kw).ratio()
-            if score > mejor_score and score >= 0.75:
+            if score > mejor_score:
                 mejor_score = score
-                mejor_kw = kw
+                mejor_kw    = kw
                 mejor_accion = accion
                 mejor_palabra = word
 
-    if not mejor_accion:
-        return None
-
-    nombre_prod = resultado.get('producto', '')
-    prod_id     = resultado.get('producto_id')
-
-    if nombre_prod:
-        respuesta = f"¿Quisiste decir {mejor_accion.upper()} {nombre_prod}?"
-    else:
-        respuesta = f"¿Quisiste decir '{mejor_kw}'? Prueba: agrega, quita o cobra"
-
-    session['voz_pendiente'] = {
-        'tipo':          'accion',
-        'accion':        mejor_accion,
-        'metodo':        None,
-        'producto':      nombre_prod,
-        'producto_id':   prod_id,
-        'variante_id':   None,
-        'variante':      resultado.get('variante', ''),
-        'variante_hint': resultado.get('variante_hint'),
-        'cantidad':      resultado.get('cantidad', 1),
-        'palabra_aprender': mejor_palabra,
-        'kw_conocida':   mejor_kw,
+    _base = {
+        'metodo': None, 'cantidad': resultado.get('cantidad', 1),
+        'variante': resultado.get('variante', ''), 'variante_hint': resultado.get('variante_hint'),
+        'producto': resultado.get('producto', ''), 'producto_id': resultado.get('producto_id'),
+        'candidatos': [], 'ambiguo': False,
     }
 
-    return {
-        'accion':        'esperando_confirmacion',
-        'estado':        'esperando_confirmacion',
-        'metodo':        None,
-        'cantidad':      resultado.get('cantidad', 1),
-        'variante':      resultado.get('variante', ''),
-        'variante_hint': resultado.get('variante_hint'),
-        'producto':      nombre_prod,
-        'producto_id':   prod_id,
-        'candidatos':    [],
-        'ambiguo':       False,
-        'respuesta_voz': respuesta,
-    }
+    if mejor_score >= 0.65:
+        nombre_prod = resultado.get('producto', '')
+        prod_id     = resultado.get('producto_id')
+
+        if nombre_prod:
+            respuesta = f"¿Quisiste decir {mejor_accion.upper()} {nombre_prod}?"
+        else:
+            respuesta = f"¿Quisiste decir '{mejor_kw}'?"
+
+        session['voz_pendiente'] = {
+            'tipo':          'accion',
+            'accion':        mejor_accion,
+            'metodo':        None,
+            'producto':      nombre_prod,
+            'producto_id':   prod_id,
+            'variante_id':   None,
+            'variante':      resultado.get('variante', ''),
+            'variante_hint': resultado.get('variante_hint'),
+            'cantidad':      resultado.get('cantidad', 1),
+            'palabra_aprender': mejor_palabra,
+            'kw_conocida':   mejor_kw,
+        }
+        return {**_base, 'accion': 'esperando_confirmacion', 'estado': 'esperando_confirmacion',
+                'respuesta_voz': respuesta}
+
+    # BUG 1c — Score too low: mention what they said, not Coca-Cola
+    palabra_dicha = mejor_palabra or (words[0] if words else texto[:20])
+    return {**_base, 'accion': 'desconocido',
+            'respuesta_voz': f"No entendí '{palabra_dicha}'. Prueba: agrega, quita o cobra"}
 
 
 def _ejecutar_confirmacion(pendiente: dict, uid: int):
