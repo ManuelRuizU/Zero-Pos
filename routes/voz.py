@@ -966,7 +966,7 @@ def saludo():
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-_VOZ_KEYS = {"voz_activa", "voz_palabra_clave", "voz_velocidad", "voz_tono"}
+_VOZ_KEYS = {"voz_activa", "voz_palabra_clave", "voz_velocidad", "voz_tono", "voz_nombre", "voz_volumen"}
 
 
 @voz_bp.route("/config", methods=["GET"])
@@ -977,10 +977,12 @@ def config_get():
         rows = conn.execute("SELECT clave, valor FROM config WHERE clave LIKE 'voz_%'").fetchall()
         cfg = {r["clave"]: r["valor"] for r in rows}
     return jsonify({
-        "voz_activa": cfg.get("voz_activa", "1"),
+        "voz_activa":      cfg.get("voz_activa", "1"),
         "voz_palabra_clave": cfg.get("voz_palabra_clave", "ZERO"),
-        "voz_velocidad": cfg.get("voz_velocidad", "1.0"),
-        "voz_tono": cfg.get("voz_tono", "1.0"),
+        "voz_velocidad":   cfg.get("voz_velocidad", "0.8"),
+        "voz_tono":        cfg.get("voz_tono", "1.0"),
+        "voz_nombre":      cfg.get("voz_nombre", ""),
+        "voz_volumen":     cfg.get("voz_volumen", "1.0"),
     })
 
 

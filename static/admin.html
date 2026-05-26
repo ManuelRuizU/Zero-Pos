@@ -531,6 +531,17 @@ input:checked + .slider:before{transform:translateX(20px);}
         </div>
       </div>
 
+      <!-- Selector de voz -->
+      <div class="cfg-card" style="grid-column:1/-1;">
+        <div class="cfg-card-title">🔊 Voz del asistente</div>
+        <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">
+          Elige la voz con la que ZERO hablará en el POS. Las voces disponibles dependen de tu navegador y sistema operativo.
+        </p>
+        <div id="vozSelectorContainer">
+          <p style="color:var(--text-dim);font-size:13px;">Cargando voces disponibles…</p>
+        </div>
+      </div>
+
       <!-- Historial del día -->
       <div class="cfg-card" style="grid-column:1/-1;">
         <div class="cfg-card-title" style="display:flex;justify-content:space-between;align-items:center;">
@@ -779,6 +790,57 @@ async function cargarListaBackups() {
 }
 
 // ── Voz ──────────────────────────────────────────────────────────────
+let _vozNombreSel = '';
+
+function rellenarSelectorVoces(nombreSel) {
+  if (nombreSel !== undefined) _vozNombreSel = nombreSel;
+  const cont = document.getElementById('vozSelectorContainer');
+  if (!cont) return;
+  if (!window.speechSynthesis) {
+    cont.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Tu navegador no soporta síntesis de voz.</p>';
+    return;
+  }
+  const todas = window.speechSynthesis.getVoices();
+  const esVoces = todas.filter(v => v.lang && v.lang.toLowerCase().startsWith('es'));
+  if (!esVoces.length) {
+    cont.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">No hay voces en español disponibles en este navegador.</p>';
+    return;
+  }
+  // Default preference if nothing saved
+  if (!_vozNombreSel) {
+    _vozNombreSel = (
+      todas.find(v => v.name === 'Google español de Estados Unidos') ||
+      todas.find(v => v.name === 'Google español') ||
+      esVoces[0]
+    )?.name || '';
+  }
+  const rows = esVoces.map(v => {
+    const safe = v.name.replace(/'/g, "\\'");
+    const checked = v.name === _vozNombreSel ? 'checked' : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0;">
+        <input type="radio" name="voz_nombre" value="${v.name}" ${checked} onchange="_vozNombreSel=this.value">
+        <span style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.name}</span>
+        <span style="font-size:11px;color:var(--text-dim);flex-shrink:0;">(${v.lang})</span>
+      </label>
+      <button class="btn sm" style="flex-shrink:0;" onclick="probarVozNombre('${safe}')">▶ Probar</button>
+    </div>`;
+  }).join('');
+  cont.innerHTML = rows;
+}
+
+function probarVozNombre(nombre) {
+  if (!window.speechSynthesis) return;
+  const vel = parseFloat(document.getElementById('voz_velocidad')?.value) || 0.8;
+  const ton = parseFloat(document.getElementById('voz_tono')?.value) || 1.0;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance('Hola, soy ZERO. Tu asistente de ventas.');
+  u.lang = 'es-CL'; u.rate = vel; u.pitch = ton; u.volume = 1.0;
+  const v = window.speechSynthesis.getVoices().find(v => v.name === nombre);
+  if (v) u.voice = v;
+  window.speechSynthesis.speak(u);
+}
+
 async function cargarVozConfig() {
   const cfg = await fetch('/api/voz/config', {credentials:'include'}).then(r=>r.json()).catch(()=>({}));
   const kw = cfg.voz_palabra_clave || 'ZERO';
@@ -793,13 +855,19 @@ async function cargarVozConfig() {
     document.getElementById('voz_palabra_clave').value = kw;
   }
   document.getElementById('voz_activa').checked = cfg.voz_activa !== '0';
-  const vel = parseFloat(cfg.voz_velocidad || '1.0');
+  const vel = parseFloat(cfg.voz_velocidad || '0.8');
   const ton = parseFloat(cfg.voz_tono || '1.0');
   document.getElementById('voz_velocidad').value = vel;
   document.getElementById('voz_tono').value = ton;
   document.getElementById('voz_vel_label').textContent = vel.toFixed(1) + '×';
   document.getElementById('voz_tono_label').textContent = ton.toFixed(1);
   actualizarPreviews(kw);
+  // Voice selector
+  _vozNombreSel = cfg.voz_nombre || '';
+  if (window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = () => rellenarSelectorVoces();
+    rellenarSelectorVoces();
+  }
 }
 
 function vozPresetChange() {
@@ -819,10 +887,12 @@ async function guardarVoz() {
   let kw = document.getElementById('voz_palabra_preset').value;
   if (kw === 'custom') kw = document.getElementById('voz_palabra_clave').value.trim() || 'ZERO';
   const data = {
-    voz_activa:      document.getElementById('voz_activa').checked ? '1' : '0',
+    voz_activa:       document.getElementById('voz_activa').checked ? '1' : '0',
     voz_palabra_clave: kw.toUpperCase(),
-    voz_velocidad:   document.getElementById('voz_velocidad').value,
-    voz_tono:        document.getElementById('voz_tono').value,
+    voz_velocidad:    document.getElementById('voz_velocidad').value,
+    voz_tono:         document.getElementById('voz_tono').value,
+    voz_nombre:       _vozNombreSel,
+    voz_volumen:      '1.0',
   };
   const r = await fetch('/api/voz/config', {
     method:'POST', credentials:'include',
@@ -840,12 +910,7 @@ function probarVoz() {
   const vel = parseFloat(document.getElementById('voz_velocidad').value);
   const ton = parseFloat(document.getElementById('voz_tono').value);
   if (!window.speechSynthesis) { alert('Tu navegador no soporta síntesis de voz'); return; }
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(`${kw} listo para ayudarte`);
-  u.lang = 'es-CL'; u.rate = vel; u.pitch = ton;
-  const v = window.speechSynthesis.getVoices().find(v => v.lang.startsWith('es'));
-  if (v) u.voice = v;
-  window.speechSynthesis.speak(u);
+  probarVozNombre(_vozNombreSel || '');
 }
 
 async function cargarAprendizaje() {

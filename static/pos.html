@@ -904,13 +904,27 @@ function getProductEmoji(prod) {
 // ── Asistente de Voz ZERO ────────────────────────────────────
 let vozActiva = localStorage.getItem('voz_activa') === 'true';
 let vozKW = 'ZERO';
-let vozVel = 1.0;
+let vozVel = 0.8;
 let vozTono_ = 1.0;
+let vozVolumen = 1.0;
+let vozVoz = null;       // SpeechSynthesisVoice seleccionada
+let vozNombre = '';      // nombre guardado en config
 let vozRecog = null;
 let vozSynth = window.speechSynthesis;
 let vozCbOk = null;
 let vozTimer = null;
 let vozCtxProd = '';
+
+function _cargarVoz() {
+  const voces = vozSynth ? vozSynth.getVoices() : [];
+  if (!voces.length) return;
+  vozVoz =
+    (vozNombre && voces.find(v => v.name === vozNombre)) ||
+    voces.find(v => v.name === 'Google español de Estados Unidos') ||
+    voces.find(v => v.name === 'Google español') ||
+    voces.find(v => v.lang && v.lang.toLowerCase().startsWith('es')) ||
+    null;
+}
 
 // ─ Local keyword parser (fallback when API unavailable) ─
 function _kwFallback(texto) {
@@ -946,9 +960,15 @@ function _kwFallback(texto) {
 async function initVoz() {
   const cfg = await fetch('/api/voz/config', {credentials:'include'})
     .then(r => r.json()).catch(() => ({}));
-  vozKW = (cfg.voz_palabra_clave || 'ZERO').toUpperCase();
-  vozVel = parseFloat(cfg.voz_velocidad || '1');
-  vozTono_ = parseFloat(cfg.voz_tono || '1');
+  vozKW      = (cfg.voz_palabra_clave || 'ZERO').toUpperCase();
+  vozVel     = parseFloat(cfg.voz_velocidad || '0.8');
+  vozTono_   = parseFloat(cfg.voz_tono    || '1.0');
+  vozVolumen = parseFloat(cfg.voz_volumen || '1.0');
+  vozNombre  = cfg.voz_nombre || '';
+  if (vozSynth) {
+    vozSynth.onvoiceschanged = _cargarVoz;
+    _cargarVoz();
+  }
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) {
@@ -1325,11 +1345,8 @@ function hablar(txt) {
   if (!vozSynth) return;
   vozSynth.cancel();
   const u = new SpeechSynthesisUtterance(txt);
-  u.lang = 'es-CL'; u.rate = vozVel; u.pitch = vozTono_;
-  const voices = vozSynth.getVoices();
-  const esV = voices.find(v => v.lang.startsWith('es') && v.localService) ||
-               voices.find(v => v.lang.startsWith('es'));
-  if (esV) u.voice = esV;
+  u.lang = 'es-CL'; u.rate = vozVel; u.pitch = vozTono_; u.volume = vozVolumen;
+  if (vozVoz) u.voice = vozVoz;
   vozSynth.speak(u);
 }
 
