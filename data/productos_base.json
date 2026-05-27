@@ -960,5 +960,123 @@
       {"nombre": "Café", "categoria": "Bebidas", "subcategoria": "",
        "variantes": [{"nombre": "Regular", "precio": 1500, "stock": 999}]}
     ]
+  },
+
+  "sushi": {
+    "nombre": "Sushi / Delivery",
+    "icono": "🍣",
+    "categorias": [
+      {"nombre": "Rolls", "icono": "🌯", "color": "#f43f5e",
+       "subcategorias": [{"nombre": "Clásicos"}, {"nombre": "Especiales"}, {"nombre": "Vegetarianos"}]},
+      {"nombre": "Nigiris", "icono": "🍣", "color": "#f97316",
+       "subcategorias": [{"nombre": "Pescados"}, {"nombre": "Mariscos"}]},
+      {"nombre": "Combos", "icono": "🎁", "color": "#8b5cf6",
+       "subcategorias": [{"nombre": "Para 1"}, {"nombre": "Para 2"}, {"nombre": "Familiar"}]},
+      {"nombre": "Bebidas", "icono": "🥤", "color": "#3b82f6",
+       "subcategorias": []},
+      {"nombre": "Extras", "icono": "🧂", "color": "#6b7280",
+       "subcategorias": []}
+    ],
+    "productos": [
+      {"nombre": "California Roll", "categoria": "Rolls", "subcategoria": "Clásicos",
+       "variantes": [
+         {"nombre": "6 piezas", "precio": 4500, "stock": 50},
+         {"nombre": "8 piezas", "precio": 5800, "stock": 50}
+       ]},
+      {"nombre": "Filadelfia Roll", "categoria": "Rolls", "subcategoria": "Clásicos",
+       "variantes": [
+         {"nombre": "6 piezas", "precio": 5200, "stock": 50},
+         {"nombre": "8 piezas", "precio": 6800, "stock": 50}
+       ]},
+      {"nombre": "Spicy Tuna Roll", "categoria": "Rolls", "subcategoria": "Clásicos",
+       "variantes": [
+         {"nombre": "6 piezas", "precio": 5800, "stock": 50},
+         {"nombre": "8 piezas", "precio": 7400, "stock": 50}
+       ]},
+      {"nombre": "Tempura Roll", "categoria": "Rolls", "subcategoria": "Especiales",
+       "variantes": [
+         {"nombre": "6 piezas", "precio": 5500, "stock": 50},
+         {"nombre": "8 piezas", "precio": 7200, "stock": 50}
+       ]},
+      {"nombre": "Dragon Roll", "categoria": "Rolls", "subcategoria": "Especiales",
+       "variantes": [
+         {"nombre": "8 piezas", "precio": 8900, "stock": 40},
+         {"nombre": "10 piezas", "precio": 10900, "stock": 40}
+       ]},
+      {"nombre": "Rainbow Roll", "categoria": "Rolls", "subcategoria": "Especiales",
+       "variantes": [
+         {"nombre": "8 piezas", "precio": 9200, "stock": 40},
+         {"nombre": "10 piezas", "precio": 11200, "stock": 40}
+       ]},
+      {"nombre": "Veggie Roll", "categoria": "Rolls", "subcategoria": "Vegetarianos",
+       "variantes": [
+         {"nombre": "6 piezas", "precio": 4200, "stock": 40},
+         {"nombre": "8 piezas", "precio": 5400, "stock": 40}
+       ]},
+      {"nombre": "Pepino y Palta Roll", "categoria": "Rolls", "subcategoria": "Vegetarianos",
+       "variantes": [
+         {"nombre": "6 piezas", "precio": 3900, "stock": 40}
+       ]},
+      {"nombre": "Nigiri Salmón", "categoria": "Nigiris", "subcategoria": "Pescados",
+       "variantes": [
+         {"nombre": "x4 piezas", "precio": 3800, "stock": 60},
+         {"nombre": "x8 piezas", "precio": 7200, "stock": 60}
+       ]},
+      {"nombre": "Nigiri Atún", "categoria": "Nigiris", "subcategoria": "Pescados",
+       "variantes": [
+         {"nombre": "x4 piezas", "precio": 4200, "stock": 50},
+         {"nombre": "x8 piezas", "precio": 8000, "stock": 50}
+       ]},
+      {"nombre": "Nigiri Reineta", "categoria": "Nigiris", "subcategoria": "Pescados",
+       "variantes": [
+         {"nombre": "x4 piezas", "precio": 3500, "stock": 50}
+       ]},
+      {"nombre": "Nigiri Camarón", "categoria": "Nigiris", "subcategoria": "Mariscos",
+       "variantes": [
+         {"nombre": "x4 piezas", "precio": 3600, "stock": 50},
+         {"nombre": "x8 piezas", "precio": 6900, "stock": 50}
+       ]},
+      {"nombre": "Nigiri Pulpo", "categoria": "Nigiris", "subcategoria": "Mariscos",
+       "variantes": [
+         {"nombre": "x4 piezas", "precio": 3800, "stock": 40}
+       ]},
+      {"nombre": "Combo Personal", "categoria": "Combos", "subcategoria": "Para 1",
+       "variantes": [
+         {"nombre": "California + Nigiri Salmón x4", "precio": 7500, "stock": 30}
+       ]},
+      {"nombre": "Combo Dúo", "categoria": "Combos", "subcategoria": "Para 2",
+       "variantes": [
+         {"nombre": "16 piezas mixtas", "precio": 13500, "stock": 30},
+         {"nombre": "20 piezas mixtas", "precio": 16800, "stock": 30}
+       ]},
+      {"nombre": "Combo Familiar", "categoria": "Combos", "subcategoria": "Familiar",
+       "variantes": [
+         {"nombre": "32 piezas mixtas", "precio": 24900, "stock": 20},
+         {"nombre": "40 piezas mixtas", "precio": 30900, "stock": 20}
+       ]},
+      {"nombre": "Coca-Cola", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "350ml lata", "precio": 1200, "stock": 48},
+         {"nombre": "1.5L", "precio": 2200, "stock": 24}
+       ]},
+      {"nombre": "Agua Mineral", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "500ml", "precio": 800, "stock": 48}
+       ]},
+      {"nombre": "Jugo Natural", "categoria": "Bebidas", "subcategoria": "",
+       "variantes": [
+         {"nombre": "250ml", "precio": 1500, "stock": 30}
+       ]},
+      {"nombre": "Salsa Soya Extra", "categoria": "Extras", "subcategoria": "",
+       "variantes": [{"nombre": "Sachets x3", "precio": 300, "stock": 200}]},
+      {"nombre": "Wasabi Extra", "categoria": "Extras", "subcategoria": "",
+       "variantes": [{"nombre": "Porción", "precio": 200, "stock": 200}]},
+      {"nombre": "Jengibre Extra", "categoria": "Extras", "subcategoria": "",
+       "variantes": [{"nombre": "Porción", "precio": 200, "stock": 200}]},
+      {"nombre": "Palillos", "categoria": "Extras", "subcategoria": "",
+       "variantes": [{"nombre": "Par", "precio": 0, "stock": 500}]},
+      {"nombre": "Bolsa Delivery", "categoria": "Extras", "subcategoria": "",
+       "variantes": [{"nombre": "Unidad", "precio": 0, "stock": 200}]}
+    ]
   }
 }
