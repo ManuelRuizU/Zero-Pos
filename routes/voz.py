@@ -137,6 +137,38 @@ _ALL_KEYWORDS: dict[str, str] = {
     **{k: 'limpiar' for k in ('limpia', 'limpiar', 'vaciar', 'vacia', 'nuevo')},
 }
 
+# ── Atributos de presentación de variantes ────────────────────────────────────
+
+# Attribute keyword → synonyms list (all normalized/accent-free)
+_ATRIBUTOS_VARIANTE: dict[str, list[str]] = {
+    'retornable': ['retornable'],
+    'desechable': ['desechable', 'descartable'],
+    'lata':       ['lata', 'en lata'],
+    'vidrio':     ['vidrio', 'de vidrio'],
+    'light':      ['light', 'zero', 'sin azucar'],
+    'familiar':   ['familiar'],
+    'personal':   ['personal'],
+    'grande':     ['grande'],
+    'chico':      ['chico', 'peque', 'mini'],
+    'mediano':    ['mediano'],
+}
+
+
+def _extraer_atributos(nombre: str) -> list[str]:
+    """Extract presentation attributes from a variant name."""
+    t = _normalizar(nombre)
+    return [attr for attr, kws in _ATRIBUTOS_VARIANTE.items() if any(kw in t for kw in kws)]
+
+
+def _atributo_usuario(texto: str) -> str | None:
+    """Detect the first attribute keyword in what the user said."""
+    t = _normalizar(texto)
+    for attr, kws in _ATRIBUTOS_VARIANTE.items():
+        if any(kw in t for kw in kws):
+            return attr
+    return None
+
+
 _PAT_AFIRMAR = re.compile(
     r'\b(si|s[ií]|correcto|exacto|eso|afirmativo|dale|claro|ok|okay|sip|'
     r'exactamente|genial|perfecto|bueno|va|sale|anda)\b', re.I
@@ -188,6 +220,13 @@ _SIZE_STRIP_PATS = [
     re.compile(r'litro\s+y\s+medio\b', re.I),
     re.compile(r'medio\s+kilo\b', re.I),
     re.compile(r'un\s+cuarto\b', re.I),
+    # Strip "N lucas/luca" so price hints don't get counted as product quantities
+    re.compile(r'\b\d+\s*lucas?\b', re.I),
+    re.compile(
+        r'\b(?:una?|dos|tres|tre|cuatro|cinco|seis|siete|ocho|nueve|'
+        r'diez|die|once|doce|quince|veinte|vente|treinta|cuarenta|cincuenta|cien)\s+lucas?\b',
+        re.I
+    ),
 ]
 
 def _strip_size_phrases(t: str) -> str:
@@ -451,6 +490,18 @@ def _fmt_pesos(n: int | float) -> str:
     return f"${int(n):,}".replace(',', '.')
 
 
+def _precio_hint_de_texto(texto: str) -> int | None:
+    """Detect a price filter embedded in a command ('de dos lucas', 'a 2000')."""
+    t = _normalizar(texto)
+    # Look for "de/a/la de + [amount_words]"
+    m = re.search(r'\b(?:de|a|la\s+de|como)\s+((?:[\w.]+\s+){0,3}(?:lucas?|mil|pesos?))', t)
+    if m:
+        n = _texto_a_numero(m.group(1).strip())
+        if n and n >= 100:
+            return n
+    return None
+
+
 # ── Número → texto en español para TTS (vuelto en voz) ───────────────────────
 
 _UNIDADES_VOZ: dict[int, str] = {
@@ -513,6 +564,115 @@ def _numero_a_texto(n: int) -> str:
     return ' '.join(parts) + ' pesos'
 
 
+# ── Resolución de variantes por atributos y precio ───────────────────────────
+
+def _frase_variante_candidatos(candidatos: list, nombre_producto: str) -> str:
+    """Build a natural Spanish clarification question for variant ties."""
+    partes = []
+    for v in candidatos[:4]:
+        atrs = ', '.join(v.get('atributos', []))
+        label = atrs if atrs else v['nombre']
+        partes.append(f"la {label} a {_fmt_pesos(v['precio'])}")
+
+    if len(partes) == 2:
+        return f"Tengo {nombre_producto}: {partes[0]} y {partes[1]}. ¿Cuál es?"
+    opciones = ', '.join(partes[:-1]) + f' o {partes[-1]}'
+    return f"Tengo {nombre_producto} en: {opciones}. ¿Cuál quieres?"
+
+
+def _resolver_variante_db(producto_id: int, variante_hint, precio_hint: int | None) -> dict:
+    """
+    Resolves which variant to use for an agregar command.
+    Returns:
+      {'variante_id': X, 'variante': '...', 'clarificacion': False}  — unique match
+      {'clarificacion': True, 'candidatos': [...]}                    — need user input
+      {}                                                               — no variants found
+    """
+    try:
+        with db_session() as conn:
+            rows = conn.execute(
+                "SELECT id, nombre, precio FROM producto_variantes "
+                "WHERE producto_id=? AND activo=1 ORDER BY precio",
+                (producto_id,)
+            ).fetchall()
+            if not rows:
+                return {}
+
+            variantes = [{'id': r['id'], 'nombre': r['nombre'],
+                          'precio': float(r['precio']),
+                          'atributos': _extraer_atributos(r['nombre'])} for r in rows]
+
+            # 0. Learned attribute → variante for this product
+            aprendidos = conn.execute(
+                "SELECT palabra, variante_id FROM voz_sinonimos_variante WHERE producto_id=?",
+                (producto_id,)
+            ).fetchall()
+    except Exception:
+        return {}
+
+    # 1. Filter by learned attributes that appear in any candidate name
+    for row in aprendidos:
+        matched_v = next((v for v in variantes if v['id'] == row['variante_id']), None)
+        if matched_v:
+            return {'variante_id': matched_v['id'], 'variante': matched_v['nombre'],
+                    'clarificacion': False}
+
+    candidatos = variantes
+
+    # 2. Filter by variante_hint
+    if variante_hint:
+        val = (variante_hint.get('valor') or '').lower()
+        if val:
+            filtradas = [v for v in variantes if val in _normalizar(v['nombre'])]
+            if filtradas:
+                candidatos = filtradas
+
+    # 3. Filter by price hint (±25%)
+    if precio_hint and len(candidatos) > 1:
+        rango = [v for v in candidatos
+                 if precio_hint * 0.75 <= v['precio'] <= precio_hint * 1.25]
+        if rango:
+            candidatos = rango
+
+    # 4. Single match → done
+    if len(candidatos) == 1:
+        v = candidatos[0]
+        return {'variante_id': v['id'], 'variante': v['nombre'], 'clarificacion': False}
+
+    # 5. Price tie check among top-2
+    candidatos.sort(key=lambda v: v['precio'])
+    if len(candidatos) >= 2:
+        p1, p2 = candidatos[0]['precio'], candidatos[1]['precio']
+        pmax = max(p1, p2, 1)
+        empate = (abs(p1 - p2) / pmax) < 0.10
+        return {'clarificacion': True, 'es_empate': empate, 'candidatos': candidatos[:4]}
+
+    return {}
+
+
+def _guardar_aprendizaje_variante(palabra: str, producto_id: int, variante_id: int) -> None:
+    """Persist attribute → variante_id mapping for a specific product."""
+    try:
+        with db_session() as conn:
+            existing = conn.execute(
+                "SELECT id FROM voz_sinonimos_variante WHERE palabra=? AND producto_id=?",
+                (palabra, producto_id)
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    "UPDATE voz_sinonimos_variante SET variante_id=?, veces_usado=veces_usado+1 WHERE id=?",
+                    (variante_id, existing['id'])
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO voz_sinonimos_variante (palabra, producto_id, variante_id, veces_usado) "
+                    "VALUES (?,?,?,1)",
+                    (palabra, producto_id, variante_id)
+                )
+    except Exception as e:
+        logger.warning(f"[variante] Error guardando aprendizaje: {e}")
+
+
 def _parsear_v2(texto: str, conn) -> dict:
     t = _normalizar(texto)
     # Strip leading wake words
@@ -573,13 +733,15 @@ def _parsear_v2(texto: str, conn) -> dict:
     }
 
     if len(matches) == 1:
-        resultado['producto'] = matches[0]['nombre']
-        resultado['producto_id'] = matches[0]['id']
+        resultado['producto']        = matches[0]['nombre']
+        resultado['producto_id']     = matches[0]['id']
+        resultado['tiene_variantes'] = bool(matches[0].get('tiene_variantes', 0))
     elif len(matches) > 1:
         gap = matches[0]['score'] - matches[1]['score']
         if gap >= 0.35:
-            resultado['producto'] = matches[0]['nombre']
-            resultado['producto_id'] = matches[0]['id']
+            resultado['producto']        = matches[0]['nombre']
+            resultado['producto_id']     = matches[0]['id']
+            resultado['tiene_variantes'] = bool(matches[0].get('tiene_variantes', 0))
         else:
             resultado['candidatos'] = [{'id': m['id'], 'nombre': m['nombre']} for m in matches[:3]]
             resultado['ambiguo'] = True
@@ -632,6 +794,51 @@ def interpretar():
                 'respuesta_voz': '¿Cuánto te dieron? Di el monto, por ejemplo "diez mil"',
                 'cantidad': 1, 'variante': '', 'variante_hint': None,
                 'producto': '', 'producto_id': None, 'candidatos': [], 'ambiguo': False,
+            })
+
+        # Resolución de variante por atributo ("la desechable", "la retornable")
+        if tipo_pend == 'seleccion_variante':
+            prod_id   = pendiente.get('producto_id')
+            prod_nom  = pendiente.get('producto_nombre', '')
+            accion_pv = pendiente.get('accion', 'agregar')
+            candidatos_v = pendiente.get('variantes_candidatas', [])
+            cantidad_v   = pendiente.get('cantidad', 1)
+            atributo = _atributo_usuario(texto)
+            t_norm_v = _normalizar(texto)
+
+            matched_v = []
+            if atributo:
+                matched_v = [v for v in candidatos_v if atributo in v.get('atributos', [])]
+            if not matched_v:
+                # Try substring match on variant name
+                matched_v = [v for v in candidatos_v if t_norm_v in _normalizar(v['nombre'])]
+
+            if len(matched_v) == 1:
+                v = matched_v[0]
+                session.pop('voz_pendiente', None)
+                if atributo:
+                    _guardar_aprendizaje_variante(atributo, prod_id, v['id'])
+                r = {
+                    'accion': accion_pv, 'metodo': None, 'monto_recibido': None,
+                    'cantidad': cantidad_v,
+                    'variante': v['nombre'], 'variante_id': v['id'], 'variante_hint': None,
+                    'producto': prod_nom, 'producto_id': prod_id,
+                    'candidatos': [], 'ambiguo': False, 'tiene_variantes': True,
+                }
+                r['respuesta_voz'] = _build_respuesta_voz(r)
+                session['voz_ultimo_producto'] = {'id': prod_id, 'nombre': prod_nom}
+                return jsonify(r)
+
+            # Still ambiguous — narrow to matched subset or re-ask full list
+            nuevos = matched_v if matched_v else candidatos_v
+            pendiente['variantes_candidatas'] = nuevos
+            session['voz_pendiente'] = pendiente
+            return jsonify({
+                'accion': 'desconocido',
+                'respuesta_voz': _frase_variante_candidatos(nuevos, prod_nom),
+                'candidatos': nuevos, 'ambiguo': True,
+                'metodo': None, 'cantidad': 1, 'variante': '', 'variante_hint': None,
+                'producto': prod_nom, 'producto_id': prod_id,
             })
 
         # BUG 1 — Selección de producto entre candidatos
@@ -709,6 +916,30 @@ def interpretar():
                 'cantidad': 1, 'variante': '', 'variante_hint': None,
                 'producto': '', 'producto_id': None, 'candidatos': [], 'ambiguo': False,
             })
+
+    # ── Resolución de variantes: precio similar o variante ambigua ───────────────
+    if (resultado['accion'] == 'agregar' and resultado.get('producto_id')
+            and resultado.get('tiene_variantes')):
+        precio_hint  = _precio_hint_de_texto(texto)
+        variante_hint = resultado.get('variante_hint')
+        res_v = _resolver_variante_db(resultado['producto_id'], variante_hint, precio_hint)
+
+        if res_v.get('clarificacion'):
+            session['voz_pendiente'] = {
+                'tipo':               'seleccion_variante',
+                'producto_id':        resultado['producto_id'],
+                'producto_nombre':    resultado['producto'],
+                'accion':             'agregar',
+                'variantes_candidatas': res_v['candidatos'],
+                'cantidad':           resultado.get('cantidad', 1),
+            }
+            resp = _frase_variante_candidatos(res_v['candidatos'], resultado['producto'])
+            return jsonify({**resultado, 'accion': 'desconocido', 'ambiguo': True,
+                            'respuesta_voz': resp})
+
+        elif res_v.get('variante_id'):
+            resultado['variante']    = res_v['variante']
+            resultado['variante_id'] = res_v['variante_id']
 
     # ── TinyLlama: last resort for truly unknown commands ─────────────────────
     if resultado['accion'] == 'desconocido' and not resultado['producto_id'] and _ollama_ok():
