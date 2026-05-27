@@ -90,6 +90,68 @@ def listar():
     return jsonify(rows)
 
 
+@productos_bp.route("/completos", methods=["GET"])
+def listar_completos():
+    """Todos los productos activos con sus variantes en una sola query JOIN."""
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+
+    cache_key = "productos_completos"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
+    with db_session() as conn:
+        rows = conn.execute("""
+            SELECT p.id, p.nombre, p.precio, p.precio_costo, p.stock,
+                   p.stock_minimo, p.codigo_barras, p.categoria_id,
+                   p.subcategoria_id, p.tiene_variantes, p.imagen_url,
+                   p.descripcion, c.nombre as categoria_nombre,
+                   v.id as v_id, v.nombre as v_nombre,
+                   v.precio as v_precio, v.stock as v_stock,
+                   v.codigo_barras as v_barras
+            FROM productos p
+            LEFT JOIN categorias c ON c.id = p.categoria_id
+            LEFT JOIN producto_variantes v
+                   ON v.producto_id = p.id AND v.activo = 1
+            WHERE p.activo = 1
+            ORDER BY p.nombre, v.id
+        """).fetchall()
+
+    productos: dict = {}
+    for r in rows:
+        pid = r["id"]
+        if pid not in productos:
+            productos[pid] = {
+                "id":             pid,
+                "nombre":         r["nombre"],
+                "precio":         r["precio"],
+                "precio_costo":   r["precio_costo"],
+                "stock":          r["stock"],
+                "stock_minimo":   r["stock_minimo"],
+                "codigo_barras":  r["codigo_barras"],
+                "categoria_id":   r["categoria_id"],
+                "subcategoria_id": r["subcategoria_id"],
+                "tiene_variantes": r["tiene_variantes"],
+                "imagen_url":     r["imagen_url"],
+                "descripcion":    r["descripcion"],
+                "categoria_nombre": r["categoria_nombre"],
+                "_variantes":     [],
+            }
+        if r["v_id"] is not None:
+            productos[pid]["_variantes"].append({
+                "id":            r["v_id"],
+                "nombre":        r["v_nombre"],
+                "precio":        r["v_precio"],
+                "stock":         r["v_stock"],
+                "codigo_barras": r["v_barras"],
+            })
+
+    result = list(productos.values())
+    _cache_set(cache_key, result)
+    return jsonify(result)
+
+
 @productos_bp.route("/<int:pid>", methods=["GET"])
 def obtener(pid):
     if not _require_auth():

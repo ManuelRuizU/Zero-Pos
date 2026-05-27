@@ -1445,30 +1445,39 @@ function selSubcat(btn, id) {
 // ── Productos ─────────────────────────────────────────────────
 async function cargarProductos() {
   const q = document.getElementById('searchInput').value;
-  const url = `/api/productos?activos=1${categoriaActual ? '&categoria_id=' + categoriaActual : ''}${q ? '&q=' + encodeURIComponent(q) : ''}`;
-  let prods = await fetch(url, {credentials:'include'}).then(r => r.json()).catch(() => []);
 
-  // Snapshot full list for voice search before any client-side filtering
+  // Initial unfiltered load: fetch everything (products + variants) in one request
   if (!categoriaActual && !q) {
+    let prods = await fetch('/api/productos/completos', {credentials:'include'}).then(r => r.json()).catch(() => []);
     todosProductos = prods;
     todosProductosMap = {};
     prods.forEach(p => { todosProductosMap[p.id] = p; });
+    if (subcatActual) prods = prods.filter(p => String(p.subcategoria_id) === String(subcatActual));
+    productos = prods;
+    renderProductos(productos);
+    return;
   }
 
-  // Client-side subcategory filter
+  // Filtered load: server-side search/category filter, variants from in-memory cache
+  const url = `/api/productos?activos=1${categoriaActual ? '&categoria_id=' + categoriaActual : ''}${q ? '&q=' + encodeURIComponent(q) : ''}`;
+  let prods = await fetch(url, {credentials:'include'}).then(r => r.json()).catch(() => []);
+
   if (subcatActual) {
     prods = prods.filter(p => String(p.subcategoria_id) === String(subcatActual));
   }
 
-  // Parallel-fetch variants for products that have them
-  const conVariantes = prods.filter(p => p.tiene_variantes);
-  if (conVariantes.length) {
-    await Promise.all(conVariantes.map(async p => {
+  // Attach variants from in-memory map (already loaded by completos); fetch only if missing
+  await Promise.all(prods.map(async p => {
+    if (!p.tiene_variantes) return;
+    const cached = todosProductosMap[p.id];
+    if (cached && cached._variantes) {
+      p._variantes = cached._variantes;
+    } else {
       try {
         p._variantes = await fetch(`/api/productos/${p.id}/variantes`, {credentials:'include'}).then(r => r.json());
       } catch(e) { p._variantes = []; }
-    }));
-  }
+    }
+  }));
 
   productos = prods;
   renderProductos(productos);
