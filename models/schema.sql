@@ -202,3 +202,68 @@ CREATE TABLE IF NOT EXISTS caja_movimientos (
     monto      REAL NOT NULL,
     creado_en  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- =========================================================
+-- DELIVERY / PEDIDOS
+-- =========================================================
+
+-- Clientes (historial y autocompletado)
+CREATE TABLE IF NOT EXISTS clientes (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre          TEXT NOT NULL,
+    telefono        TEXT UNIQUE NOT NULL,
+    telefono2       TEXT,
+    email           TEXT,
+    direccion       TEXT,
+    depto           TEXT,
+    comuna          TEXT,
+    notas           TEXT,
+    total_pedidos   INTEGER NOT NULL DEFAULT 0,
+    total_gastado   REAL NOT NULL DEFAULT 0,
+    creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_clientes_tel ON clientes(telefono);
+
+-- Pedidos (delivery, retiro, local)
+CREATE TABLE IF NOT EXISTS pedidos (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    numero          INTEGER NOT NULL,
+    tipo            TEXT NOT NULL CHECK(tipo IN ('delivery','retiro','local')),
+    estado          TEXT NOT NULL DEFAULT 'nuevo'
+                    CHECK(estado IN ('nuevo','preparando','listo','despachado','cancelado')),
+    cliente_id      INTEGER REFERENCES clientes(id),
+    cliente_nombre  TEXT NOT NULL,
+    cliente_tel     TEXT,
+    cliente_tel2    TEXT,
+    cliente_email   TEXT,
+    direccion       TEXT,
+    depto           TEXT,
+    referencia      TEXT,
+    comuna          TEXT,
+    notas           TEXT,
+    total           REAL NOT NULL DEFAULT 0,
+    metodo_pago     TEXT NOT NULL DEFAULT 'efectivo',
+    usuario_id      INTEGER REFERENCES usuarios(id),
+    creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_pedidos_estado   ON pedidos(estado);
+CREATE INDEX IF NOT EXISTS idx_pedidos_fecha    ON pedidos(creado_en);
+CREATE INDEX IF NOT EXISTS idx_pedidos_cliente  ON pedidos(cliente_id);
+
+-- Ítems de cada pedido
+CREATE TABLE IF NOT EXISTS pedido_items (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    pedido_id   INTEGER NOT NULL REFERENCES pedidos(id) ON DELETE CASCADE,
+    producto_id INTEGER REFERENCES productos(id),
+    variante_id INTEGER REFERENCES producto_variantes(id),
+    nombre      TEXT NOT NULL,
+    cantidad    INTEGER NOT NULL DEFAULT 1,
+    precio      REAL NOT NULL,
+    subtotal    REAL NOT NULL,
+    notas       TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_pitems_pedido ON pedido_items(pedido_id);
