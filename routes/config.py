@@ -15,6 +15,7 @@ CLAVES_PERMITIDAS = {
     "banco_nombre", "banco_tipo_cuenta", "banco_cuenta", "banco_titular",
     "backup_hora",
     "pantalla_cliente_activa", "pantalla_cocina_activa",
+    "modulo_delivery", "modo_mesas", "tipo_negocio",
 }
 
 

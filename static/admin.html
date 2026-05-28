@@ -441,6 +441,16 @@ input:checked + .slider:before{transform:translateX(20px);}
             <span class="slider"></span>
           </label>
         </div>
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">🛵 Módulo Delivery/Retiro</span>
+            <span class="toggle-sub">Activa el flujo de entrega en el POS (delivery, retiro, mesas)</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="cfg_modulo_delivery">
+            <span class="slider"></span>
+          </label>
+        </div>
         <div class="cfg-save">
           <span class="save-feedback" id="fb_pantallas">✓ Guardado</span>
           <button class="btn primary sm" onclick="guardarSeccion('pantallas')">Guardar pantallas</button>
@@ -722,6 +732,7 @@ async function cargarConfig() {
   set('cfg_backup_hora',         cfgActual.backup_hora || '03:00');
   setChk('cfg_pantalla_cliente_activa', cfgActual.pantalla_cliente_activa);
   setChk('cfg_pantalla_cocina_activa',  cfgActual.pantalla_cocina_activa);
+  setChk('cfg_modulo_delivery',         cfgActual.modulo_delivery);
 
   toggleImpresora();
   cargarListaBackups();
@@ -739,7 +750,7 @@ const SECCIONES = {
   impresora: ['impresora_tipo','impresora_ip','impresora_puerto'],
   khipu:     ['khipu_receiver_id','khipu_secret'],
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
-  pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa'],
+  pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa','modulo_delivery'],
   backup:    ['backup_hora'],
 };
 

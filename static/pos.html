@@ -742,6 +742,7 @@ const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
 
 let productos = [];
 let carrito = [];
+let cfgApp = {};  // config del negocio cargada al inicio
 let categoriaActual = '';
 let subcatActual = '';
 let catIconoMap = {};
@@ -1370,6 +1371,10 @@ async function init() {
     location.href = 'onboarding.html';
     return;
   }
+
+  cfgApp = await fetch('/api/config', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
+  const btnPedidos = document.querySelector('[onclick*="pedidos.html"]');
+  if (btnPedidos) btnPedidos.style.display = (cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true) ? '' : 'none';
 
   await cargarCategorias();
   await cargarProductos();
