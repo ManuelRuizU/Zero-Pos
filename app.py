@@ -219,7 +219,42 @@ def start_backup_scheduler(app: Flask):
         logger.warning("schedule no disponible — backup automático desactivado")
 
 
+def get_hardware_fingerprint() -> str:
+    import hashlib, uuid, platform
+    datos = [
+        str(uuid.getnode()),   # MAC address
+        platform.node(),       # hostname
+        platform.machine(),    # arquitectura
+    ]
+    raw = "|".join(datos)
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def verificar_licencia() -> bool:
+    fingerprint = get_hardware_fingerprint()
+    license_file = BASE_DIR / ".license"
+
+    if not license_file.exists():
+        license_file.write_text(fingerprint)
+        logger.info(f"Licencia registrada para este hardware: {fingerprint}")
+        return True
+
+    saved = license_file.read_text().strip()
+    if saved != fingerprint:
+        print("=" * 60)
+        print("  ZERO POS — Hardware no autorizado")
+        print(f"  Fingerprint esperado : {saved}")
+        print(f"  Fingerprint actual   : {fingerprint}")
+        print("  Contacta soporte: mrruiz.u@gmail.com")
+        print("=" * 60)
+        return False
+    return True
+
+
 if __name__ == "__main__":
+    if not verificar_licencia():
+        sys.exit(1)
+
     # Restauración en frío — antes de create_app() para que la DB esté libre
     _flag = BASE_DIR / ".restaurar_flag"
     _incoming = BASE_DIR / "temp" / "backup_incoming.zip"

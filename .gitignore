@@ -16,6 +16,7 @@ zero_pos.db-shm
 zero_pos.db.prev
 .secret_key
 .backup_key
+.license
 
 # Sesiones Flask
 flask_sessions/
