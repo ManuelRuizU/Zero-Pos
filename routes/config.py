@@ -57,10 +57,14 @@ def sincronizar_hora():
         try:
             dt = datetime.datetime.fromtimestamp(float(ts))
             fecha_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-            subprocess.run(
+            res = subprocess.run(
                 ["sudo", "date", "-s", fecha_str],
                 capture_output=True, timeout=3
             )
+            if res.returncode == 0:
+                logger.info(f"Reloj sincronizado: {fecha_str}")
+            else:
+                logger.warning(f"sudo date rechazado: {res.stderr}")
         except Exception:
             pass  # Sin sudo → silencioso, no crítico
     return jsonify({"ok": True})
