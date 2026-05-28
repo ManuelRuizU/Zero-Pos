@@ -105,8 +105,9 @@ def listar_completos():
         rows = conn.execute("""
             SELECT p.id, p.nombre, p.precio, p.precio_costo, p.stock,
                    p.stock_minimo, p.codigo_barras, p.categoria_id,
-                   p.subcategoria_id, p.tiene_variantes, p.imagen_url,
-                   p.descripcion, c.nombre as categoria_nombre,
+                   p.subcategoria_id, p.tiene_variantes,
+                   p.es_granel, p.unidad_medida, p.precio_por,
+                   p.imagen_url, p.descripcion, c.nombre as categoria_nombre,
                    v.id as v_id, v.nombre as v_nombre,
                    v.precio as v_precio, v.stock as v_stock,
                    v.codigo_barras as v_barras
@@ -133,6 +134,9 @@ def listar_completos():
                 "categoria_id":   r["categoria_id"],
                 "subcategoria_id": r["subcategoria_id"],
                 "tiene_variantes": r["tiene_variantes"],
+                "es_granel":      r["es_granel"] if "es_granel" in r.keys() else 0,
+                "unidad_medida":  r["unidad_medida"] if "unidad_medida" in r.keys() else "unidad",
+                "precio_por":     r["precio_por"] if "precio_por" in r.keys() else "unidad",
                 "imagen_url":     r["imagen_url"],
                 "descripcion":    r["descripcion"],
                 "categoria_nombre": r["categoria_nombre"],
@@ -297,8 +301,9 @@ def crear():
         cur = conn.execute(
             """INSERT INTO productos
                (nombre, descripcion, precio, precio_costo, stock, stock_minimo,
-                codigo_barras, categoria_id, imagen_url)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+                codigo_barras, categoria_id, imagen_url,
+                es_granel, unidad_medida, precio_por)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 nombre,
                 data.get("descripcion"),
@@ -309,6 +314,9 @@ def crear():
                 data.get("codigo_barras"),
                 data.get("categoria_id"),
                 data.get("imagen_url"),
+                int(bool(data.get("es_granel", 0))),
+                data.get("unidad_medida", "unidad"),
+                data.get("precio_por", "unidad"),
             )
         )
         _registrar_movimiento(conn, cur.lastrowid, "entrada",
@@ -326,7 +334,7 @@ def actualizar(pid):
     campos = {}
     permitidos = ("nombre", "descripcion", "precio", "precio_costo",
                   "stock_minimo", "codigo_barras", "categoria_id",
-                  "imagen_url", "activo")
+                  "imagen_url", "activo", "es_granel", "unidad_medida", "precio_por")
     for campo in permitidos:
         if campo in data:
             campos[campo] = data[campo]
@@ -540,6 +548,53 @@ def ajustar_stock_variante(pid, vid):
         )
         _registrar_movimiento(conn, pid, tipo, cantidad, data.get("motivo", ""), uid)
         return jsonify({"ok": True, "stock_nuevo": nuevo})
+
+
+# ── EAN-13 a granel ───────────────────────────────────────────────────────────
+
+@productos_bp.route("/leer-granel", methods=["POST"])
+def leer_granel():
+    """Decodifica EAN-13 interno con prefijo 2 para productos a granel.
+    Formato: 2 + codigo_producto(5 dígitos) + peso_gramos(5 dígitos) + verificador(1)
+    Ejemplo: 2 00001 00350 X  → producto 1, 350g
+    """
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+
+    data = request.get_json(silent=True) or {}
+    codigo = str(data.get("codigo", "")).strip()
+
+    if len(codigo) != 13 or not codigo.startswith("2"):
+        return jsonify({"error": "No es un EAN-13 interno de granel (debe empezar con 2)"}), 400
+
+    try:
+        producto_id = int(codigo[1:6])
+        peso_gramos = int(codigo[6:11])
+    except ValueError:
+        return jsonify({"error": "Código inválido"}), 400
+
+    with db_session() as conn:
+        prod = conn.execute(
+            "SELECT * FROM productos WHERE id=? AND activo=1 AND es_granel=1",
+            (producto_id,)
+        ).fetchone()
+        if not prod:
+            return jsonify({"error": f"Producto granel #{producto_id} no encontrado"}), 404
+
+        precio_por_kg = float(prod["precio"])
+        precio = round(precio_por_kg * peso_gramos / 1000)
+        unidad = prod["unidad_medida"] or "kg"
+
+        return jsonify({
+            "ok": True,
+            "producto_id": producto_id,
+            "nombre":      prod["nombre"],
+            "peso_gramos": peso_gramos,
+            "peso_display": f"{peso_gramos}g" if peso_gramos < 1000 else f"{peso_gramos/1000:.3f}kg",
+            "precio_unit": precio_por_kg,
+            "precio":      precio,
+            "unidad":      unidad,
+        })
 
 
 # ── Subcategorías ──────────────────────────────────────────────────────────────

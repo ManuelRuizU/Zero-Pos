@@ -143,6 +143,34 @@ select option{background:#13131a;}
   <div class="form-group"><label>Categoría</label>
     <select id="prodCategoria"><option value="">Sin categoría</option></select>
   </div>
+  <div class="form-group" style="display:flex;align-items:center;gap:12px">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0">
+      <input type="checkbox" id="prodGranel" onchange="toggleGranel()"> Es producto a granel
+    </label>
+  </div>
+  <div id="granelOpts" style="display:none;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px;margin-top:4px">
+    <div style="font-size:12px;color:#f59e0b;font-weight:600;margin-bottom:10px">⚖️ Configuración a granel</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin:0">
+        <label>Precio por</label>
+        <select id="prodPrecioPor" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;">
+          <option value="unidad">Unidad</option>
+          <option value="kg">Kilogramo (kg)</option>
+          <option value="litro">Litro</option>
+          <option value="metro">Metro</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label>Unidad de medida</label>
+        <select id="prodUnidadMedida" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;">
+          <option value="unidad">Unidad</option>
+          <option value="kg">Kilogramo (kg)</option>
+          <option value="litro">Litro</option>
+          <option value="metro">Metro</option>
+        </select>
+      </div>
+    </div>
+  </div>
   <div class="modal-btns">
     <button class="btn" style="flex:1" onclick="cerrarModalProd()">Cancelar</button>
     <button class="btn primary" style="flex:2" onclick="guardarProd()">Guardar</button>
@@ -258,6 +286,10 @@ function abrirModalProd() {
   document.getElementById('prodStock').value='0';
   document.getElementById('prodStockMin').value='5';
   document.getElementById('prodCategoria').value='';
+  document.getElementById('prodGranel').checked=false;
+  document.getElementById('granelOpts').style.display='none';
+  document.getElementById('prodPrecioPor').value='unidad';
+  document.getElementById('prodUnidadMedida').value='unidad';
   document.getElementById('modalProd').classList.add('active');
 }
 
@@ -272,6 +304,11 @@ async function editarProd(id) {
   document.getElementById('prodBarras').value=p.codigo_barras||'';
   document.getElementById('prodCategoria').value=p.categoria_id||'';
   document.getElementById('prodStock').value=p.stock;
+  const granel = p.es_granel === 1 || p.es_granel === true;
+  document.getElementById('prodGranel').checked=granel;
+  document.getElementById('granelOpts').style.display=granel?'':'none';
+  document.getElementById('prodPrecioPor').value=p.precio_por||'unidad';
+  document.getElementById('prodUnidadMedida').value=p.unidad_medida||'unidad';
   document.getElementById('modalProd').classList.add('active');
 }
 
@@ -285,6 +322,9 @@ async function guardarProd() {
     stock_minimo: parseInt(document.getElementById('prodStockMin').value)||5,
     codigo_barras: document.getElementById('prodBarras').value.trim()||null,
     categoria_id: document.getElementById('prodCategoria').value||null,
+    es_granel: document.getElementById('prodGranel').checked ? 1 : 0,
+    precio_por: document.getElementById('prodPrecioPor').value,
+    unidad_medida: document.getElementById('prodUnidadMedida').value,
   };
   if (!data.nombre) { alert('El nombre es requerido'); return; }
   const url = id ? `/api/productos/${id}` : '/api/productos';
@@ -295,6 +335,11 @@ async function guardarProd() {
   });
   if (r.ok) { cerrarModalProd(); cargarProductos(); }
   else { const e=await r.json(); alert(e.error||'Error'); }
+}
+
+function toggleGranel() {
+  const activo = document.getElementById('prodGranel').checked;
+  document.getElementById('granelOpts').style.display = activo ? '' : 'none';
 }
 
 function cerrarModalProd() { document.getElementById('modalProd').classList.remove('active'); }
