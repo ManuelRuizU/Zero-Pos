@@ -76,31 +76,31 @@ def init_db():
 
 
 def _migrate_montos(conn: sqlite3.Connection):
-    """Redondea a entero todos los campos monetarios que pudieran tener decimales REAL."""
+    """Convierte a INTEGER todos los campos monetarios que pudieran tener decimales REAL."""
     stmts = [
-        "UPDATE productos         SET precio       = ROUND(precio)       WHERE precio       != ROUND(precio)",
-        "UPDATE productos         SET precio_costo = ROUND(precio_costo) WHERE precio_costo != ROUND(precio_costo)",
-        "UPDATE producto_variantes SET precio      = ROUND(precio)       WHERE precio       != ROUND(precio)",
-        "UPDATE producto_variantes SET precio_costo= ROUND(precio_costo) WHERE precio_costo != ROUND(precio_costo)",
-        "UPDATE ventas            SET total        = ROUND(total)        WHERE total        != ROUND(total)",
-        "UPDATE ventas            SET descuento    = ROUND(descuento)    WHERE descuento    != ROUND(descuento)",
-        "UPDATE ventas            SET impuesto     = ROUND(impuesto)     WHERE impuesto     != ROUND(impuesto)",
-        "UPDATE venta_items       SET precio_unit  = ROUND(precio_unit)  WHERE precio_unit  != ROUND(precio_unit)",
-        "UPDATE venta_items       SET descuento    = ROUND(descuento)    WHERE descuento    != ROUND(descuento)",
-        "UPDATE venta_items       SET subtotal     = ROUND(subtotal)     WHERE subtotal     != ROUND(subtotal)",
-        "UPDATE devoluciones      SET monto        = ROUND(monto)        WHERE monto        != ROUND(monto)",
-        "UPDATE turnos            SET fondo_inicial = ROUND(fondo_inicial) WHERE fondo_inicial != ROUND(fondo_inicial)",
-        "UPDATE turnos            SET fondo_final   = ROUND(fondo_final)   WHERE fondo_final   != ROUND(fondo_final)",
-        "UPDATE caja_movimientos  SET monto        = ROUND(monto)        WHERE monto        != ROUND(monto)",
-        "UPDATE pagos_khipu       SET monto        = ROUND(monto)        WHERE monto        != ROUND(monto)",
-        "UPDATE clientes          SET total_gastado = ROUND(total_gastado) WHERE total_gastado != ROUND(total_gastado)",
-        "UPDATE pedidos           SET total        = ROUND(total)        WHERE total        != ROUND(total)",
-        "UPDATE pedido_items      SET precio       = ROUND(precio)       WHERE precio       != ROUND(precio)",
-        "UPDATE pedido_items      SET subtotal     = ROUND(subtotal)     WHERE subtotal     != ROUND(subtotal)",
-        "UPDATE ordenes_compra    SET total        = ROUND(total)        WHERE total        != ROUND(total)",
-        "UPDATE orden_items       SET precio_unit  = ROUND(precio_unit)  WHERE precio_unit  != ROUND(precio_unit)",
-        "UPDATE orden_items       SET subtotal     = ROUND(subtotal)     WHERE subtotal     != ROUND(subtotal)",
-        "UPDATE facturas_proveedor SET total       = ROUND(total)        WHERE total        != ROUND(total)",
+        "UPDATE productos          SET precio        = CAST(ROUND(precio)        AS INTEGER) WHERE precio        != CAST(ROUND(precio)        AS INTEGER)",
+        "UPDATE productos          SET precio_costo  = CAST(ROUND(precio_costo)  AS INTEGER) WHERE precio_costo  != CAST(ROUND(precio_costo)  AS INTEGER)",
+        "UPDATE producto_variantes SET precio        = CAST(ROUND(precio)        AS INTEGER) WHERE precio        != CAST(ROUND(precio)        AS INTEGER)",
+        "UPDATE producto_variantes SET precio_costo  = CAST(ROUND(precio_costo)  AS INTEGER) WHERE precio_costo  != CAST(ROUND(precio_costo)  AS INTEGER)",
+        "UPDATE ventas             SET total         = CAST(ROUND(total)         AS INTEGER) WHERE total         != CAST(ROUND(total)         AS INTEGER)",
+        "UPDATE ventas             SET descuento     = CAST(ROUND(descuento)     AS INTEGER) WHERE descuento     != CAST(ROUND(descuento)     AS INTEGER)",
+        "UPDATE ventas             SET impuesto      = CAST(ROUND(impuesto)      AS INTEGER) WHERE impuesto      != CAST(ROUND(impuesto)      AS INTEGER)",
+        "UPDATE venta_items        SET precio_unit   = CAST(ROUND(precio_unit)   AS INTEGER) WHERE precio_unit   != CAST(ROUND(precio_unit)   AS INTEGER)",
+        "UPDATE venta_items        SET descuento     = CAST(ROUND(descuento)     AS INTEGER) WHERE descuento     != CAST(ROUND(descuento)     AS INTEGER)",
+        "UPDATE venta_items        SET subtotal      = CAST(ROUND(subtotal)      AS INTEGER) WHERE subtotal      != CAST(ROUND(subtotal)      AS INTEGER)",
+        "UPDATE devoluciones       SET monto         = CAST(ROUND(monto)         AS INTEGER) WHERE monto         != CAST(ROUND(monto)         AS INTEGER)",
+        "UPDATE turnos             SET fondo_inicial  = CAST(ROUND(fondo_inicial) AS INTEGER) WHERE fondo_inicial  != CAST(ROUND(fondo_inicial) AS INTEGER)",
+        "UPDATE turnos             SET fondo_final    = CAST(ROUND(fondo_final)   AS INTEGER) WHERE fondo_final    != CAST(ROUND(fondo_final)   AS INTEGER)",
+        "UPDATE caja_movimientos   SET monto         = CAST(ROUND(monto)         AS INTEGER) WHERE monto         != CAST(ROUND(monto)         AS INTEGER)",
+        "UPDATE pagos_khipu        SET monto         = CAST(ROUND(monto)         AS INTEGER) WHERE monto         != CAST(ROUND(monto)         AS INTEGER)",
+        "UPDATE clientes           SET total_gastado  = CAST(ROUND(total_gastado) AS INTEGER) WHERE total_gastado  != CAST(ROUND(total_gastado) AS INTEGER)",
+        "UPDATE pedidos            SET total         = CAST(ROUND(total)         AS INTEGER) WHERE total         != CAST(ROUND(total)         AS INTEGER)",
+        "UPDATE pedido_items       SET precio        = CAST(ROUND(precio)        AS INTEGER) WHERE precio        != CAST(ROUND(precio)        AS INTEGER)",
+        "UPDATE pedido_items       SET subtotal      = CAST(ROUND(subtotal)      AS INTEGER) WHERE subtotal      != CAST(ROUND(subtotal)      AS INTEGER)",
+        "UPDATE ordenes_compra     SET total         = CAST(ROUND(total)         AS INTEGER) WHERE total         != CAST(ROUND(total)         AS INTEGER)",
+        "UPDATE orden_items        SET precio_unit   = CAST(ROUND(precio_unit)   AS INTEGER) WHERE precio_unit   != CAST(ROUND(precio_unit)   AS INTEGER)",
+        "UPDATE orden_items        SET subtotal      = CAST(ROUND(subtotal)      AS INTEGER) WHERE subtotal      != CAST(ROUND(subtotal)      AS INTEGER)",
+        "UPDATE facturas_proveedor SET total         = CAST(ROUND(total)         AS INTEGER) WHERE total         != CAST(ROUND(total)         AS INTEGER)",
     ]
     for stmt in stmts:
         try:
@@ -110,9 +110,9 @@ def _migrate_montos(conn: sqlite3.Connection):
 
 
 def _migrate_columns(conn: sqlite3.Connection):
-    """Agrega columnas nuevas a tablas existentes sin romper instancias ya creadas."""
-    cols_productos  = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
-    cols_vitems     = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
+    """Agrega columnas e índices nuevos a tablas existentes sin romper instancias ya creadas."""
+    cols_productos   = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
+    cols_vitems      = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
     cols_aprendizaje = {r[1] for r in conn.execute("PRAGMA table_info(voz_aprendizaje)").fetchall()}
 
     if "subcategoria_id" not in cols_productos:
@@ -125,6 +125,15 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE venta_items ADD COLUMN nombre_variante TEXT")
     if "tipo" not in cols_aprendizaje:
         conn.execute("ALTER TABLE voz_aprendizaje ADD COLUMN tipo TEXT NOT NULL DEFAULT 'accion'")
+
+    # Unique index en voz_sinonimos_variante — silencioso si ya existe o hay duplicados
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_vsv_unique "
+            "ON voz_sinonimos_variante(palabra, producto_id, variante_id)"
+        )
+    except Exception as e:
+        logger.debug(f"migrate idx_vsv_unique: {e}")
 
 
 def _seed_defaults(conn: sqlite3.Connection):
