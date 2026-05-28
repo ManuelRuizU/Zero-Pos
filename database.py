@@ -9,6 +9,11 @@ DB_PATH = BASE_DIR / "zero_pos.db"
 logger = logging.getLogger("zero_pos.db")
 
 
+def pesos(valor) -> int:
+    """Convierte cualquier valor monetario a entero CLP (sin decimales)."""
+    return int(round(float(valor or 0)))
+
+
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -60,6 +65,7 @@ def init_db():
     # Bloque 3: migraciones y seeds — independiente de los bloques anteriores
     try:
         with db_session() as conn:
+            _migrate_montos(conn)
             _migrate_columns(conn)
             _seed_defaults(conn)
     except Exception as e:
@@ -67,6 +73,40 @@ def init_db():
         raise
 
     logger.info(f"Base de datos inicializada: {DB_PATH}")
+
+
+def _migrate_montos(conn: sqlite3.Connection):
+    """Redondea a entero todos los campos monetarios que pudieran tener decimales REAL."""
+    stmts = [
+        "UPDATE productos         SET precio       = ROUND(precio)       WHERE precio       != ROUND(precio)",
+        "UPDATE productos         SET precio_costo = ROUND(precio_costo) WHERE precio_costo != ROUND(precio_costo)",
+        "UPDATE producto_variantes SET precio      = ROUND(precio)       WHERE precio       != ROUND(precio)",
+        "UPDATE producto_variantes SET precio_costo= ROUND(precio_costo) WHERE precio_costo != ROUND(precio_costo)",
+        "UPDATE ventas            SET total        = ROUND(total)        WHERE total        != ROUND(total)",
+        "UPDATE ventas            SET descuento    = ROUND(descuento)    WHERE descuento    != ROUND(descuento)",
+        "UPDATE ventas            SET impuesto     = ROUND(impuesto)     WHERE impuesto     != ROUND(impuesto)",
+        "UPDATE venta_items       SET precio_unit  = ROUND(precio_unit)  WHERE precio_unit  != ROUND(precio_unit)",
+        "UPDATE venta_items       SET descuento    = ROUND(descuento)    WHERE descuento    != ROUND(descuento)",
+        "UPDATE venta_items       SET subtotal     = ROUND(subtotal)     WHERE subtotal     != ROUND(subtotal)",
+        "UPDATE devoluciones      SET monto        = ROUND(monto)        WHERE monto        != ROUND(monto)",
+        "UPDATE turnos            SET fondo_inicial = ROUND(fondo_inicial) WHERE fondo_inicial != ROUND(fondo_inicial)",
+        "UPDATE turnos            SET fondo_final   = ROUND(fondo_final)   WHERE fondo_final   != ROUND(fondo_final)",
+        "UPDATE caja_movimientos  SET monto        = ROUND(monto)        WHERE monto        != ROUND(monto)",
+        "UPDATE pagos_khipu       SET monto        = ROUND(monto)        WHERE monto        != ROUND(monto)",
+        "UPDATE clientes          SET total_gastado = ROUND(total_gastado) WHERE total_gastado != ROUND(total_gastado)",
+        "UPDATE pedidos           SET total        = ROUND(total)        WHERE total        != ROUND(total)",
+        "UPDATE pedido_items      SET precio       = ROUND(precio)       WHERE precio       != ROUND(precio)",
+        "UPDATE pedido_items      SET subtotal     = ROUND(subtotal)     WHERE subtotal     != ROUND(subtotal)",
+        "UPDATE ordenes_compra    SET total        = ROUND(total)        WHERE total        != ROUND(total)",
+        "UPDATE orden_items       SET precio_unit  = ROUND(precio_unit)  WHERE precio_unit  != ROUND(precio_unit)",
+        "UPDATE orden_items       SET subtotal     = ROUND(subtotal)     WHERE subtotal     != ROUND(subtotal)",
+        "UPDATE facturas_proveedor SET total       = ROUND(total)        WHERE total        != ROUND(total)",
+    ]
+    for stmt in stmts:
+        try:
+            conn.execute(stmt)
+        except Exception as e:
+            logger.debug(f"migrate_montos skip: {e}")
 
 
 def _migrate_columns(conn: sqlite3.Connection):

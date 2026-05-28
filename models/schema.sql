@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS turnos (
     sucursal_id    INTEGER REFERENCES sucursales(id),
     apertura       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     cierre         DATETIME,
-    fondo_inicial  REAL NOT NULL DEFAULT 0,
-    fondo_final    REAL,
+    fondo_inicial  INTEGER NOT NULL DEFAULT 0,
+    fondo_final    INTEGER,
     estado         TEXT NOT NULL DEFAULT 'abierto' -- abierto | cerrado
 );
 
@@ -55,8 +55,8 @@ CREATE TABLE IF NOT EXISTS producto_variantes (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     producto_id   INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
     nombre        TEXT NOT NULL,
-    precio        REAL NOT NULL DEFAULT 0,
-    precio_costo  REAL DEFAULT 0,
+    precio        INTEGER NOT NULL DEFAULT 0,
+    precio_costo  INTEGER DEFAULT 0,
     stock         INTEGER NOT NULL DEFAULT 0,
     stock_minimo  INTEGER NOT NULL DEFAULT 5,
     codigo_barras TEXT UNIQUE,
@@ -71,8 +71,8 @@ CREATE TABLE IF NOT EXISTS productos (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre          TEXT NOT NULL,
     descripcion     TEXT,
-    precio          REAL NOT NULL DEFAULT 0,
-    precio_costo    REAL DEFAULT 0,
+    precio          INTEGER NOT NULL DEFAULT 0,
+    precio_costo    INTEGER DEFAULT 0,
     stock           INTEGER NOT NULL DEFAULT 0,
     stock_minimo    INTEGER NOT NULL DEFAULT 5,
     codigo_barras   TEXT UNIQUE,
@@ -93,9 +93,9 @@ CREATE TABLE IF NOT EXISTS ventas (
     turno_id       INTEGER REFERENCES turnos(id),
     usuario_id     INTEGER REFERENCES usuarios(id),
     sucursal_id    INTEGER REFERENCES sucursales(id),
-    total          REAL NOT NULL DEFAULT 0,
-    descuento      REAL NOT NULL DEFAULT 0,
-    impuesto       REAL NOT NULL DEFAULT 0,
+    total          INTEGER NOT NULL DEFAULT 0,
+    descuento      INTEGER NOT NULL DEFAULT 0,
+    impuesto       INTEGER NOT NULL DEFAULT 0,
     metodo_pago    TEXT NOT NULL DEFAULT 'efectivo', -- efectivo | tarjeta | transferencia | khipu | mixto
     estado         TEXT NOT NULL DEFAULT 'completada', -- completada | anulada | devuelta
     cliente_nombre TEXT,
@@ -115,9 +115,9 @@ CREATE TABLE IF NOT EXISTS venta_items (
     variante_id INTEGER REFERENCES producto_variantes(id),
     nombre_variante TEXT,
     cantidad    INTEGER NOT NULL DEFAULT 1,
-    precio_unit REAL NOT NULL,
-    descuento   REAL NOT NULL DEFAULT 0,
-    subtotal    REAL NOT NULL
+    precio_unit INTEGER NOT NULL,
+    descuento   INTEGER NOT NULL DEFAULT 0,
+    subtotal    INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_vitems_venta ON venta_items(venta_id);
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS devoluciones (
     venta_id    INTEGER NOT NULL REFERENCES ventas(id),
     usuario_id  INTEGER REFERENCES usuarios(id),
     motivo      TEXT,
-    monto       REAL NOT NULL DEFAULT 0,
+    monto       INTEGER NOT NULL DEFAULT 0,
     creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS pagos_khipu (
     venta_id        INTEGER REFERENCES ventas(id),
     payment_id      TEXT UNIQUE,
     payment_url     TEXT,
-    monto           REAL NOT NULL,
+    monto           INTEGER NOT NULL,
     estado          TEXT NOT NULL DEFAULT 'pendiente', -- pendiente | pagado | rechazado | expirado
     creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP,
     actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -199,7 +199,7 @@ CREATE TABLE IF NOT EXISTS caja_movimientos (
     turno_id   INTEGER REFERENCES turnos(id),
     tipo       TEXT NOT NULL, -- ingreso | egreso
     concepto   TEXT NOT NULL,
-    monto      REAL NOT NULL,
+    monto      INTEGER NOT NULL,
     creado_en  DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS clientes (
     comuna          TEXT,
     notas           TEXT,
     total_pedidos   INTEGER NOT NULL DEFAULT 0,
-    total_gastado   REAL NOT NULL DEFAULT 0,
+    total_gastado   INTEGER NOT NULL DEFAULT 0,
     creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -242,7 +242,7 @@ CREATE TABLE IF NOT EXISTS pedidos (
     referencia      TEXT,
     comuna          TEXT,
     notas           TEXT,
-    total           REAL NOT NULL DEFAULT 0,
+    total           INTEGER NOT NULL DEFAULT 0,
     metodo_pago     TEXT NOT NULL DEFAULT 'efectivo',
     usuario_id      INTEGER REFERENCES usuarios(id),
     creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -261,8 +261,8 @@ CREATE TABLE IF NOT EXISTS pedido_items (
     variante_id INTEGER REFERENCES producto_variantes(id),
     nombre      TEXT NOT NULL,
     cantidad    INTEGER NOT NULL DEFAULT 1,
-    precio      REAL NOT NULL,
-    subtotal    REAL NOT NULL,
+    precio      INTEGER NOT NULL,
+    subtotal    INTEGER NOT NULL,
     notas       TEXT
 );
 

@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS ordenes_compra (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     proveedor_id  INTEGER NOT NULL REFERENCES proveedores(id),
     usuario_id    INTEGER REFERENCES usuarios(id),
-    total         REAL NOT NULL DEFAULT 0,
+    total         INTEGER NOT NULL DEFAULT 0,
     estado        TEXT NOT NULL DEFAULT 'borrador', -- borrador | enviada | recibida | cancelada
     notas         TEXT,
     creado_en     DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -34,8 +34,8 @@ CREATE TABLE IF NOT EXISTS orden_items (
     orden_id     INTEGER NOT NULL REFERENCES ordenes_compra(id) ON DELETE CASCADE,
     producto_id  INTEGER NOT NULL REFERENCES productos(id),
     cantidad     INTEGER NOT NULL DEFAULT 1,
-    precio_unit  REAL NOT NULL,
-    subtotal     REAL NOT NULL
+    precio_unit  INTEGER NOT NULL,
+    subtotal     INTEGER NOT NULL
 );
 
 -- Movimientos de stock
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS facturas_proveedor (
     proveedor_id    INTEGER REFERENCES proveedores(id),
     numero_factura  TEXT,
     fecha_emision   DATE,
-    total           REAL,
+    total           INTEGER,
     archivo_pdf     TEXT,
     procesada       INTEGER NOT NULL DEFAULT 0,
     datos_json      TEXT,

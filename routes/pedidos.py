@@ -3,7 +3,7 @@ import base64
 import logging
 from datetime import date
 from flask import Blueprint, request, jsonify, session
-from database import db_session
+from database import db_session, pesos
 
 pedidos_bp = Blueprint("pedidos", __name__, url_prefix="/api")
 logger = logging.getLogger("zero_pos.pedidos")
@@ -236,7 +236,7 @@ def pedidos_crear():
     if not items:
         return jsonify({"error": "items requeridos"}), 400
 
-    total = sum(float(i.get("subtotal", 0)) for i in items)
+    total = sum(pesos(i.get("subtotal", 0)) for i in items)
 
     with db_session() as conn:
         # Número diario
@@ -299,7 +299,7 @@ def pedidos_crear():
         pedido_id = cur.lastrowid
 
         for item in items:
-            subtotal = float(item.get("subtotal", 0))
+            subtotal = pesos(item.get("subtotal", 0))
             conn.execute(
                 """INSERT INTO pedido_items
                    (pedido_id, producto_id, variante_id, nombre, cantidad, precio, subtotal, notas)
@@ -309,7 +309,7 @@ def pedidos_crear():
                  item.get("variante_id"),
                  str(item.get("nombre", "")),
                  int(item.get("cantidad", 1)),
-                 float(item.get("precio", 0)),
+                 pesos(item.get("precio", 0)),
                  subtotal,
                  item.get("notas") or None)
             )

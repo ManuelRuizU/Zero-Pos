@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
-from database import db_session
+from database import db_session, pesos
 from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
@@ -78,7 +78,7 @@ def crear_venta():
                     return jsonify({"error": f"Stock insuficiente: {prod['nombre']}"}), 409
                 precio_unit = float(prod["precio"])
 
-            subtotal = round((precio_unit * qty) - descuento_item, 2)
+            subtotal = pesos((precio_unit * qty) - descuento_item)
             total += subtotal
             items_validados.append({
                 "producto_id": pid,
@@ -86,17 +86,17 @@ def crear_venta():
                 "variante_id": variante_id,
                 "nombre_variante": nombre_variante,
                 "cantidad": qty,
-                "precio_unit": precio_unit,
-                "descuento": descuento_item,
+                "precio_unit": pesos(precio_unit),
+                "descuento": pesos(descuento_item),
                 "subtotal": subtotal,
             })
 
-        total = round(total - descuento_global, 2)
+        total = pesos(total - descuento_global)
         cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
         config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
 
         iva_pct = float(config_negocio.get("iva_porcentaje") or 19)
-        impuesto = round(total * iva_pct / (100 + iva_pct), 2)
+        impuesto = pesos(total * iva_pct / (100 + iva_pct))
 
         # Leer config de impresora desde DB (misma fuente que usa test_conexion)
         config_imp = {
@@ -307,10 +307,10 @@ def devolucion(vid):
 
         conn.execute(
             "INSERT INTO devoluciones (venta_id, usuario_id, motivo, monto) VALUES (?,?,?,?)",
-            (vid, uid, motivo, round(monto_devuelto, 2))
+            (vid, uid, motivo, pesos(monto_devuelto))
         )
         conn.execute("UPDATE ventas SET estado='devuelta' WHERE id=?", (vid,))
-        return jsonify({"ok": True, "monto_devuelto": round(monto_devuelto, 2)})
+        return jsonify({"ok": True, "monto_devuelto": pesos(monto_devuelto)})
 
 
 @ventas_bp.route("/rapida", methods=["POST"])
@@ -374,7 +374,7 @@ def venta_rapida():
             )
             prod_id = cur_prod.lastrowid
 
-            subtotal = round(precio_unit * qty, 2)
+            subtotal = pesos(precio_unit * qty)
             total += subtotal
             items_validados.append({
                 "producto_id": prod_id,
@@ -382,13 +382,13 @@ def venta_rapida():
                 "variante_id": None,
                 "nombre_variante": "",
                 "cantidad": qty,
-                "precio_unit": precio_unit,
+                "precio_unit": pesos(precio_unit),
                 "descuento": 0,
                 "subtotal": subtotal,
             })
 
-        total = round(total - descuento_global, 2)
-        impuesto = round(total * iva_pct / (100 + iva_pct), 2)
+        total = pesos(total - descuento_global)
+        impuesto = pesos(total * iva_pct / (100 + iva_pct))
 
         cur = conn.execute(
             """INSERT INTO ventas
