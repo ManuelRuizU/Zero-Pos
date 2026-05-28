@@ -18,6 +18,14 @@ body{
   background-image:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(99,102,241,0.12) 0%,transparent 70%);
 }
 
+/* ── Header ─────────────────────────────── */
+#headerBar{
+  text-align:center;padding:14px 0 10px;
+  font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:var(--text-dim);border-bottom:1px solid var(--border);
+  display:none;
+}
+
 /* ── Idle ───────────────────────────────── */
 #pantallaIdle{
   flex:1;display:flex;flex-direction:column;
@@ -57,20 +65,39 @@ body{
 }
 .item-nombre{flex:1;font-size:15px;font-weight:500;}
 .item-sub{font-size:15px;font-weight:700;color:var(--accent2);}
-.total-card{
+
+/* ── Totales ────────────────────────────── */
+.totales-card{
   background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--radius);padding:24px 28px;
-  display:flex;align-items:center;justify-content:space-between;
+  border-radius:var(--radius);padding:20px 24px;display:flex;flex-direction:column;gap:10px;
 }
-.total-label{font-size:14px;color:var(--text-dim);font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
-.total-monto{font-size:52px;font-weight:900;letter-spacing:-2px;color:var(--accent2);}
+.tot-row{display:flex;justify-content:space-between;align-items:center;}
+.tot-label{font-size:13px;color:var(--text-dim);font-weight:600;letter-spacing:.4px;text-transform:uppercase;}
+.tot-valor{font-size:15px;font-weight:700;}
+.tot-iva{color:var(--text-dim);}
+.tot-divider{border:none;border-top:1px solid var(--border);margin:4px 0;}
+.tot-total-label{font-size:14px;color:var(--text-dim);font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.tot-total-monto{font-size:52px;font-weight:900;letter-spacing:-2px;color:var(--accent2);}
+
+/* ── Vuelto (estado pagado) ─────────────── */
+#vueltoCard{
+  display:none;
+  background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);
+  border-radius:var(--radius);padding:20px 24px;
+  flex-direction:column;gap:8px;align-items:center;
+}
+.vuelto-title{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--success);}
+.vuelto-monto{font-size:64px;font-weight:900;letter-spacing:-3px;color:var(--success);}
+.pago-metodo{font-size:13px;color:var(--text-dim);margin-top:2px;}
 </style>
 </head>
 <body>
 
+<div id="headerBar"></div>
+
 <div id="pantallaIdle">
   <div class="idle-logo">🛍️</div>
-  <div class="idle-nombre">ZERO<span>POS</span></div>
+  <div class="idle-nombre" id="idleNombre">ZERO<span>POS</span></div>
   <div class="idle-tagline">Sin internet. Sin comisiones. Solo tú y tus ventas.</div>
   <div class="idle-bienvenida">¡Bienvenido! 👋</div>
 </div>
@@ -78,19 +105,48 @@ body{
 <div id="pantallaVenta">
   <div class="venta-header">Tu pedido</div>
   <div class="items-lista" id="itemsLista"></div>
-  <div class="total-card">
-    <div class="total-label">Total</div>
-    <div class="total-monto" id="totalMonto">$0</div>
+  <div class="totales-card">
+    <div class="tot-row" id="ivaRow" style="display:none">
+      <span class="tot-label tot-iva">IVA incluido</span>
+      <span class="tot-valor tot-iva" id="ivaValor">$0</span>
+    </div>
+    <hr class="tot-divider" id="ivaDivider" style="display:none">
+    <div class="tot-row">
+      <span class="tot-total-label">Total</span>
+      <span class="tot-total-monto" id="totalMonto">$0</span>
+    </div>
+  </div>
+  <div id="vueltoCard">
+    <div class="vuelto-title">Vuelto</div>
+    <div class="vuelto-monto" id="vueltoMonto">$0</div>
+    <div class="pago-metodo" id="pagoMetodo"></div>
   </div>
 </div>
 
 <script>
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+const METODOS = {efectivo:'Efectivo',tarjeta:'Tarjeta',transferencia:'Transferencia',khipu:'Khipu'};
+
+let _nombreNegocio = 'ZERO POS';
+
+async function cargarNombre() {
+  try {
+    const cfg = await fetch('/api/config').then(r => r.json());
+    if (cfg.nombre_negocio) {
+      _nombreNegocio = cfg.nombre_negocio;
+      document.getElementById('headerBar').textContent = _nombreNegocio;
+      const el = document.getElementById('idleNombre');
+      el.innerHTML = _nombreNegocio.replace(/ /g, '<span style="color:var(--accent2)"> </span>');
+    }
+  } catch(e) {}
+}
 
 async function poll() {
   try {
     const estado = await fetch('/api/ventas/pantalla-cliente').then(r => r.json());
     if (estado.activa && estado.items && estado.items.length) {
+      mostrarVenta(estado);
+    } else if (estado.estado === 'pagado') {
       mostrarVenta(estado);
     } else {
       mostrarIdle();
@@ -98,29 +154,58 @@ async function poll() {
   } catch(e) {}
 }
 
-function mostrarVenta(estado) {
+function mostrarVenta(est) {
   document.getElementById('pantallaIdle').style.display = 'none';
+  document.getElementById('headerBar').style.display = 'block';
   const pv = document.getElementById('pantallaVenta');
   pv.style.display = 'flex';
 
+  // Items
   const lista = document.getElementById('itemsLista');
-  lista.innerHTML = estado.items.map(i => `
+  lista.innerHTML = (est.items || []).map(i => `
     <div class="item-row">
       <span class="item-cant">${i.cantidad}</span>
       <span class="item-nombre">${i.nombre}</span>
       <span class="item-sub">${fmt(i.subtotal)}</span>
     </div>`).join('');
 
-  document.getElementById('totalMonto').textContent = fmt(estado.total);
+  // IVA
+  const iva = est.iva || 0;
+  const ivaRow = document.getElementById('ivaRow');
+  const ivaDivider = document.getElementById('ivaDivider');
+  if (iva > 0) {
+    document.getElementById('ivaValor').textContent = fmt(iva);
+    ivaRow.style.display = '';
+    ivaDivider.style.display = '';
+  } else {
+    ivaRow.style.display = 'none';
+    ivaDivider.style.display = 'none';
+  }
+
+  // Total
+  document.getElementById('totalMonto').textContent = fmt(est.total);
+
+  // Vuelto
+  const vueltoCard = document.getElementById('vueltoCard');
+  if (est.estado === 'pagado' && est.vuelto > 0) {
+    document.getElementById('vueltoMonto').textContent = fmt(est.vuelto);
+    const met = METODOS[est.metodo_pago] || est.metodo_pago || '';
+    document.getElementById('pagoMetodo').textContent = met ? `Pagó con ${met}` : '';
+    vueltoCard.style.display = 'flex';
+  } else {
+    vueltoCard.style.display = 'none';
+  }
 }
 
 function mostrarIdle() {
   document.getElementById('pantallaVenta').style.display = 'none';
+  document.getElementById('headerBar').style.display = 'none';
   document.getElementById('pantallaIdle').style.display = 'flex';
 }
 
+cargarNombre();
 poll();
-setInterval(poll, 5000);
+setInterval(poll, 2000);
 </script>
 </body>
 </html>

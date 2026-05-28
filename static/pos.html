@@ -1692,6 +1692,9 @@ function cambiarCantidad(idx, delta) {
 
 function eliminarItem(idx) { carrito.splice(idx, 1); renderCarrito(); }
 
+let _pantallaLock = false;
+let _pantallaTimer = null;
+
 function limpiarCarrito() { carrito = []; renderCarrito(); }
 
 function renderCarrito() {
@@ -1728,9 +1731,13 @@ function renderCarrito() {
   pushPantallaCliente();
 }
 
-function pushPantallaCliente() {
-  const subtotal = carrito.reduce((s, i) => s + i.precio_unit * i.cantidad, 0);
+function pushPantallaCliente(extra = {}) {
+  if (_pantallaLock && !extra.estado) return;
+  const subtotalBruto = carrito.reduce((s, i) => s + i.precio_unit * i.cantidad, 0);
   const desc = parseFloat(document.getElementById('descuentoInput')?.value) || 0;
+  const t = Math.max(0, subtotalBruto - desc);
+  const ivaPct = parseFloat(cfgApp.iva_porcentaje || 19);
+  const iva = Math.round(t * ivaPct / (100 + ivaPct));
   fetch('/api/ventas/pantalla-cliente/estado', {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type': 'application/json'},
@@ -1741,8 +1748,19 @@ function pushPantallaCliente() {
         precio_unit: i.precio_unit,
         subtotal: i.precio_unit * i.cantidad,
       })),
-      total: Math.max(0, subtotal - desc),
+      total: t,
+      subtotal: subtotalBruto,
+      iva: iva,
+      ...extra,
     })
+  }).catch(() => {});
+}
+
+function _pushPantallaIdle() {
+  fetch('/api/ventas/pantalla-cliente/estado', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({items: [], total: 0, estado: 'idle'})
   }).catch(() => {});
 }
 
@@ -2021,6 +2039,14 @@ async function confirmarPago() {
         }),
       }).catch(() => {});
     }
+
+    // Push estado "pagado" a pantalla cliente antes de limpiar carrito
+    const _recibido = metodoPago === 'efectivo' ? (parseFloat(document.getElementById('montoRecibido').value) || 0) : 0;
+    const _vuelto = metodoPago === 'efectivo' ? Math.max(0, _recibido - total) : 0;
+    pushPantallaCliente({estado: 'pagado', metodo_pago: metodoPago, monto_recibido: _recibido, vuelto: _vuelto});
+    _pantallaLock = true;
+    if (_pantallaTimer) clearTimeout(_pantallaTimer);
+    _pantallaTimer = setTimeout(() => { _pantallaLock = false; _pushPantallaIdle(); }, 10000);
 
     cerrarCobro();
     if (document.getElementById('carrito').classList.contains('open')) toggleCarritoMobile();

@@ -7,7 +7,11 @@ from routes.productos import cache_invalidate as _invalidate_productos
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
 
 # Estado en memoria para pantalla cliente (Orange Pi = servidor único)
-_pantalla: dict = {"items": [], "total": 0, "activa": False}
+_pantalla: dict = {
+    "items": [], "total": 0, "subtotal": 0, "iva": 0,
+    "metodo_pago": "", "monto_recibido": 0, "vuelto": 0,
+    "estado": "idle", "activa": False,
+}
 
 @ventas_bp.after_request
 def _invalidate_on_venta(response):
@@ -430,18 +434,25 @@ def pantalla_cliente_set():
     global _pantalla
     data = request.get_json(silent=True) or {}
     items = data.get("items", [])
+    estado = data.get("estado", "carrito" if items else "idle")
     _pantalla = {
         "items": [
             {
-                "nombre":    i.get("nombre", ""),
-                "cantidad":  int(i.get("cantidad", 1)),
+                "nombre":      i.get("nombre", ""),
+                "cantidad":    int(i.get("cantidad", 1)),
                 "precio_unit": pesos(i.get("precio_unit", 0)),
-                "subtotal":  pesos(i.get("subtotal", 0)),
+                "subtotal":    pesos(i.get("subtotal", 0)),
             }
             for i in items
         ],
-        "total":  pesos(data.get("total", 0)),
-        "activa": bool(items),
+        "total":          pesos(data.get("total", 0)),
+        "subtotal":       pesos(data.get("subtotal", 0)),
+        "iva":            pesos(data.get("iva", 0)),
+        "metodo_pago":    str(data.get("metodo_pago", "")),
+        "monto_recibido": pesos(data.get("monto_recibido", 0)),
+        "vuelto":         pesos(data.get("vuelto", 0)),
+        "estado":         estado,
+        "activa":         bool(items),
     }
     return jsonify({"ok": True})
 
