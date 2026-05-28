@@ -1,5 +1,7 @@
 import logging
-from flask import Blueprint, request, jsonify, session, send_file
+import threading
+from pathlib import Path
+from flask import Blueprint, request, jsonify, session, send_file, current_app
 from database import db_session
 
 backup_bp = Blueprint("backup", __name__, url_prefix="/api/backup")
@@ -21,11 +23,11 @@ def descargar_backup(nombre):
     if session.get("usuario_rol") != "admin":
         return jsonify({"error": "Sin permisos"}), 403
 
-    from pathlib import Path
-    from flask import current_app
-    base = Path(current_app.root_path) / "backups"
-    archivo = base / nombre
-    if not archivo.exists() or not archivo.is_relative_to(base):
+    base    = (Path(current_app.root_path) / "backups").resolve()
+    archivo = (base / nombre).resolve()
+    if not archivo.is_relative_to(base):
+        return jsonify({"error": "Acceso denegado"}), 403
+    if not archivo.exists():
         return jsonify({"error": "Archivo no encontrado"}), 404
 
     return send_file(str(archivo), as_attachment=True)
@@ -54,9 +56,22 @@ def restaurar_backup():
         return jsonify({"error": "Sin permisos"}), 403
 
     archivo = request.files.get("archivo")
-    if not archivo:
-        return jsonify({"error": "Archivo requerido"}), 400
+    if not archivo or not archivo.filename:
+        return jsonify({"error": "No se seleccionó archivo"}), 400
 
-    from utils.backup import restaurar_backup_cifrado
-    resultado = restaurar_backup_cifrado(archivo)
-    return jsonify(resultado)
+    # Guardar en /tmp y reiniciar en frío — la DB no puede restaurarse
+    # mientras Flask la tiene abierta
+    pending = Path("/tmp/restore_pending.zip")
+    archivo.save(str(pending))
+    Path("restore.flag").write_text(archivo.filename)
+
+    def _reiniciar():
+        import time, os, sys
+        time.sleep(1)
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    threading.Thread(target=_reiniciar, daemon=True).start()
+    return jsonify({
+        "ok": True,
+        "mensaje": "Reiniciando para restaurar... El sistema estará listo en 10 segundos."
+    })

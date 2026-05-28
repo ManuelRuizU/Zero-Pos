@@ -22,6 +22,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger("zero_pos")
 
+# Restauración en frío — ejecutar antes de que Flask abra la DB
+_restore_flag = BASE_DIR / "restore.flag"
+if _restore_flag.exists():
+    _nombre = _restore_flag.read_text().strip()
+    _restore_flag.unlink()
+    try:
+        from utils.backup import restaurar_backup_cifrado
+        restaurar_backup_cifrado(Path("/tmp/restore_pending.zip"))
+        print(f"[ZERO POS] Base de datos restaurada desde '{_nombre}' exitosamente")
+    except Exception as _e:
+        print(f"[ZERO POS] Error al restaurar backup: {_e}")
+
 
 def get_or_create_ssl_cert() -> tuple[Path, Path]:
     """Generate a persistent self-signed cert (only on first run)."""
