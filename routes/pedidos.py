@@ -8,6 +8,9 @@ from database import db_session, pesos
 pedidos_bp = Blueprint("pedidos", __name__, url_prefix="/api")
 logger = logging.getLogger("zero_pos.pedidos")
 
+# Estado en memoria para notificación "llamar" en pantalla
+_llamar: dict = {"pedido_id": None, "numero": None, "nombre": None, "ts": 0.0}
+
 
 def _auth():
     return session.get("usuario_id")
@@ -226,6 +229,8 @@ def pedidos_crear():
     tipo   = data.get("tipo", "delivery")
     nombre = (data.get("cliente_nombre") or "").strip()
     items  = data.get("items", [])
+    origen = data.get("origen", "pos")  # pos | meson
+    estado_inicial = data.get("estado", "nuevo")
 
     if tipo not in ("delivery", "retiro", "local"):
         return jsonify({"error": "tipo inválido"}), 400
@@ -235,6 +240,8 @@ def pedidos_crear():
         nombre = nombre or "Local"
     if not items:
         return jsonify({"error": "items requeridos"}), 400
+    if estado_inicial not in ("nuevo", "en_espera"):
+        estado_inicial = "nuevo"
 
     total = sum(pesos(i.get("subtotal", 0)) for i in items)
 
@@ -277,13 +284,17 @@ def pedidos_crear():
                 )
                 cliente_id = cur.lastrowid
 
+        # Auto-assign nombre for meson pedidos without client name
+        if origen == "meson" and not nombre:
+            nombre = f"#{numero}"
+
         cur = conn.execute(
             """INSERT INTO pedidos
-               (numero, tipo, estado, cliente_id, cliente_nombre, cliente_tel,
+               (numero, tipo, estado, origen, cliente_id, cliente_nombre, cliente_tel,
                 cliente_tel2, cliente_email, direccion, depto, referencia,
                 comuna, notas, total, metodo_pago, usuario_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (numero, tipo, "nuevo", cliente_id, nombre,
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (numero, tipo, estado_inicial, origen, cliente_id, nombre,
              data.get("cliente_tel") or None,
              data.get("cliente_tel2") or None,
              data.get("cliente_email") or None,
@@ -341,7 +352,7 @@ def pedidos_estado(pid):
         return jsonify({"error": "No autenticado"}), 401
     data  = request.get_json(silent=True) or {}
     nuevo = (data.get("estado") or "").strip()
-    if nuevo not in ("nuevo", "preparando", "listo", "despachado", "cancelado"):
+    if nuevo not in ("en_espera", "nuevo", "preparando", "listo", "despachado", "cancelado", "completado"):
         return jsonify({"error": "estado inválido"}), 400
 
     with db_session() as conn:
@@ -370,6 +381,62 @@ def pedidos_cancelar(pid):
             (pid,)
         )
     return jsonify({"ok": True})
+
+
+# ─────────────────────────────── COLA MESON ──────────────────────────────────
+
+@pedidos_bp.route("/pedidos/en-espera", methods=["GET"])
+def pedidos_en_espera():
+    """Lista pedidos en_espera para cola de caja (sin auth para meson.html)."""
+    with db_session() as conn:
+        rows = conn.execute(
+            """SELECT p.*, u.nombre as cajero_nombre
+               FROM pedidos p LEFT JOIN usuarios u ON u.id = p.usuario_id
+               WHERE p.estado='en_espera'
+               ORDER BY p.creado_en ASC"""
+        ).fetchall()
+        result = []
+        for p in rows:
+            p = dict(p)
+            items = conn.execute(
+                "SELECT * FROM pedido_items WHERE pedido_id=? ORDER BY id",
+                (p["id"],)
+            ).fetchall()
+            p["items"] = [dict(i) for i in items]
+            result.append(p)
+    return jsonify(result)
+
+
+@pedidos_bp.route("/pedidos/<int:pid>/llamar", methods=["POST"])
+def pedidos_llamar(pid):
+    if not _auth():
+        return jsonify({"error": "No autenticado"}), 401
+    import time
+    global _llamar
+    with db_session() as conn:
+        p = conn.execute("SELECT numero, cliente_nombre FROM pedidos WHERE id=?", (pid,)).fetchone()
+        if not p:
+            return jsonify({"error": "Pedido no encontrado"}), 404
+        _llamar = {
+            "pedido_id": pid,
+            "numero":    p["numero"],
+            "nombre":    p["cliente_nombre"],
+            "ts":        time.time(),
+        }
+    return jsonify({"ok": True})
+
+
+@pedidos_bp.route("/pedidos/llamar/activo", methods=["GET"])
+def pedidos_llamar_activo():
+    """Sin auth — meson.html/display polling para mostrar notificación."""
+    import time
+    if _llamar["ts"] and (time.time() - _llamar["ts"]) < 8:
+        return jsonify({
+            "activo": True,
+            "numero": _llamar["numero"],
+            "nombre": _llamar["nombre"],
+        })
+    return jsonify({"activo": False})
 
 
 # ─────────────────────────────── QR RUTA ─────────────────────────────────────

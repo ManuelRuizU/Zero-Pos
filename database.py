@@ -72,6 +72,14 @@ def init_db():
         logger.error(f"init_db migraciones/seeds: {e}")
         raise
 
+    # Bloque 4: recreación de tabla pedidos (requiere FK OFF fuera de transacción)
+    try:
+        conn = get_connection()
+        _migrate_pedidos_estados(conn)
+        conn.close()
+    except Exception as e:
+        logger.warning(f"init_db migrate pedidos estados: {e}")
+
     logger.info(f"Base de datos inicializada: {DB_PATH}")
 
 
@@ -109,22 +117,98 @@ def _migrate_montos(conn: sqlite3.Connection):
             logger.debug(f"migrate_montos skip: {e}")
 
 
+def _migrate_pedidos_estados(conn: sqlite3.Connection):
+    """Recrea tabla pedidos si el CHECK constraint no incluye 'en_espera'."""
+    # Verificar si ya soporta en_espera usando SAVEPOINT
+    try:
+        conn.execute("SAVEPOINT _chk_en_espera")
+        conn.execute(
+            "INSERT INTO pedidos (numero, tipo, estado, origen, cliente_nombre, total, metodo_pago, usuario_id)"
+            " VALUES (-99, 'local', 'en_espera', 'pos', '_test_', 0, 'efectivo', 1)"
+        )
+        conn.execute("DELETE FROM pedidos WHERE numero=-99 AND cliente_nombre='_test_'")
+        conn.execute("RELEASE SAVEPOINT _chk_en_espera")
+        # Asegurar columna 'origen' si no existe (puede existir sin constraint)
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(pedidos)").fetchall()}
+        if "origen" not in cols:
+            conn.execute("ALTER TABLE pedidos ADD COLUMN origen TEXT NOT NULL DEFAULT 'pos'")
+            conn.commit()
+        return
+    except Exception:
+        try:
+            conn.execute("ROLLBACK TO SAVEPOINT _chk_en_espera")
+        except Exception:
+            pass
+
+    # Recrear tabla con nuevo CHECK constraint (requiere FK OFF)
+    conn.execute("PRAGMA foreign_keys=OFF")
+    conn.executescript("""
+        CREATE TABLE _pedidos_new (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero          INTEGER NOT NULL,
+            tipo            TEXT NOT NULL,
+            estado          TEXT NOT NULL DEFAULT 'nuevo',
+            origen          TEXT NOT NULL DEFAULT 'pos',
+            cliente_id      INTEGER,
+            cliente_nombre  TEXT NOT NULL DEFAULT '',
+            cliente_tel     TEXT,
+            cliente_tel2    TEXT,
+            cliente_email   TEXT,
+            direccion       TEXT,
+            depto           TEXT,
+            referencia      TEXT,
+            comuna          TEXT,
+            notas           TEXT,
+            total           INTEGER NOT NULL DEFAULT 0,
+            metodo_pago     TEXT NOT NULL DEFAULT 'efectivo',
+            usuario_id      INTEGER,
+            creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP,
+            actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        INSERT INTO _pedidos_new
+            (id,numero,tipo,estado,cliente_id,cliente_nombre,cliente_tel,
+             cliente_tel2,cliente_email,direccion,depto,referencia,
+             comuna,notas,total,metodo_pago,usuario_id,creado_en,actualizado_en)
+        SELECT id,numero,tipo,estado,cliente_id,cliente_nombre,cliente_tel,
+               cliente_tel2,cliente_email,direccion,depto,referencia,
+               comuna,notas,total,metodo_pago,usuario_id,creado_en,actualizado_en
+        FROM pedidos;
+        DROP TABLE pedidos;
+        ALTER TABLE _pedidos_new RENAME TO pedidos;
+        CREATE INDEX IF NOT EXISTS idx_pedidos_estado  ON pedidos(estado);
+        CREATE INDEX IF NOT EXISTS idx_pedidos_fecha   ON pedidos(creado_en);
+        CREATE INDEX IF NOT EXISTS idx_pedidos_cliente ON pedidos(cliente_id);
+    """)
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.commit()
+    logger.info("Tabla pedidos recreada con estados en_espera/completado")
+
+
 def _migrate_columns(conn: sqlite3.Connection):
     """Agrega columnas e índices nuevos a tablas existentes sin romper instancias ya creadas."""
     cols_productos   = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
     cols_vitems      = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
     cols_aprendizaje = {r[1] for r in conn.execute("PRAGMA table_info(voz_aprendizaje)").fetchall()}
+    cols_ventas      = {r[1] for r in conn.execute("PRAGMA table_info(ventas)").fetchall()}
 
     if "subcategoria_id" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN subcategoria_id INTEGER REFERENCES subcategorias(id)")
     if "tiene_variantes" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN tiene_variantes INTEGER NOT NULL DEFAULT 0")
+    if "es_granel" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN es_granel INTEGER NOT NULL DEFAULT 0")
+    if "unidad_medida" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN unidad_medida TEXT NOT NULL DEFAULT 'unidad'")
+    if "precio_por" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN precio_por TEXT NOT NULL DEFAULT 'unidad'")
     if "variante_id" not in cols_vitems:
         conn.execute("ALTER TABLE venta_items ADD COLUMN variante_id INTEGER REFERENCES producto_variantes(id)")
     if "nombre_variante" not in cols_vitems:
         conn.execute("ALTER TABLE venta_items ADD COLUMN nombre_variante TEXT")
     if "tipo" not in cols_aprendizaje:
         conn.execute("ALTER TABLE voz_aprendizaje ADD COLUMN tipo TEXT NOT NULL DEFAULT 'accion'")
+    if "pedido_id" not in cols_ventas:
+        conn.execute("ALTER TABLE ventas ADD COLUMN pedido_id INTEGER REFERENCES pedidos(id)")
 
     # Unique index en voz_sinonimos_variante — silencioso si ya existe o hay duplicados
     try:

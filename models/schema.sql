@@ -87,6 +87,9 @@ CREATE TABLE IF NOT EXISTS productos (
     subcategoria_id INTEGER REFERENCES subcategorias(id),
     sucursal_id     INTEGER REFERENCES sucursales(id),
     tiene_variantes INTEGER NOT NULL DEFAULT 0,
+    es_granel       INTEGER NOT NULL DEFAULT 0,
+    unidad_medida   TEXT NOT NULL DEFAULT 'unidad', -- unidad | kg | litro | metro
+    precio_por      TEXT NOT NULL DEFAULT 'unidad', -- unidad | kg | litro | metro
     activo          INTEGER NOT NULL DEFAULT 1,
     imagen_url      TEXT,
     creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -118,6 +121,7 @@ CREATE TABLE IF NOT EXISTS ventas (
     turno_id       INTEGER REFERENCES turnos(id),
     usuario_id     INTEGER REFERENCES usuarios(id),
     sucursal_id    INTEGER REFERENCES sucursales(id),
+    pedido_id      INTEGER REFERENCES pedidos(id),
     total          INTEGER NOT NULL DEFAULT 0,
     descuento      INTEGER NOT NULL DEFAULT 0,
     impuesto       INTEGER NOT NULL DEFAULT 0,
@@ -137,7 +141,8 @@ CREATE TABLE IF NOT EXISTS pedidos (
     numero          INTEGER NOT NULL,
     tipo            TEXT NOT NULL CHECK(tipo IN ('delivery','retiro','local')),
     estado          TEXT NOT NULL DEFAULT 'nuevo'
-                    CHECK(estado IN ('nuevo','preparando','listo','despachado','cancelado')),
+                    CHECK(estado IN ('en_espera','nuevo','preparando','listo','despachado','cancelado','completado')),
+    origen          TEXT NOT NULL DEFAULT 'pos', -- pos | meson
     cliente_id      INTEGER REFERENCES clientes(id),
     cliente_nombre  TEXT NOT NULL,
     cliente_tel     TEXT,

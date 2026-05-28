@@ -109,6 +109,30 @@ body {
 /* ── Layout ───────────────────────────────── */
 .layout { display: flex; flex: 1; overflow: hidden; }
 
+/* ── Cola de espera ───────────────────────── */
+#colaPanel{width:300px;min-width:260px;background:rgba(10,10,15,0.95);
+  border-left:1px solid var(--border);display:none;flex-direction:column;overflow:hidden;}
+#colaPanel.open{display:flex;}
+.cola-header{padding:14px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;}
+.cola-title{font-size:14px;font-weight:700;flex:1;}
+.cola-badge{background:var(--danger);color:#fff;border-radius:10px;
+  font-size:11px;font-weight:700;padding:2px 7px;}
+.cola-items{flex:1;overflow-y:auto;}
+.cola-empty{text-align:center;color:var(--text-dim);font-size:13px;padding:32px 16px;}
+.cola-item{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background .15s;}
+.cola-item:hover{background:var(--surface2);}
+.cola-num{font-size:22px;font-weight:900;color:var(--accent2);display:inline-block;width:44px;}
+.cola-nombre{font-size:14px;font-weight:600;}
+.cola-meta{font-size:12px;color:var(--text-dim);margin-top:2px;}
+.cola-total{font-size:13px;font-weight:700;color:var(--success);}
+.cola-actions{display:flex;gap:6px;margin-top:6px;}
+.cola-btn{background:var(--surface);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;transition:all .15s;}
+.cola-btn:hover{border-color:var(--accent);}
+.cola-btn.call{border-color:var(--warning);color:var(--warning);}
+.cola-btn.call:hover{background:rgba(245,158,11,0.15);}
+
 /* ── Productos panel ──────────────────────── */
 .productos-panel {
   flex: 1; display: flex; flex-direction: column;
@@ -575,6 +599,9 @@ body {
   <div class="logo">ZERO<span>POS</span></div>
   <button class="btn-top" onclick="location.href='admin.html'" title="Admin">📊 <span class="btn-admin-label">Admin</span></button>
   <button class="btn-top" onclick="location.href='pedidos.html'" title="Pedidos">🛵</button>
+  <button class="btn-top" id="btnColaEspera" onclick="toggleColaEspera()" title="Cola de espera" style="display:none;position:relative">
+    🔔 <span id="colaCount" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:none;align-items:center;justify-content:center;font-weight:700"></span>
+  </button>
   <div class="topbar-spacer"></div>
   <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"></span>
   <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Asistente de voz ZERO">🎤 <span class="voz-kw-label">ZERO</span></button>
@@ -599,6 +626,17 @@ body {
     </div>
     <div class="subcategorias-row" id="subcatRow"></div>
     <div class="productos-grid" id="productosGrid"></div>
+  </div>
+
+  <!-- Cola de espera (mesón) -->
+  <div id="colaPanel">
+    <div class="cola-header">
+      <span class="cola-title">🔔 En espera</span>
+      <span class="cola-badge" id="colaBadge">0</span>
+    </div>
+    <div class="cola-items" id="colaItems">
+      <div class="cola-empty">Sin pedidos en espera</div>
+    </div>
   </div>
 
   <!-- Panel carrito -->
@@ -1474,11 +1512,15 @@ async function init() {
   const btnPedidos = document.querySelector('[onclick*="pedidos.html"]');
   if (btnPedidos) btnPedidos.style.display = (cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true) ? '' : 'none';
 
+  // Mostrar botón cola si es minimarket (sin módulo mesas ni delivery)
+  document.getElementById('btnColaEspera').style.display = '';
+
   await cargarCategorias();
   await cargarProductos();
   verificarAlertas();
   verificarTurno(me);
   initVoz();
+  iniciarPollCola();
 }
 
 async function verificarTurno(me) {
@@ -1967,11 +2009,31 @@ async function confirmarPago() {
   btn.disabled = true; btn.textContent = 'Procesando...';
 
   const desc = parseFloat(document.getElementById('descuentoInput').value) || 0;
-  const itemsNormales = carrito.filter(i => !i._rapida && i.producto_id);
+  const itemsNormales = carrito.filter(i => !i._rapida && i.producto_id && !i._pedido_item);
   const itemsRapidosCarrito = carrito.filter(i => i._rapida);
+  const pedidoItemsCarrito = carrito.filter(i => i._pedido_item);
+  const pedidoIdActual = window._pedidoActual || null;
 
   try {
     let ventaId = null;
+
+    // Si el carrito viene de un pedido del mesón, crear venta rápida con esos items
+    if (pedidoIdActual && pedidoItemsCarrito.length) {
+      const rp = await fetch('/api/ventas/rapida', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          items: pedidoItemsCarrito.map(i => ({nombre: i.nombre, precio_unit: i.precio_unit, cantidad: i.cantidad})),
+          metodo_pago: metodoPago,
+          descuento: desc,
+          pedido_id: pedidoIdActual,
+        }),
+      });
+      const dp = await rp.json();
+      if (!rp.ok) { showToast(dp.error || 'Error en venta mesón', 'error'); return; }
+      ventaId = dp.venta_id;
+      window._pedidoActual = null;
+    }
 
     if (itemsNormales.length) {
       const payload = {
@@ -2254,6 +2316,116 @@ document.addEventListener('keydown', e => {
 });
 
 init();
+
+// ── Cola de espera (mesón) ────────────────────────────────────────────────────
+let _colaAbierta = false;
+let _pedidosCola = [];
+
+function toggleColaEspera() {
+  _colaAbierta = !_colaAbierta;
+  document.getElementById('colaPanel').classList.toggle('open', _colaAbierta);
+  if (_colaAbierta) cargarCola();
+}
+
+async function cargarCola() {
+  try {
+    const lista = await fetch('/api/pedidos/en-espera', {credentials:'include'}).then(r=>r.json());
+    _pedidosCola = lista;
+    renderCola(lista);
+    actualizarBadgeCola(lista.length);
+  } catch(e) {}
+}
+
+function renderCola(lista) {
+  const el = document.getElementById('colaItems');
+  if (!lista.length) {
+    el.innerHTML = '<div class="cola-empty">Sin pedidos en espera</div>';
+    return;
+  }
+  el.innerHTML = lista.map(p => {
+    const hora = new Date(p.creado_en).toLocaleTimeString('es-CL', {hour:'2-digit',minute:'2-digit'});
+    return `<div class="cola-item">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="cola-num">#${p.numero}</span>
+        <div>
+          <div class="cola-nombre">${p.cliente_nombre}</div>
+          <div class="cola-meta">${hora} · ${p.cajero_nombre||'—'}</div>
+        </div>
+        <span class="cola-total" style="margin-left:auto">${fmt(p.total)}</span>
+      </div>
+      <div class="cola-actions">
+        <button class="cola-btn" onclick="cargarPedidoEnCaja(${p.id})">📋 Cargar</button>
+        <button class="cola-btn call" onclick="llamarCliente(${p.id})">🔔 Llamar</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function actualizarBadgeCola(n) {
+  const badge = document.getElementById('colaCount');
+  const btnCola = document.getElementById('btnColaEspera');
+  if (n > 0) {
+    badge.textContent = n > 9 ? '9+' : n;
+    badge.style.display = 'flex';
+    btnCola.style.background = 'rgba(239,68,68,0.15)';
+  } else {
+    badge.style.display = 'none';
+    btnCola.style.background = '';
+  }
+  document.getElementById('colaBadge').textContent = n;
+}
+
+async function cargarPedidoEnCaja(pid) {
+  const p = _pedidosCola.find(x=>x.id===pid);
+  if (!p) return;
+
+  // Confirmar si carrito tiene items
+  if (carrito.length && !confirm('¿Reemplazar el carrito actual con este pedido?')) return;
+
+  // Cargar items del pedido en el carrito
+  carrito = (p.items || []).map(item => ({
+    producto_id: item.producto_id || null,
+    nombre: item.nombre,
+    cantidad: item.cantidad,
+    precio_unit: item.precio,
+    subtotal: item.subtotal,
+    _pedido_id: p.id,
+    _pedido_item: true,
+  }));
+
+  // Guardar pedido_id para asociar la venta
+  window._pedidoActual = p.id;
+
+  renderCarrito();
+  if (document.getElementById('carrito').classList.contains('open') === false) {
+    toggleCarritoMobile && toggleCarritoMobile();
+  }
+
+  // Cerrar panel cola
+  _colaAbierta = false;
+  document.getElementById('colaPanel').classList.remove('open');
+  showToast(`Pedido #${p.numero} — ${p.cliente_nombre} cargado`, 'success');
+}
+
+async function llamarCliente(pid) {
+  await fetch(`/api/pedidos/${pid}/llamar`, {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({}),
+  }).catch(()=>{});
+  showToast('Llamada enviada al mesón', 'success');
+}
+
+function iniciarPollCola() {
+  setInterval(async () => {
+    try {
+      const lista = await fetch('/api/pedidos/en-espera', {credentials:'include'}).then(r=>r.json());
+      _pedidosCola = lista;
+      if (_colaAbierta) renderCola(lista);
+      actualizarBadgeCola(lista.length);
+    } catch(e) {}
+  }, 5000);
+}
 </script>
 </body>
 </html>

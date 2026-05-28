@@ -44,6 +44,7 @@ def crear_venta():
     cliente_nombre = data.get("cliente_nombre")
     cliente_rut = data.get("cliente_rut")
     notas = data.get("notas")
+    pedido_id = data.get("pedido_id")
     turno_id = session.get("turno_id")
 
     venta_id = None
@@ -114,13 +115,19 @@ def crear_venta():
 
         cur = conn.execute(
             """INSERT INTO ventas
-               (turno_id, usuario_id, total, descuento, impuesto,
+               (turno_id, usuario_id, pedido_id, total, descuento, impuesto,
                 metodo_pago, cliente_nombre, cliente_rut, notas)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
-            (turno_id, uid, total, descuento_global, impuesto,
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (turno_id, uid, pedido_id, total, descuento_global, impuesto,
              metodo_pago, cliente_nombre, cliente_rut, notas)
         )
         venta_id = cur.lastrowid
+
+        if pedido_id:
+            conn.execute(
+                "UPDATE pedidos SET estado='completado', actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+                (pedido_id,)
+            )
 
         for it in items_validados:
             conn.execute(
@@ -145,16 +152,25 @@ def crear_venta():
             _check_stock_alerta(conn, it["producto_id"])
 
         items_para_ticket = items_validados
+
+        # Cargar datos del pedido asociado (para ticket delivery/retiro)
+        pedido_data = None
+        if pedido_id:
+            row = conn.execute("SELECT * FROM pedidos WHERE id=?", (pedido_id,)).fetchone()
+            if row:
+                pedido_data = dict(row)
+
         logger.info(f"Venta #{venta_id} creada por usuario {uid} — total={total}")
 
     # La transacción ya está committed. Imprimir sin afectar la respuesta.
     _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                           config_negocio, config_imp)
+                           config_negocio, config_imp, pedido_data)
 
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
 
-def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, config_imp):
+def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, config_imp,
+                           pedido=None):
     """Imprime en hilo separado para no bloquear la respuesta HTTP."""
     import threading
 
@@ -167,7 +183,7 @@ def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, 
                 "metodo_pago": metodo_pago,
                 "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             }
-            resultado = imprimir_recibo(venta_data, items, config_negocio, config_imp)
+            resultado = imprimir_recibo(venta_data, items, config_negocio, config_imp, pedido)
             if resultado.get("ok"):
                 logger.info(f"Ticket venta #{venta_id} impreso OK")
             else:
@@ -335,6 +351,7 @@ def venta_rapida():
     metodo_pago = data.get("metodo_pago", "efectivo")
     descuento_global = float(data.get("descuento", 0))
     guardar_productos = data.get("guardar_productos", False)
+    pedido_id_rapida = data.get("pedido_id")
     turno_id = session.get("turno_id")
 
     total = 0
@@ -399,11 +416,17 @@ def venta_rapida():
 
         cur = conn.execute(
             """INSERT INTO ventas
-               (turno_id, usuario_id, total, descuento, impuesto, metodo_pago)
-               VALUES (?,?,?,?,?,?)""",
-            (turno_id, uid, total, descuento_global, impuesto, metodo_pago)
+               (turno_id, usuario_id, pedido_id, total, descuento, impuesto, metodo_pago)
+               VALUES (?,?,?,?,?,?,?)""",
+            (turno_id, uid, pedido_id_rapida, total, descuento_global, impuesto, metodo_pago)
         )
         venta_id = cur.lastrowid
+
+        if pedido_id_rapida:
+            conn.execute(
+                "UPDATE pedidos SET estado='completado', actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+                (pedido_id_rapida,)
+            )
 
         for it in items_validados:
             conn.execute(
