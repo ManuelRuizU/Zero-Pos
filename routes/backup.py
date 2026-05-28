@@ -59,18 +59,18 @@ def restaurar_backup():
     if not archivo or not archivo.filename:
         return jsonify({"error": "No se seleccionó archivo"}), 400
 
-    # Guardar en /tmp y reiniciar en frío — la DB no puede restaurarse
-    # mientras Flask la tiene abierta
-    pending = Path("/tmp/restore_pending.zip")
-    archivo.save(str(pending))
-    Path("restore.flag").write_text(archivo.filename)
+    raiz = Path(current_app.root_path)
+    temp_dir = raiz / "temp"
+    temp_dir.mkdir(exist_ok=True)
+    (temp_dir / "backup_incoming.zip").write_bytes(archivo.read())
+    (raiz / ".restaurar_flag").write_text(archivo.filename)
 
-    def _reiniciar():
-        import time, os, sys
+    def _salir():
+        import time, os
         time.sleep(1)
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        os._exit(0)  # systemd/supervisord reinicia el proceso
 
-    threading.Thread(target=_reiniciar, daemon=True).start()
+    threading.Thread(target=_salir, daemon=True).start()
     return jsonify({
         "ok": True,
         "mensaje": "Reiniciando para restaurar... El sistema estará listo en 10 segundos."

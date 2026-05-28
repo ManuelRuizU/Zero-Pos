@@ -24,6 +24,7 @@ flask_sessions/
 backups/
 facturas_pdf/
 sync/
+temp/
 
 # Logs
 *.log
