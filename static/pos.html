@@ -217,6 +217,8 @@ body {
 .prod-card:active { transform: scale(0.96); background: var(--surface-hover); }
 .prod-card:hover { background: var(--surface-hover); border-color: rgba(99,102,241,.4); }
 .prod-card.sin-stock { opacity: .45; cursor: not-allowed; }
+@keyframes prodFlash { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 3px #22c55e;} }
+.prod-card.flash { animation: prodFlash 0.2s ease; }
 .prod-emoji {
   font-size: 38px; line-height: 1;
   flex-shrink: 0;
@@ -311,6 +313,8 @@ body {
   border-radius: 10px; padding: 10px 12px;
   display: flex; align-items: center; gap: 8px;
 }
+@keyframes cartFadeIn { from{opacity:0;transform:translateY(-4px);} to{opacity:1;transform:none;} }
+.carrito-item-new { animation: cartFadeIn 0.22s ease; }
 .item-nombre { flex: 1; font-size: 13px; font-weight: 500; line-height: 1.2; }
 .item-controles { display: flex; align-items: center; gap: 6px; }
 .qty-btn {
@@ -610,7 +614,7 @@ body {
   </button>
   <div class="topbar-spacer"></div>
   <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"></span>
-  <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Asistente de voz ZERO">🎤 <span class="voz-kw-label">ZERO</span></button>
+  <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Consulta por voz — ventas, stock, proveedores">🎤 <span class="voz-kw-label">ZERO</span></button>
   <button class="btn-top" onclick="window.open('cliente.html','pantalla-cliente')" title="Pantalla cliente">📺</button>
   <button class="btn-top" onclick="abrirVentaRapida()" title="Venta rápida">⚡</button>
   <button class="btn-top" onclick="cerrarSesion()">Salir</button>
@@ -624,7 +628,8 @@ body {
     <div class="search-bar">
       <input class="search-input" type="text" id="searchInput"
         placeholder="Buscar producto o código..." autocomplete="off"
-        inputmode="search" oninput="filtrar()">
+        inputmode="search" oninput="filtrar()"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();procesarCodigo(this.value);}">
       <button class="btn-scan" onclick="abrirScanner()">📷</button>
     </div>
     <div class="categorias" id="categorias">
@@ -891,6 +896,9 @@ let catIconoMap = {};
 let productoMap = {};
 let todosProductos = [];    // always the full unfiltered list, for voice search
 let todosProductosMap = {}; // id → product, from todosProductos
+let indiceCodigo = new Map();  // codigo_barras → product (O(1) scan lookup)
+let indiceId = new Map();       // product.id → product
+const scanTiempos = [];
 let metodoPago = 'efectivo';
 let total = 0;
 
@@ -1174,7 +1182,8 @@ function toggleVoz() {
   actualizarBtnVoz();
   if (vozActiva) {
     try { vozRecog.start(); } catch(e){}
-    setTimeout(() => hablar(`${vozKW} activado`), 400);
+    setTimeout(() => hablar('Modo consulta activo'), 400);
+    showToast('Modo consulta activo.\nPregunta sobre ventas, stock o proveedores.', 'success');
   } else {
     try { vozRecog.stop(); } catch(e){}
   }
@@ -1219,9 +1228,11 @@ async function saludarVoz() {
 }
 
 async function procesarVoz(cmd, alternativas = []) {
-  console.log('[VOZ] cmd:', cmd, 'alts:', alternativas);
-  if (esConsultaVoz(cmd)) return await consultarVoz(cmd);
+  console.log('[VOZ consulta] cmd:', cmd);
+  await consultarVoz(cmd);
+  return;
 
+  // eslint-disable-next-line no-unreachable
   const textos = [cmd, ...alternativas];
   let interp = null;
 
@@ -1234,13 +1245,12 @@ async function procesarVoz(cmd, alternativas = []) {
       });
       if (!r.ok) continue;
       const data = await r.json();
-      // Accept result if we have a recognized action or a product match
       if (data.accion !== 'desconocido' || data.producto_id || data.ambiguo) {
         interp = data;
         if (txt !== cmd) mostrarEscuche(txt);
         break;
       }
-      if (!interp) interp = data;  // keep first as fallback
+      if (!interp) interp = data;
     } catch(e) {
       if (!interp) interp = _kwFallback(txt);
     }
@@ -1610,7 +1620,18 @@ async function cargarProductos() {
     let prods = await fetch('/api/productos/completos', {credentials:'include'}).then(r => r.json()).catch(() => []);
     todosProductos = prods;
     todosProductosMap = {};
-    prods.forEach(p => { todosProductosMap[p.id] = p; });
+    indiceCodigo = new Map();
+    indiceId = new Map();
+    prods.forEach(p => {
+      todosProductosMap[p.id] = p;
+      indiceId.set(p.id, p);
+      if (p.codigo_barras) indiceCodigo.set(String(p.codigo_barras), p);
+      if (p._variantes) {
+        p._variantes.forEach(v => {
+          if (v.codigo_barras) indiceCodigo.set(String(v.codigo_barras), {...p, variante_seleccionada: v});
+        });
+      }
+    });
     if (subcatActual) prods = prods.filter(p => String(p.subcategoria_id) === String(subcatActual));
     productos = prods;
     renderProductos(productos);
@@ -1658,6 +1679,7 @@ function renderProductos(lista) {
     const sinStock = !p.tiene_variantes && modoStock !== 'sin_stock' && p.stock <= 0;
     const div = document.createElement('div');
     div.className = 'prod-card' + (sinStock ? ' sin-stock' : '');
+    div.setAttribute('data-producto-id', p.id);
 
     const emoji = getProductEmoji(p);
     // Escape name for safe innerHTML insertion
@@ -1782,7 +1804,9 @@ function renderCarrito() {
   carrito.forEach((item, idx) => {
     const sub = item.precio_unit * item.cantidad;
     const div = document.createElement('div');
-    div.className = 'carrito-item';
+    const esNuevo = item._new;
+    if (esNuevo) item._new = false;
+    div.className = 'carrito-item' + (esNuevo ? ' carrito-item-new' : '');
     div.innerHTML = `
       <div class="item-nombre">${item.nombre}</div>
       <div class="item-controles">
@@ -2345,6 +2369,144 @@ function showToast(msg, type = 'success') {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// ── Escáner optimizado — O(1) lookup en índice local ─────────────────────────
+
+function procesarCodigo(codigo) {
+  codigo = String(codigo || '').trim();
+  if (!codigo) return;
+  const inicio = performance.now();
+
+  // Granel EAN-13 (prefijo 2)
+  if (codigo.startsWith('2') && /^\d{13}$/.test(codigo)) {
+    procesarCodigoGranel(codigo);
+    return;
+  }
+
+  // Búsqueda O(1) en índice local
+  const producto = indiceCodigo.get(codigo);
+  if (producto) {
+    agregarAlCarritoLocal(producto);
+    const ms = performance.now() - inicio;
+    medirScan(ms);
+    console.log(`[ZERO] Escaneado en ${ms.toFixed(1)}ms`);
+    return;
+  }
+
+  // Fallback: servidor
+  buscarEnServidor(codigo, inicio);
+}
+
+function procesarCodigoGranel(codigo) {
+  const pesoGramos = parseInt(codigo.slice(7, 12)) / 1000;
+  const codBase = '2' + codigo.slice(1, 7);
+  const prod = indiceCodigo.get(codBase) || (() => {
+    for (const [, p] of indiceId) {
+      if (p.es_granel && p.codigo_barras && String(p.codigo_barras).startsWith('2'))
+        return p;
+    }
+    return null;
+  })();
+  if (prod) {
+    carrito.push({
+      producto_id: prod.id,
+      variante_id: null,
+      nombre: `${prod.nombre} (${pesoGramos}kg)`,
+      nombre_variante: '',
+      precio_unit: Math.round((prod.precio || 0) * pesoGramos),
+      cantidad: 1,
+      stock: prod.stock,
+      modo_stock: prod.modo_stock || 'normal',
+      _new: true,
+    });
+    renderCarrito();
+    flashProducto(prod.id);
+    limpiarYEnfocarBusqueda();
+  } else {
+    buscarEnServidor(codigo, performance.now());
+  }
+}
+
+async function buscarEnServidor(codigo, inicioMs) {
+  try {
+    const r = await fetch(`/api/productos/barras/${encodeURIComponent(codigo)}`, {credentials:'include'});
+    const data = await r.json();
+    if (data && data.id) {
+      if (data.codigo_barras) indiceCodigo.set(String(data.codigo_barras), data);
+      indiceId.set(data.id, data);
+      agregarAlCarritoLocal(data);
+      const ms = performance.now() - inicioMs;
+      medirScan(ms);
+      console.log(`[ZERO] Escaneado vía servidor en ${ms.toFixed(1)}ms`);
+    } else {
+      showToast('Producto no encontrado: ' + codigo, 'error');
+    }
+  } catch(e) {
+    showToast('Error buscando código', 'error');
+  }
+}
+
+function agregarAlCarritoLocal(producto) {
+  const vSel = producto.variante_seleccionada || null;
+  const varianteId = vSel ? vSel.id : null;
+  const precio = vSel ? vSel.precio : producto.precio;
+  const nombreFull = producto.nombre + (vSel ? ' ' + vSel.nombre : '');
+  const stockDisp = vSel ? (vSel.stock ?? 9999) : (producto.stock ?? 9999);
+  const modoStock = producto.modo_stock || 'normal';
+
+  const idx = carrito.findIndex(i => i.producto_id === producto.id && i.variante_id === varianteId);
+  if (idx >= 0) {
+    if (modoStock !== 'sin_stock' && carrito[idx].cantidad >= stockDisp) {
+      showToast('Stock máximo alcanzado', 'error'); return;
+    }
+    carrito[idx].cantidad++;
+  } else {
+    carrito.push({
+      producto_id: producto.id,
+      variante_id: varianteId,
+      nombre: nombreFull,
+      nombre_variante: vSel ? vSel.nombre : '',
+      precio_unit: precio,
+      cantidad: 1,
+      stock: stockDisp,
+      modo_stock: modoStock,
+      _new: true,
+    });
+  }
+  renderCarrito();
+  flashProducto(producto.id);
+  limpiarYEnfocarBusqueda();
+}
+
+function flashProducto(productoId) {
+  const card = document.querySelector(`[data-producto-id="${productoId}"]`);
+  if (!card) return;
+  card.classList.remove('flash');
+  void card.offsetWidth; // reflow to restart animation
+  card.classList.add('flash');
+  setTimeout(() => card.classList.remove('flash'), 200);
+}
+
+function limpiarYEnfocarBusqueda() {
+  const campo = document.getElementById('searchInput');
+  if (campo) { campo.value = ''; campo.focus(); }
+}
+
+function medirScan(ms) {
+  scanTiempos.push(ms);
+  if (scanTiempos.length % 10 === 0) {
+    const promedio = scanTiempos.slice(-10).reduce((a, b) => a + b, 0) / 10;
+    console.log(`[ZERO] Promedio últimos 10 scans: ${promedio.toFixed(1)}ms`);
+  }
+}
+
+// Auto-foco en el campo de búsqueda cuando no se interactúa con otro elemento
+document.addEventListener('click', e => {
+  if (!e.target.closest('button, input, select, textarea, .modal, .modal-overlay, [role="dialog"]')) {
+    const campo = document.getElementById('searchInput');
+    if (campo) campo.focus();
+  }
+});
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { cerrarCobro(); cerrarVariantes(); cerrarVentaRapida(); }
