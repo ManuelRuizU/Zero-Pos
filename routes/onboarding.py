@@ -66,6 +66,20 @@ def setup():
     config = data[tipo]
     uid = session.get("usuario_id")
 
+    # Defaults de módulos según tipo de negocio
+    _MODULOS = {
+        "cafe":       {"modulo_delivery": "1", "modo_mesas": "1"},
+        "sushi":      {"modulo_delivery": "1", "modo_mesas": "1"},
+        "panaderia":  {"modulo_delivery": "1", "modo_mesas": "1"},
+        "foodtruck":  {"modulo_delivery": "1", "modo_mesas": "0"},
+        "almacen":    {"modulo_delivery": "0", "modo_mesas": "0"},
+        "minimarket": {"modulo_delivery": "0", "modo_mesas": "0"},
+        "botilleria": {"modulo_delivery": "0", "modo_mesas": "0"},
+        "peluqueria": {"modulo_delivery": "0", "modo_mesas": "0"},
+        "otro":       {"modulo_delivery": "0", "modo_mesas": "0"},
+    }
+    modulos = _MODULOS.get(tipo, {"modulo_delivery": "0", "modo_mesas": "0"})
+
     with db_session() as conn:
         # Guardar tipo en config
         conn.execute(
@@ -73,6 +87,14 @@ def setup():
         )
         conn.execute(
             "INSERT OR REPLACE INTO config (clave, valor) VALUES ('onboarding_completado', '1')"
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO config (clave, valor) VALUES ('modulo_delivery', ?)",
+            (modulos["modulo_delivery"],)
+        )
+        conn.execute(
+            "INSERT OR REPLACE INTO config (clave, valor) VALUES ('modo_mesas', ?)",
+            (modulos["modo_mesas"],)
         )
 
         # Crear categorías y subcategorías
