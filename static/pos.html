@@ -601,72 +601,25 @@ body {
   .carrito-panel { width: 360px; }
 }
 
-/* ── Escáner de cámara ───────────────────────────────────── */
-#modalEscaner {
+/* ── Escáner (overlay de procesamiento) ─────────────────── */
+#escanerOverlay {
   position: fixed; inset: 0; z-index: 9999;
-  background: #000;
+  background: rgba(0,0,0,0.7);
   display: flex; align-items: center; justify-content: center;
 }
-#contenedorVideo {
-  position: relative; width: 100%; height: 100%;
-  overflow: hidden;
+#escanerOverlayBox {
+  background: var(--surface); border-radius: 16px;
+  padding: 28px 32px; text-align: center;
+  max-width: 320px; width: 90%;
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
 }
-#videoEscaner {
-  width: 100%; height: 100%; object-fit: cover;
-  display: block;
+#escanerOverlayBox p { margin: 0; color: var(--text); font-size: 15px; }
+#escanerOverlayBox .esc-spin {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid var(--border); border-top-color: var(--accent);
+  animation: spin .7s linear infinite;
 }
-#zonaDeteccion {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 70%; max-width: 300px;
-  aspect-ratio: 1.5;
-  display: flex; flex-direction: column;
-  align-items: center; gap: 12px;
-}
-#marcoEscaneo {
-  width: 100%; height: 100%;
-  border: 3px solid #6366f1;
-  border-radius: 8px;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
-  position: relative; overflow: hidden;
-  transition: border-color 0.2s;
-}
-#marcoEscaneo::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, #6366f1, transparent);
-  animation: scanLine 1.5s ease-in-out infinite;
-}
-@keyframes scanLine {
-  0%   { top: 0%; opacity: 1; }
-  95%  { top: 100%; opacity: 1; }
-  100% { top: 100%; opacity: 0; }
-}
-#zonaDeteccion p {
-  color: rgba(255,255,255,0.8); font-size: 13px;
-  text-align: center; margin: 0;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
-}
-#btnCerrarEscaner {
-  position: absolute; top: 18px; right: 18px;
-  background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);
-  color: #fff; border-radius: 50%;
-  width: 44px; height: 44px; font-size: 18px;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  z-index: 10;
-}
-#feedbackEscaner {
-  position: absolute; bottom: 40px; left: 50%;
-  transform: translateX(-50%);
-  background: rgba(34,197,94,0.9); color: #fff;
-  padding: 8px 20px; border-radius: 20px;
-  font-size: 15px; font-weight: 600;
-  opacity: 0; transition: opacity 0.15s;
-  pointer-events: none;
-}
-#feedbackEscaner.show { opacity: 1; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -949,33 +902,11 @@ body {
   </div>
 </div>
 
-<!-- Modal escáner de cámara -->
-<div id="modalEscaner" style="display:none">
-  <div id="contenedorVideo">
-    <video id="videoEscaner" autoplay playsinline muted></video>
-    <div id="zonaDeteccion">
-      <div id="marcoEscaneo"></div>
-      <p>Apunta al código de barras</p>
-    </div>
-    <canvas id="canvasEscaner" style="display:none"></canvas>
-    <button id="btnCerrarEscaner">✕</button>
-    <div id="feedbackEscaner"></div>
-    <!-- Panel de error / entrada manual (visible cuando la cámara falla) -->
-    <div id="escanerError" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.85);flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;">
-      <div style="font-size:40px">📷</div>
-      <p id="escanerErrorMsg" style="color:#fca5a5;font-size:15px;max-width:280px;line-height:1.4;margin:0"></p>
-      <p style="color:rgba(255,255,255,0.7);font-size:13px;margin:0">O escribe el código manualmente:</p>
-      <input id="codigoManualEscaner" type="text" inputmode="numeric" autocomplete="off"
-        placeholder="7891234567890"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();Escaner._procesarManual();}"
-        style="background:#1e1e2e;border:2px solid #6366f1;border-radius:10px;color:#fff;
-               font-size:18px;padding:10px 16px;width:100%;max-width:260px;text-align:center;outline:none;">
-      <button onclick="Escaner._procesarManual()"
-        style="background:#6366f1;border:none;border-radius:10px;color:#fff;
-               font-size:15px;font-weight:600;padding:12px 24px;cursor:pointer;">
-        Buscar →
-      </button>
-    </div>
+<!-- Overlay de procesamiento de imagen del escáner -->
+<div id="escanerOverlay" style="display:none">
+  <div id="escanerOverlayBox">
+    <div class="esc-spin"></div>
+    <p id="escanerOverlayMsg">Analizando imagen...</p>
   </div>
 </div>
 
@@ -2453,215 +2384,113 @@ async function verificarAlertas() {
 }
 
 function verAlertas() { location.href = 'inventario.html'; }
-// ── Escáner de cámara — BarcodeDetector nativo + ZXing fallback ──────────────
-const Escaner = {
-  stream:      null,
-  activo:      false,
-  detector:    null,
-  canvas:      null,
-  ctx:         null,
-  video:       null,
-  ultimoScan:  0,
-  INTERVALO_MS: 80,
-  _iniciado:   false,
+// ── Escáner: input[type=file] + BarcodeDetector/ZXing ────────────────────────
 
-  async init() {
-    console.log('[ZERO] Escaner.init() arrancando');
-    console.log('[ZERO] BarcodeDetector disponible:', 'BarcodeDetector' in window);
-    console.log('[ZERO] getUserMedia disponible:', !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
-    console.log('[ZERO] Modal escáner:', document.getElementById('modalEscaner'));
-    console.log('[ZERO] Botón cámara:', document.getElementById('btnCamara'));
+function _escanerOverlay(msg) {
+  const el = document.getElementById('escanerOverlay');
+  if (msg) {
+    document.getElementById('escanerOverlayMsg').textContent = msg;
+    el.style.display = 'flex';
+  } else {
+    el.style.display = 'none';
+  }
+}
 
-    this.video  = document.getElementById('videoEscaner');
-    this.canvas = document.getElementById('canvasEscaner');
-    if (!this.canvas) { console.warn('[ZERO] canvasEscaner no encontrado'); return; }
-    this.ctx = this.canvas.getContext('2d', {willReadFrequently: true, alpha: false});
+async function _cargarZXingEscaner() {
+  if (window.ZXing) return;
+  await new Promise(resolve => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
+    s.onload = () => { console.log('[ZERO] ZXing listo'); resolve(); };
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+}
 
-    if ('BarcodeDetector' in window) {
-      try {
-        this.detector = new BarcodeDetector({
-          formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'],
-        });
-        console.log('[ZERO] BarcodeDetector nativo listo');
-      } catch(e) {
-        console.warn('[ZERO] BarcodeDetector constructor falló:', e.message);
-        this.detector = null;
-      }
-    }
-    if (!this.detector) await this._cargarZXing();
-    this._iniciado = true;
-    console.log('[ZERO] Escaner.init() completado. detector=', this.detector ? 'nativo' : (window.ZXing ? 'ZXing' : 'ninguno'));
-  },
-
-  _cargarZXing() {
-    if (window.ZXing) return Promise.resolve();
-    return new Promise(resolve => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
-      s.onload = () => { console.log('[ZERO] ZXing cargado como fallback'); resolve(); };
-      s.onerror = () => { console.warn('[ZERO] ZXing no se pudo cargar (sin internet?)'); resolve(); };
-      document.head.appendChild(s);
-    });
-  },
-
-  async abrir() {
-    console.log('[ZERO] Escaner.abrir() llamado');
-
-    // HTTPS requerido fuera de localhost
-    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-      const httpsUrl = 'https://' + location.hostname + ':5001';
-      showToast('El escáner requiere HTTPS. Usa: ' + httpsUrl, 'error');
-      console.warn('[ZERO] getUserMedia requiere HTTPS. URL actual:', location.href);
-      this._mostrarEntradaManual();
-      return;
-    }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showToast('Este navegador no soporta acceso a la cámara', 'error');
-      console.warn('[ZERO] mediaDevices no disponible');
-      this._mostrarEntradaManual();
-      return;
-    }
-
-    if (!this._iniciado) {
-      try { await this.init(); } catch(e) {
-        console.error('[ZERO] init() falló:', e);
-      }
-    }
-
-    const modal = document.getElementById('modalEscaner');
-    modal.style.display = 'flex';
-    document.getElementById('escanerError').style.display = 'none';
-
+async function detectarCodigoEnImagen(file) {
+  // Método 1: BarcodeDetector nativo (iOS 17+, Chrome Android)
+  if ('BarcodeDetector' in window) {
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width:  {ideal: 1280, max: 1920},
-          height: {ideal: 720,  max: 1080},
-          frameRate: {ideal: 30},
-        },
+      const det = new BarcodeDetector({
+        formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'],
       });
-      this.video.srcObject = this.stream;
-      await this.video.play();
-      this.video.addEventListener('loadedmetadata', () => {
-        const w = this.video.videoWidth, h = this.video.videoHeight;
-        this.canvas.width  = Math.floor(w * 0.6);
-        this.canvas.height = Math.floor(h * 0.4);
-        console.log(`[ZERO] Cámara lista ${w}x${h}, canvas ${this.canvas.width}x${this.canvas.height}`);
-      }, {once: true});
-      this.activo = true;
-      this._bucle();
-    } catch(err) {
-      console.error('[ZERO] Error al abrir cámara:', err.name, err.message);
-      const msg = err.name === 'NotAllowedError'
-        ? 'Permiso de cámara denegado. Habilitalo en el navegador.'
-        : err.name === 'NotFoundError'
-        ? 'No se encontró ninguna cámara.'
-        : 'Error al abrir la cámara: ' + err.message;
-      // Mostrar el error DENTRO del modal (visible aunque el modal esté abierto)
-      this._mostrarErrorEnModal(msg);
-    }
-  },
-
-  _mostrarErrorEnModal(msg) {
-    const errDiv = document.getElementById('escanerError');
-    document.getElementById('escanerErrorMsg').textContent = msg;
-    errDiv.style.display = 'flex';
-    document.getElementById('contenedorVideo').style.background = '#111';
-    // Focus en el input manual dentro del modal
-    setTimeout(() => document.getElementById('codigoManualEscaner').focus(), 100);
-  },
-
-  _mostrarEntradaManual() {
-    // Foco en searchInput con instrucción via toast
-    showToast('Escribe el código en el campo de búsqueda', 'success');
-    const campo = document.getElementById('searchInput');
-    if (campo) { campo.value = ''; campo.focus(); campo.select(); }
-  },
-
-  _procesarManual() {
-    const val = (document.getElementById('codigoManualEscaner').value || '').trim();
-    if (!val) return;
-    this.cerrar();
-    procesarCodigo(val);
-  },
-
-  _bucle() {
-    const tick = async () => {
-      if (!this.activo) return;
-      const ahora = performance.now();
-      if (ahora - this.ultimoScan >= this.INTERVALO_MS) {
-        this.ultimoScan = ahora;
-        await this._procesarFrame();
+      const img = await createImageBitmap(file);
+      const res = await det.detect(img);
+      if (res.length) {
+        console.log('[ZERO] BarcodeDetector detectó:', res[0].rawValue);
+        return res[0].rawValue;
       }
-      requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  },
+    } catch(e) {
+      console.warn('[ZERO] BarcodeDetector falló:', e.message);
+    }
+  }
 
-  async _procesarFrame() {
-    if (!this.video || this.video.readyState < 2) return;
-    const vw = this.video.videoWidth, vh = this.video.videoHeight;
-    if (!vw || !vh) return;
+  // Método 2: ZXing fallback
+  await _cargarZXingEscaner();
+  if (!window.ZXing) { console.warn('[ZERO] ZXing no disponible'); return null; }
 
-    const sx = Math.floor(vw * 0.2), sy = Math.floor(vh * 0.3);
-    const sw = Math.floor(vw * 0.6), sh = Math.floor(vh * 0.4);
-    this.ctx.drawImage(this.video, sx, sy, sw, sh, 0, 0, this.canvas.width, this.canvas.height);
-
-    const inicio = performance.now();
-    let codigo = null;
-
-    if (this.detector) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
       try {
-        const res = await this.detector.detect(this.canvas);
-        if (res.length) codigo = res[0].rawValue;
-      } catch(e) {}
-    } else if (window.ZXing) {
-      try {
-        const imgData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        const lum = new ZXing.RGBLuminanceSource(imgData.data, this.canvas.width, this.canvas.height);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const lum = new ZXing.RGBLuminanceSource(imgData.data, canvas.width, canvas.height);
         const bin = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
         const res = new ZXing.MultiFormatReader().decode(bin);
-        if (res) codigo = res.getText();
-      } catch(e) {}
+        console.log('[ZERO] ZXing detectó:', res ? res.getText() : 'nada');
+        resolve(res ? res.getText() : null);
+      } catch(e) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+function abrirEscaner() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';  // cámara trasera en móvil
+
+  input.onchange = async e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    _escanerOverlay('Analizando imagen...');
+    const inicio = performance.now();
+    try {
+      const codigo = await detectarCodigoEnImagen(file);
+      _escanerOverlay(null);
+      if (codigo) {
+        const ms = (performance.now() - inicio).toFixed(0);
+        console.log(`[ZERO] Código detectado en ${ms}ms: ${codigo}`);
+        if (navigator.vibrate) navigator.vibrate(50);
+        showToast('✓ ' + codigo, 'success');
+        procesarCodigo(codigo);
+      } else {
+        showToast('No se detectó código. Intenta de nuevo.', 'error');
+        document.getElementById('searchInput').focus();
+      }
+    } catch(err) {
+      _escanerOverlay(null);
+      console.error('[ZERO] Error procesando imagen:', err);
+      showToast('Error al procesar imagen: ' + err.message, 'error');
     }
+  };
 
-    if (codigo) {
-      const ms = performance.now() - inicio;
-      console.log(`[ZERO] Código detectado en ${ms.toFixed(1)}ms: ${codigo}`);
-      this._onDetectado(codigo);
-    }
-  },
+  input.click();
+}
 
-  _onDetectado(codigo) {
-    this._feedbackExito();
-    if (navigator.vibrate) navigator.vibrate(50);
-    this.cerrar();
-    procesarCodigo(codigo);
-  },
-
-  _feedbackExito() {
-    const fb = document.getElementById('feedbackEscaner');
-    const marco = document.getElementById('marcoEscaneo');
-    fb.textContent = '✓ Detectado';
-    fb.classList.add('show');
-    marco.style.borderColor = '#22c55e';
-    setTimeout(() => { fb.classList.remove('show'); marco.style.borderColor = '#6366f1'; }, 300);
-  },
-
-  cerrar() {
-    this.activo = false;
-    if (this.stream) {
-      this.stream.getTracks().forEach(t => t.stop());
-      this.stream = null;
-    }
-    document.getElementById('modalEscaner').style.display = 'none';
-    document.getElementById('searchInput').focus();
-  },
-};
-
-function abrirScanner() { Escaner.abrir(); }
+function abrirScanner() { abrirEscaner(); }
 async function cerrarSesion() {
   await fetch('/api/auth/logout', {method:'POST', credentials:'include'});
   location.href = 'login.html';
@@ -2815,24 +2644,21 @@ document.addEventListener('click', e => {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    if (Escaner.activo) { Escaner.cerrar(); return; }
     cerrarCobro(); cerrarVariantes(); cerrarVentaRapida();
   }
 });
 
-// Diagnóstico de arranque — visible en consola del navegador
 console.log('[ZERO] Botón cámara:', document.getElementById('btnCamara'));
-console.log('[ZERO] Modal escáner:', document.getElementById('modalEscaner'));
 
 document.getElementById('btnCamara').addEventListener('click', () => {
   console.log('[ZERO] Click en btnCamara');
-  Escaner.abrir();
+  abrirEscaner();
 });
-document.getElementById('btnCerrarEscaner').addEventListener('click', () => Escaner.cerrar());
 
-// Precarga del detector en segundo plano sin bloquear la UI
-// setTimeout 0 asegura que el DOM esté completamente listo
-setTimeout(() => { Escaner.init().catch(e => console.warn('[ZERO] init precarga falló:', e)); }, 0);
+// Pre-cargar ZXing en segundo plano si BarcodeDetector no está disponible
+if (!('BarcodeDetector' in window)) {
+  setTimeout(() => _cargarZXingEscaner().catch(() => {}), 0);
+}
 
 init();
 
