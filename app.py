@@ -242,5 +242,15 @@ if __name__ == "__main__":
         logger.info("  HTTP (micrófono solo en localhost)")
     logger.info("=" * 60)
 
-    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False,
-            ssl_context=ssl_ctx)
+    if ssl_ctx:
+        # Waitress no soporta SSL nativo — Werkzeug maneja HTTPS
+        app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False,
+                ssl_context=ssl_ctx)
+    else:
+        try:
+            from waitress import serve
+            print(f"[ZERO POS] Servidor producción (Waitress) → puerto {port}")
+            serve(app, host="0.0.0.0", port=port, threads=8)
+        except ImportError:
+            print("[ZERO POS] Waitress no disponible, usando Werkzeug")
+            app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

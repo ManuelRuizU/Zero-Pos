@@ -1,4 +1,6 @@
+import datetime
 import logging
+import subprocess
 from flask import Blueprint, request, jsonify, session
 from database import db_session
 
@@ -44,4 +46,21 @@ def guardar():
             )
 
     logger.info(f"Config actualizada: {list(data.keys())}")
+    return jsonify({"ok": True})
+
+
+@config_bp.route("/sistema/sincronizar-hora", methods=["POST"])
+def sincronizar_hora():
+    data = request.get_json(silent=True) or {}
+    ts = data.get("timestamp")
+    if ts:
+        try:
+            dt = datetime.datetime.fromtimestamp(float(ts))
+            fecha_str = dt.strftime("%Y-%m-%d %H:%M:%S")
+            subprocess.run(
+                ["sudo", "date", "-s", fecha_str],
+                capture_output=True, timeout=3
+            )
+        except Exception:
+            pass  # Sin sudo → silencioso, no crítico
     return jsonify({"ok": True})

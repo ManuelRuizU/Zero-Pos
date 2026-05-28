@@ -1352,6 +1352,12 @@ function hablar(txt) {
 }
 
 // ── Init ─────────────────────────────────────────────────────
+fetch('/api/config/sistema/sincronizar-hora', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({timestamp: Math.floor(Date.now() / 1000)})
+}).catch(() => {});
+
 async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
