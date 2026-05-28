@@ -201,6 +201,10 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE productos ADD COLUMN unidad_medida TEXT NOT NULL DEFAULT 'unidad'")
     if "precio_por" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN precio_por TEXT NOT NULL DEFAULT 'unidad'")
+    if "modo_stock" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN modo_stock TEXT NOT NULL DEFAULT 'normal'")
+    if "hora_reset_stock" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN hora_reset_stock TEXT NOT NULL DEFAULT '06:00'")
     if "variante_id" not in cols_vitems:
         conn.execute("ALTER TABLE venta_items ADD COLUMN variante_id INTEGER REFERENCES producto_variantes(id)")
     if "nombre_variante" not in cols_vitems:

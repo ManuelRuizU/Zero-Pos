@@ -64,11 +64,13 @@ def crear_venta():
             nombre_variante = item.get("nombre_variante", "")
 
             prod = conn.execute(
-                "SELECT id, nombre, precio, stock, tiene_variantes FROM productos WHERE id=? AND activo=1",
+                "SELECT id, nombre, precio, stock, tiene_variantes, modo_stock FROM productos WHERE id=? AND activo=1",
                 (pid,)
             ).fetchone()
             if not prod:
                 return jsonify({"error": f"Producto {pid} no encontrado"}), 404
+
+            modo_stock = prod["modo_stock"] or "normal"
 
             if variante_id:
                 # Validar stock de la variante específica
@@ -82,7 +84,7 @@ def crear_venta():
                     return jsonify({"error": f"Stock insuficiente: {prod['nombre']} ({nombre_variante})"}), 409
                 precio_unit = float(v["precio"])
             else:
-                if prod["stock"] < qty:
+                if modo_stock != "sin_stock" and prod["stock"] < qty:
                     return jsonify({"error": f"Stock insuficiente: {prod['nombre']}"}), 409
                 precio_unit = float(prod["precio"])
 
@@ -97,6 +99,7 @@ def crear_venta():
                 "precio_unit": pesos(precio_unit),
                 "descuento": pesos(descuento_item),
                 "subtotal": subtotal,
+                "modo_stock": modo_stock,
             })
 
         total = pesos(total - descuento_global)
@@ -144,12 +147,13 @@ def crear_venta():
                     "UPDATE producto_variantes SET stock = stock - ? WHERE id=?",
                     (it["cantidad"], it["variante_id"])
                 )
-            else:
+            elif it.get("modo_stock") != "sin_stock":
                 conn.execute(
                     "UPDATE productos SET stock = stock - ? WHERE id=?",
                     (it["cantidad"], it["producto_id"])
                 )
-            _check_stock_alerta(conn, it["producto_id"])
+            if it.get("modo_stock") != "sin_stock":
+                _check_stock_alerta(conn, it["producto_id"])
 
         items_para_ticket = items_validados
 

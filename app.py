@@ -212,6 +212,18 @@ def create_app() -> Flask:
     return app
 
 
+def _reset_stock_produccion():
+    from database import get_connection
+    try:
+        conn = get_connection()
+        conn.execute("UPDATE productos SET stock = 0 WHERE modo_stock = 'produccion' AND activo = 1")
+        conn.commit()
+        conn.close()
+        logger.info("Stock de produccion reseteado")
+    except Exception as e:
+        logger.warning(f"reset_stock_produccion error: {e}")
+
+
 def start_backup_scheduler(app: Flask):
     try:
         import schedule
@@ -219,7 +231,8 @@ def start_backup_scheduler(app: Flask):
         from utils.backup import run_scheduled_backup
 
         schedule.every().day.at("03:00").do(run_scheduled_backup, app=app)
-        logger.info("Backup scheduler iniciado (03:00 diario)")
+        schedule.every().day.at("06:00").do(_reset_stock_produccion)
+        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00)")
 
         def loop():
             while True:

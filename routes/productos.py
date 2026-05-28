@@ -107,6 +107,7 @@ def listar_completos():
                    p.stock_minimo, p.codigo_barras, p.categoria_id,
                    p.subcategoria_id, p.tiene_variantes,
                    p.es_granel, p.unidad_medida, p.precio_por,
+                   p.modo_stock, p.hora_reset_stock,
                    p.imagen_url, p.descripcion, c.nombre as categoria_nombre,
                    v.id as v_id, v.nombre as v_nombre,
                    v.precio as v_precio, v.stock as v_stock,
@@ -134,10 +135,12 @@ def listar_completos():
                 "categoria_id":   r["categoria_id"],
                 "subcategoria_id": r["subcategoria_id"],
                 "tiene_variantes": r["tiene_variantes"],
-                "es_granel":      r["es_granel"] if "es_granel" in r.keys() else 0,
-                "unidad_medida":  r["unidad_medida"] if "unidad_medida" in r.keys() else "unidad",
-                "precio_por":     r["precio_por"] if "precio_por" in r.keys() else "unidad",
-                "imagen_url":     r["imagen_url"],
+                "es_granel":       r["es_granel"] if "es_granel" in r.keys() else 0,
+                "unidad_medida":   r["unidad_medida"] if "unidad_medida" in r.keys() else "unidad",
+                "precio_por":      r["precio_por"] if "precio_por" in r.keys() else "unidad",
+                "modo_stock":      r["modo_stock"] if "modo_stock" in r.keys() else "normal",
+                "hora_reset_stock": r["hora_reset_stock"] if "hora_reset_stock" in r.keys() else "06:00",
+                "imagen_url":      r["imagen_url"],
                 "descripcion":    r["descripcion"],
                 "categoria_nombre": r["categoria_nombre"],
                 "_variantes":     [],
@@ -297,13 +300,17 @@ def crear():
     if not nombre:
         return jsonify({"error": "Nombre requerido"}), 400
 
+    modo_stock = data.get("modo_stock", "normal")
+    if modo_stock not in ("normal", "produccion", "sin_stock"):
+        modo_stock = "normal"
+
     with db_session() as conn:
         cur = conn.execute(
             """INSERT INTO productos
                (nombre, descripcion, precio, precio_costo, stock, stock_minimo,
                 codigo_barras, categoria_id, imagen_url,
-                es_granel, unidad_medida, precio_por)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                es_granel, unidad_medida, precio_por, modo_stock, hora_reset_stock)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 nombre,
                 data.get("descripcion"),
@@ -317,6 +324,8 @@ def crear():
                 int(bool(data.get("es_granel", 0))),
                 data.get("unidad_medida", "unidad"),
                 data.get("precio_por", "unidad"),
+                modo_stock,
+                data.get("hora_reset_stock", "06:00"),
             )
         )
         _registrar_movimiento(conn, cur.lastrowid, "entrada",
@@ -334,7 +343,8 @@ def actualizar(pid):
     campos = {}
     permitidos = ("nombre", "descripcion", "precio", "precio_costo",
                   "stock_minimo", "codigo_barras", "categoria_id",
-                  "imagen_url", "activo", "es_granel", "unidad_medida", "precio_por")
+                  "imagen_url", "activo", "es_granel", "unidad_medida", "precio_por",
+                  "modo_stock", "hora_reset_stock")
     for campo in permitidos:
         if campo in data:
             campos[campo] = data[campo]

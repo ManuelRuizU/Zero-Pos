@@ -76,6 +76,10 @@ select option{background:#13131a;}
 .badge{display:inline-block;padding:3px 8px;border-radius:99px;font-size:11px;font-weight:600;}
 .badge-bajo{background:rgba(245,158,11,0.15);color:var(--warning);}
 .badge-ok{background:rgba(34,197,94,0.15);color:var(--success);}
+.modo-stock-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;transition:all .15s;}
+.modo-stock-btn:hover{border-color:var(--accent);color:var(--text);}
+.modo-stock-btn.active{background:rgba(99,102,241,0.2);border-color:var(--accent);color:var(--accent2);}
 </style>
 </head>
 <body>
@@ -177,6 +181,29 @@ select option{background:#13131a;}
       </div>
     </div>
   </div>
+
+  <!-- Modo de stock -->
+  <div class="form-group" style="margin-top:8px">
+    <label>Control de stock</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button type="button" class="modo-stock-btn active" data-modo="normal" onclick="selModoStock('normal')">● Normal</button>
+      <button type="button" class="modo-stock-btn" data-modo="produccion" onclick="selModoStock('produccion')">○ Producción diaria</button>
+      <button type="button" class="modo-stock-btn" data-modo="sin_stock" onclick="selModoStock('sin_stock')">○ Sin stock</button>
+    </div>
+  </div>
+  <div id="modoProduccionOpts" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:12px;margin-top:4px">
+    <div style="font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:10px">🔄 Producción diaria</div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label>Hora de reset diario</label>
+      <input type="time" id="prodHoraReset" value="06:00" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;width:100%">
+    </div>
+    <button type="button" class="btn" style="width:100%;font-size:12px" onclick="abrirModalProduccion()">+ Ingresar producción de hoy</button>
+  </div>
+  <div id="modoSinStockMsg" style="display:none;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:12px;margin-top:4px">
+    <div style="font-size:12px;color:var(--success);font-weight:600">✓ Sin control de stock</div>
+    <div style="font-size:12px;color:var(--text-dim);margin-top:4px">Este producto siempre estará disponible. No se controlará el stock.</div>
+  </div>
+
   <div class="modal-btns">
     <button class="btn" style="flex:1" onclick="cerrarModalProd()">Cancelar</button>
     <button class="btn primary" style="flex:2" onclick="guardarProd()">Guardar</button>
@@ -200,6 +227,23 @@ select option{background:#13131a;}
   <div class="modal-btns">
     <button class="btn" style="flex:1" onclick="cerrarModalProv()">Cancelar</button>
     <button class="btn primary" style="flex:2" onclick="guardarProv()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- Modal ingresar producción -->
+<div class="modal-overlay" id="modalProduccion">
+<div class="modal">
+  <div class="modal-title">🥐 Producción de hoy</div>
+  <input type="hidden" id="prodProduccionId">
+  <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px" id="prodProduccionNombre"></p>
+  <div class="form-group">
+    <label>¿Cuánto produjiste hoy?</label>
+    <input type="number" id="prodProduccionQty" min="0" placeholder="0" inputmode="numeric" style="font-size:18px;font-weight:700;text-align:center">
+  </div>
+  <div class="modal-btns">
+    <button class="btn" style="flex:1" onclick="cerrarModalProduccion()">Cancelar</button>
+    <button class="btn primary" style="flex:2" onclick="guardarProduccion()">Guardar producción</button>
   </div>
 </div>
 </div>
@@ -296,6 +340,8 @@ function abrirModalProd() {
   document.getElementById('granelOpts').style.display='none';
   document.getElementById('prodPrecioPor').value='unidad';
   document.getElementById('prodUnidadMedida').value='unidad';
+  document.getElementById('prodHoraReset').value='06:00';
+  selModoStock('normal');
   document.getElementById('modalProd').classList.add('active');
 }
 
@@ -315,6 +361,8 @@ async function editarProd(id) {
   document.getElementById('granelOpts').style.display=granel?'':'none';
   document.getElementById('prodPrecioPor').value=p.precio_por||'unidad';
   document.getElementById('prodUnidadMedida').value=p.unidad_medida||'unidad';
+  document.getElementById('prodHoraReset').value=p.hora_reset_stock||'06:00';
+  selModoStock(p.modo_stock||'normal');
   document.getElementById('modalProd').classList.add('active');
 }
 
@@ -331,6 +379,8 @@ async function guardarProd() {
     es_granel: document.getElementById('prodGranel').checked ? 1 : 0,
     precio_por: document.getElementById('prodPrecioPor').value,
     unidad_medida: document.getElementById('prodUnidadMedida').value,
+    modo_stock: document.querySelector('.modo-stock-btn.active')?.dataset.modo || 'normal',
+    hora_reset_stock: document.getElementById('prodHoraReset').value || '06:00',
   };
   if (!data.nombre) { alert('El nombre es requerido'); return; }
   const url = id ? `/api/productos/${id}` : '/api/productos';
@@ -347,6 +397,43 @@ function toggleGranel() {
   const activo = document.getElementById('prodGranel').checked;
   document.getElementById('granelOpts').style.display = activo ? '' : 'none';
 }
+
+function selModoStock(modo) {
+  document.querySelectorAll('.modo-stock-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.modo === modo);
+  });
+  document.getElementById('modoProduccionOpts').style.display = modo === 'produccion' ? '' : 'none';
+  document.getElementById('modoSinStockMsg').style.display    = modo === 'sin_stock'  ? '' : 'none';
+  const stockRow = document.querySelector('[id="prodStock"]')?.closest('.form-group');
+  const minRow   = document.querySelector('[id="prodStockMin"]')?.closest('.form-group');
+  if (stockRow) stockRow.style.display = modo === 'sin_stock' ? 'none' : '';
+  if (minRow)   minRow.style.display   = modo === 'sin_stock' ? 'none' : '';
+}
+
+function abrirModalProduccion() {
+  const id = document.getElementById('prodId').value;
+  const nombre = document.getElementById('prodNombre').value;
+  if (!id) { alert('Guarda el producto primero'); return; }
+  document.getElementById('prodProduccionId').value = id;
+  document.getElementById('prodProduccionNombre').textContent = nombre;
+  document.getElementById('prodProduccionQty').value = '';
+  document.getElementById('modalProduccion').classList.add('active');
+}
+
+async function guardarProduccion() {
+  const id  = document.getElementById('prodProduccionId').value;
+  const qty = parseInt(document.getElementById('prodProduccionQty').value) || 0;
+  if (qty <= 0) { alert('Ingresa una cantidad mayor a 0'); return; }
+  const r = await fetch(`/api/productos/${id}/stock`, {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({tipo: 'ajuste', cantidad: qty, motivo: 'produccion_diaria'}),
+  });
+  if (r.ok) { cerrarModalProduccion(); cargarProductos(); }
+  else { const e = await r.json(); alert(e.error || 'Error'); }
+}
+
+function cerrarModalProduccion() { document.getElementById('modalProduccion').classList.remove('active'); }
 
 function cerrarModalProd() { document.getElementById('modalProd').classList.remove('active'); }
 
@@ -412,6 +499,7 @@ document.addEventListener('keydown', e => {
   if (e.key==='Escape') {
     cerrarModalProd();
     cerrarModalProv();
+    cerrarModalProduccion();
   }
 });
 

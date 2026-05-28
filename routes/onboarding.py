@@ -130,6 +130,23 @@ def setup():
                     sid = row2["id"]
                 subcat_ids[(cat_id, sub["nombre"])] = sid
 
+        # Determina modo_stock según tipo de negocio y categoría
+        _BEBIDA_RE = r'bebida|agua|jugo|gaseosa|cerveza|vino|licor|ron|gin|pisco|whisky|champa'
+
+        def _inferir_modo_stock(prod_def_: dict, cat_nombre_: str) -> str:
+            if "modo_stock" in prod_def_:
+                return prod_def_["modo_stock"]
+            cn = cat_nombre_.lower()
+            if tipo in ("sushi", "cafe", "restaurante"):
+                import re
+                return "normal" if re.search(_BEBIDA_RE, cn) else "sin_stock"
+            elif tipo == "panaderia":
+                return "produccion"
+            elif tipo == "foodtruck":
+                import re
+                return "normal" if re.search(_BEBIDA_RE, cn) else "sin_stock"
+            return "normal"
+
         # Crear productos y variantes
         creados = 0
         for prod_def in config.get("productos", []):
@@ -145,21 +162,23 @@ def setup():
             # Precio y stock del producto padre = primera variante
             precio_base = variantes[0]["precio"] if variantes else 0
             stock_base = variantes[0]["stock"] if variantes else 0
+            modo_stock = _inferir_modo_stock(prod_def, cat_nombre)
+            stock_inicial = 0 if (tiene_variantes or modo_stock == "sin_stock") else stock_base
 
             cur = conn.execute(
                 """INSERT OR IGNORE INTO productos
                    (nombre, precio, stock, categoria_id, subcategoria_id,
-                    tiene_variantes, activo, stock_minimo)
-                   VALUES (?,?,?,?,?,?,1,5)""",
-                (prod_def["nombre"], precio_base, stock_base if not tiene_variantes else 0,
-                 cat_id, subcat_id, tiene_variantes)
+                    tiene_variantes, activo, stock_minimo, modo_stock)
+                   VALUES (?,?,?,?,?,?,1,5,?)""",
+                (prod_def["nombre"], precio_base, stock_inicial,
+                 cat_id, subcat_id, tiene_variantes, modo_stock)
             )
             if not cur.lastrowid:
                 continue  # ya existía
             prod_id = cur.lastrowid
 
             # Registrar movimiento de stock inicial
-            if not tiene_variantes and stock_base > 0:
+            if not tiene_variantes and stock_base > 0 and modo_stock != "sin_stock":
                 conn.execute(
                     """INSERT INTO stock_movimientos
                        (producto_id, tipo, cantidad, motivo, usuario_id)

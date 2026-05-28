@@ -87,10 +87,13 @@ CREATE TABLE IF NOT EXISTS productos (
     subcategoria_id INTEGER REFERENCES subcategorias(id),
     sucursal_id     INTEGER REFERENCES sucursales(id),
     tiene_variantes INTEGER NOT NULL DEFAULT 0,
-    es_granel       INTEGER NOT NULL DEFAULT 0,
-    unidad_medida   TEXT NOT NULL DEFAULT 'unidad', -- unidad | kg | litro | metro
-    precio_por      TEXT NOT NULL DEFAULT 'unidad', -- unidad | kg | litro | metro
-    activo          INTEGER NOT NULL DEFAULT 1,
+    es_granel        INTEGER NOT NULL DEFAULT 0,
+    unidad_medida    TEXT NOT NULL DEFAULT 'unidad', -- unidad | kg | litro | metro
+    precio_por       TEXT NOT NULL DEFAULT 'unidad', -- unidad | kg | litro | metro
+    modo_stock       TEXT NOT NULL DEFAULT 'normal'
+                     CHECK(modo_stock IN ('normal', 'produccion', 'sin_stock')),
+    hora_reset_stock TEXT NOT NULL DEFAULT '06:00',
+    activo           INTEGER NOT NULL DEFAULT 1,
     imagen_url      TEXT,
     creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP,
     actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP

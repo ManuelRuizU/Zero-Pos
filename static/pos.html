@@ -1654,7 +1654,8 @@ function renderProductos(lista) {
 
   lista.forEach(p => {
     productoMap[p.id] = p;
-    const sinStock = !p.tiene_variantes && p.stock <= 0;
+    const modoStock = p.modo_stock || 'normal';
+    const sinStock = !p.tiene_variantes && modoStock !== 'sin_stock' && p.stock <= 0;
     const div = document.createElement('div');
     div.className = 'prod-card' + (sinStock ? ' sin-stock' : '');
 
@@ -1686,8 +1687,24 @@ function renderProductos(lista) {
         <span class="prod-nombre">${nombreSafe}</span>
         <span class="prod-stock-info" style="color:var(--accent2);font-size:12px;">Toca para ver opciones ▼</span>`;
       div.onclick = () => abrirVariantes(p);
+    } else if (modoStock === 'sin_stock') {
+      innerContent = `
+        <span class="prod-emoji">${emoji}</span>
+        <span class="prod-nombre">${nombreSafe}</span>
+        <span class="prod-precio">${fmt(p.precio)}</span>`;
+      div.onclick = () => agregarAlCarrito(p);
+    } else if (modoStock === 'produccion') {
+      const agotado = p.stock <= 0;
+      const stockTxt = agotado ? 'AGOTADO' : `Disponibles hoy: ${p.stock}`;
+      if (agotado) div.classList.add('sin-stock');
+      innerContent = `
+        <span class="prod-emoji">${emoji}</span>
+        <span class="prod-nombre">${nombreSafe}</span>
+        <span class="prod-stock-info${agotado ? '" style="color:var(--danger);font-weight:700' : ''}">${stockTxt}</span>
+        <span class="prod-precio">${fmt(p.precio)}</span>`;
+      if (!agotado) div.onclick = () => agregarAlCarrito(p);
     } else {
-      // Simple product: emoji → name → stock → price
+      // Normal: emoji → name → stock → price
       const bajo = p.stock > 0 && p.stock <= p.stock_minimo;
       const stockTxt = `Stock: ${p.stock}${bajo ? ' ⚠️' : ''}`;
       innerContent = `
@@ -1719,13 +1736,17 @@ function filtrar() {
 // ── Carrito ───────────────────────────────────────────────────
 function agregarAlCarrito(prod) {
   const idx = carrito.findIndex(i => i.producto_id === prod.id && !i.variante_id);
+  const modoStock = prod.modo_stock || 'normal';
   if (idx >= 0) {
-    if (carrito[idx].cantidad >= prod.stock) { showToast('Stock máximo alcanzado', 'error'); return; }
+    if (modoStock !== 'sin_stock' && carrito[idx].cantidad >= prod.stock) {
+      showToast('Stock máximo alcanzado', 'error'); return;
+    }
     carrito[idx].cantidad++;
   } else {
     carrito.push({
       producto_id: prod.id, nombre: prod.nombre,
       precio_unit: prod.precio, cantidad: 1, stock: prod.stock,
+      modo_stock: modoStock,
     });
   }
   renderCarrito();
