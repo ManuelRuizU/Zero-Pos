@@ -600,6 +600,73 @@ body {
   .productos-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
   .carrito-panel { width: 360px; }
 }
+
+/* ── Escáner de cámara ───────────────────────────────────── */
+#modalEscaner {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #000;
+  display: flex; align-items: center; justify-content: center;
+}
+#contenedorVideo {
+  position: relative; width: 100%; height: 100%;
+  overflow: hidden;
+}
+#videoEscaner {
+  width: 100%; height: 100%; object-fit: cover;
+  display: block;
+}
+#zonaDeteccion {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70%; max-width: 300px;
+  aspect-ratio: 1.5;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+}
+#marcoEscaneo {
+  width: 100%; height: 100%;
+  border: 3px solid #6366f1;
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s;
+}
+#marcoEscaneo::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, #6366f1, transparent);
+  animation: scanLine 1.5s ease-in-out infinite;
+}
+@keyframes scanLine {
+  0%   { top: 0%; opacity: 1; }
+  95%  { top: 100%; opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+#zonaDeteccion p {
+  color: rgba(255,255,255,0.8); font-size: 13px;
+  text-align: center; margin: 0;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+}
+#btnCerrarEscaner {
+  position: absolute; top: 18px; right: 18px;
+  background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);
+  color: #fff; border-radius: 50%;
+  width: 44px; height: 44px; font-size: 18px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  z-index: 10;
+}
+#feedbackEscaner {
+  position: absolute; bottom: 40px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(34,197,94,0.9); color: #fff;
+  padding: 8px 20px; border-radius: 20px;
+  font-size: 15px; font-weight: 600;
+  opacity: 0; transition: opacity 0.15s;
+  pointer-events: none;
+}
+#feedbackEscaner.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -630,7 +697,7 @@ body {
         placeholder="Buscar producto o código..." autocomplete="off"
         inputmode="search" oninput="filtrar()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();procesarCodigo(this.value);}">
-      <button class="btn-scan" onclick="abrirScanner()">📷</button>
+      <button class="btn-scan" id="btnCamara">📷</button>
     </div>
     <div class="categorias" id="categorias">
       <button class="cat-btn active" data-id="" onclick="selCat(this,'')">Todos</button>
@@ -879,6 +946,20 @@ body {
       <button class="btn-cancelar" onclick="cerrarVentaRapida()">Cancelar</button>
       <button class="btn-confirmar" onclick="confirmarVentaRapida()">⚡ Al carrito</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal escáner de cámara -->
+<div id="modalEscaner" style="display:none">
+  <div id="contenedorVideo">
+    <video id="videoEscaner" autoplay playsinline muted></video>
+    <div id="zonaDeteccion">
+      <div id="marcoEscaneo"></div>
+      <p>Apunta al código de barras</p>
+    </div>
+    <canvas id="canvasEscaner" style="display:none"></canvas>
+    <button id="btnCerrarEscaner">✕</button>
+    <div id="feedbackEscaner"></div>
   </div>
 </div>
 
@@ -2356,7 +2437,153 @@ async function verificarAlertas() {
 }
 
 function verAlertas() { location.href = 'inventario.html'; }
-function abrirScanner() { location.href = 'scanner.html'; }
+// ── Escáner de cámara — BarcodeDetector nativo + ZXing fallback ──────────────
+const Escaner = {
+  stream:     null,
+  activo:     false,
+  detector:   null,
+  canvas:     null,
+  ctx:        null,
+  video:      null,
+  ultimoScan: 0,
+  INTERVALO_MS: 80,
+
+  async init() {
+    this.video  = document.getElementById('videoEscaner');
+    this.canvas = document.getElementById('canvasEscaner');
+    this.ctx    = this.canvas.getContext('2d', {willReadFrequently: true, alpha: false});
+
+    if ('BarcodeDetector' in window) {
+      try {
+        this.detector = new BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'],
+        });
+        console.log('[ZERO] BarcodeDetector nativo disponible');
+      } catch(e) { this.detector = null; }
+    }
+
+    if (!this.detector) await this._cargarZXing();
+  },
+
+  _cargarZXing() {
+    if (window.ZXing) return Promise.resolve();
+    return new Promise(resolve => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
+      s.onload = () => { console.log('[ZERO] ZXing cargado como fallback'); resolve(); };
+      s.onerror = () => resolve();
+      document.head.appendChild(s);
+    });
+  },
+
+  async abrir() {
+    if (!this.detector && !window.ZXing) await this.init();
+    document.getElementById('modalEscaner').style.display = 'flex';
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width:  {ideal: 1280, max: 1920},
+          height: {ideal: 720,  max: 1080},
+          frameRate: {ideal: 30},
+        },
+      });
+      this.video.srcObject = this.stream;
+      await this.video.play();
+      this.video.addEventListener('loadedmetadata', () => {
+        const w = this.video.videoWidth, h = this.video.videoHeight;
+        this.canvas.width  = Math.floor(w * 0.6);
+        this.canvas.height = Math.floor(h * 0.4);
+      }, {once: true});
+      this.activo = true;
+      this._bucle();
+    } catch(err) {
+      console.error('[ZERO] Error cámara:', err);
+      this.cerrar();
+      showToast('No se pudo acceder a la cámara', 'error');
+      document.getElementById('searchInput').focus();
+    }
+  },
+
+  _bucle() {
+    const tick = async () => {
+      if (!this.activo) return;
+      const ahora = performance.now();
+      if (ahora - this.ultimoScan >= this.INTERVALO_MS) {
+        this.ultimoScan = ahora;
+        await this._procesarFrame();
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  },
+
+  async _procesarFrame() {
+    if (!this.video || this.video.readyState < 2) return;
+    const vw = this.video.videoWidth, vh = this.video.videoHeight;
+    if (!vw || !vh) return;
+
+    // Solo la zona central del frame
+    const sx = Math.floor(vw * 0.2), sy = Math.floor(vh * 0.3);
+    const sw = Math.floor(vw * 0.6), sh = Math.floor(vh * 0.4);
+    this.ctx.drawImage(this.video, sx, sy, sw, sh, 0, 0, this.canvas.width, this.canvas.height);
+
+    const inicio = performance.now();
+    let codigo = null;
+
+    if (this.detector) {
+      try {
+        const res = await this.detector.detect(this.canvas);
+        if (res.length) codigo = res[0].rawValue;
+      } catch(e) {}
+    } else if (window.ZXing) {
+      try {
+        const imgData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
+        const lum = new ZXing.RGBLuminanceSource(imgData.data, this.canvas.width, this.canvas.height);
+        const bin = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+        const res = new ZXing.MultiFormatReader().decode(bin);
+        if (res) codigo = res.getText();
+      } catch(e) {}
+    }
+
+    if (codigo) {
+      const ms = performance.now() - inicio;
+      console.log(`[ZERO] Código detectado en ${ms.toFixed(1)}ms: ${codigo}`);
+      this._onDetectado(codigo);
+    }
+  },
+
+  _onDetectado(codigo) {
+    this._feedbackExito();
+    if (navigator.vibrate) navigator.vibrate(50);
+    this.cerrar();
+    procesarCodigo(codigo);
+  },
+
+  _feedbackExito() {
+    const fb = document.getElementById('feedbackEscaner');
+    const marco = document.getElementById('marcoEscaneo');
+    fb.textContent = '✓ Detectado';
+    fb.classList.add('show');
+    marco.style.borderColor = '#22c55e';
+    setTimeout(() => {
+      fb.classList.remove('show');
+      marco.style.borderColor = '#6366f1';
+    }, 300);
+  },
+
+  cerrar() {
+    this.activo = false;
+    if (this.stream) {
+      this.stream.getTracks().forEach(t => t.stop());
+      this.stream = null;
+    }
+    document.getElementById('modalEscaner').style.display = 'none';
+    document.getElementById('searchInput').focus();
+  },
+};
+
+function abrirScanner() { Escaner.abrir(); }
 async function cerrarSesion() {
   await fetch('/api/auth/logout', {method:'POST', credentials:'include'});
   location.href = 'login.html';
@@ -2509,8 +2736,17 @@ document.addEventListener('click', e => {
 });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { cerrarCobro(); cerrarVariantes(); cerrarVentaRapida(); }
+  if (e.key === 'Escape') {
+    if (Escaner.activo) { Escaner.cerrar(); return; }
+    cerrarCobro(); cerrarVariantes(); cerrarVentaRapida();
+  }
 });
+
+document.getElementById('btnCamara').addEventListener('click', () => Escaner.abrir());
+document.getElementById('btnCerrarEscaner').addEventListener('click', () => Escaner.cerrar());
+
+// Precarga del detector en segundo plano (no bloquea la UI)
+document.addEventListener('DOMContentLoaded', () => { Escaner.init().catch(() => {}); });
 
 init();
 
