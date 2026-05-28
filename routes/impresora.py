@@ -11,6 +11,7 @@ def imprimir_ticket(venta_id):
     if not session.get("usuario_id"):
         return jsonify({"error": "No autenticado"}), 401
 
+    pedido = None
     with db_session() as conn:
         venta = conn.execute(
             "SELECT * FROM ventas WHERE id=?", (venta_id,)
@@ -25,10 +26,15 @@ def imprimir_ticket(venta_id):
             (venta_id,)
         ).fetchall()
 
+        pid = venta["pedido_id"] if "pedido_id" in venta.keys() else None
+        if pid:
+            row = conn.execute("SELECT * FROM pedidos WHERE id=?", (pid,)).fetchone()
+            if row:
+                pedido = dict(row)
+
         cfg = conn.execute("SELECT clave, valor FROM config").fetchall()
         config = {r["clave"]: r["valor"] for r in cfg}
 
-    # Leer config de impresora desde DB (misma fuente que test_conexion)
     config_imp = {
         "tipo":   config.get("impresora_tipo", "red"),
         "ip":     config.get("impresora_ip", "192.168.1.100"),
@@ -36,7 +42,8 @@ def imprimir_ticket(venta_id):
     }
 
     from utils.impresora import imprimir_recibo
-    resultado = imprimir_recibo(dict(venta), [dict(i) for i in items], config, config_imp)
+    resultado = imprimir_recibo(dict(venta), [dict(i) for i in items], config, config_imp,
+                                pedido=pedido)
     return jsonify(resultado)
 
 

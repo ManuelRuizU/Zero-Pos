@@ -2044,6 +2044,40 @@ async function confirmarPago() {
   try {
     let ventaId = null;
 
+    // Para delivery/retiro: crear el pedido PRIMERO para obtener pedido_id
+    let pedidoIdParaVenta = pedidoIdActual;
+    if (entregaActual.tipo !== 'local') {
+      const rped = await fetch('/api/pedidos', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          tipo:           entregaActual.tipo,
+          cliente_nombre: entregaActual.nombre,
+          cliente_tel:    entregaActual.tel,
+          cliente_tel2:   entregaActual.tel2 || null,
+          direccion:      entregaActual.direccion || null,
+          depto:          entregaActual.depto || null,
+          referencia:     entregaActual.referencia || null,
+          comuna:         entregaActual.comuna || null,
+          notas:          entregaActual.notas || null,
+          hora_retiro:    entregaActual.hora_retiro || null,
+          metodo_pago:    metodoPago,
+          items: carrito.map(i => ({
+            producto_id: i.producto_id || null,
+            variante_id: i.variante_id || null,
+            nombre:      i.nombre + (i.nombre_variante ? ' ' + i.nombre_variante : ''),
+            cantidad:    i.cantidad,
+            precio:      i.precio_unit,
+            subtotal:    i.precio_unit * i.cantidad,
+          })),
+        }),
+      });
+      if (rped.ok) {
+        const dped = await rped.json();
+        pedidoIdParaVenta = dped.id || dped.pedido_id || null;
+      }
+    }
+
     // Si el carrito viene de un pedido del mesón, crear venta rápida con esos items
     if (pedidoIdActual && pedidoItemsCarrito.length) {
       const rp = await fetch('/api/ventas/rapida', {
@@ -2072,6 +2106,7 @@ async function confirmarPago() {
         })),
         metodo_pago: metodoPago,
         descuento: itemsRapidosCarrito.length ? 0 : desc,
+        pedido_id: pedidoIdParaVenta || null,
       };
       const r = await fetch('/api/ventas', {
         method: 'POST', credentials: 'include',
@@ -2090,6 +2125,7 @@ async function confirmarPago() {
           nombre: i.nombre, precio_unit: i.precio_unit, cantidad: i.cantidad,
         })),
         metodo_pago: metodoPago, descuento: desc, guardar_productos: guardar,
+        pedido_id: pedidoIdParaVenta || null,
       };
       const r2 = await fetch('/api/ventas/rapida', {
         method: 'POST', credentials: 'include',
@@ -2099,34 +2135,6 @@ async function confirmarPago() {
       const data2 = await r2.json();
       if (!r2.ok) { showToast(data2.error || 'Error en venta rápida', 'error'); return; }
       ventaId = ventaId || data2.venta_id;
-    }
-
-    // Crear pedido si es delivery o retiro
-    if (entregaActual.tipo !== 'local') {
-      await fetch('/api/pedidos', {
-        method: 'POST', credentials: 'include',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({
-          tipo:          entregaActual.tipo,
-          cliente_nombre: entregaActual.nombre,
-          cliente_tel:   entregaActual.tel,
-          cliente_tel2:  entregaActual.tel2 || null,
-          direccion:     entregaActual.direccion || null,
-          depto:         entregaActual.depto || null,
-          referencia:    entregaActual.referencia || null,
-          comuna:        entregaActual.comuna || null,
-          notas:         entregaActual.notas || null,
-          metodo_pago:   metodoPago,
-          items: carrito.map(i => ({
-            producto_id: i.producto_id || null,
-            variante_id: i.variante_id || null,
-            nombre:      i.nombre + (i.nombre_variante ? ' ' + i.nombre_variante : ''),
-            cantidad:    i.cantidad,
-            precio:      i.precio_unit,
-            subtotal:    i.precio_unit * i.cantidad,
-          })),
-        }),
-      }).catch(() => {});
     }
 
     // Push estado "pagado" a pantalla cliente antes de limpiar carrito
