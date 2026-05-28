@@ -6,6 +6,9 @@ from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
 
+# Estado en memoria para pantalla cliente (Orange Pi = servidor único)
+_pantalla: dict = {"items": [], "total": 0, "activa": False}
+
 @ventas_bp.after_request
 def _invalidate_on_venta(response):
     if request.method == "POST" and response.status_code < 400:
@@ -412,6 +415,35 @@ def venta_rapida():
     _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
                            config_negocio, config_imp)
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
+
+
+@ventas_bp.route("/pantalla-cliente", methods=["GET"])
+def pantalla_cliente_get():
+    """Sin autenticación — la red local es el perímetro de seguridad."""
+    return jsonify(_pantalla)
+
+
+@ventas_bp.route("/pantalla-cliente/estado", methods=["POST"])
+def pantalla_cliente_set():
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+    global _pantalla
+    data = request.get_json(silent=True) or {}
+    items = data.get("items", [])
+    _pantalla = {
+        "items": [
+            {
+                "nombre":    i.get("nombre", ""),
+                "cantidad":  int(i.get("cantidad", 1)),
+                "precio_unit": pesos(i.get("precio_unit", 0)),
+                "subtotal":  pesos(i.get("subtotal", 0)),
+            }
+            for i in items
+        ],
+        "total":  pesos(data.get("total", 0)),
+        "activa": bool(items),
+    }
+    return jsonify({"ok": True})
 
 
 @ventas_bp.route("/resumen/hoy", methods=["GET"])

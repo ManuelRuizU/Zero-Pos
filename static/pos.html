@@ -543,6 +543,7 @@ body {
   <div class="topbar-spacer"></div>
   <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"></span>
   <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Asistente de voz ZERO">🎤 <span class="voz-kw-label">ZERO</span></button>
+  <button class="btn-top" onclick="window.open('cliente.html','pantalla-cliente')" title="Pantalla cliente">📺</button>
   <button class="btn-top" onclick="abrirVentaRapida()" title="Venta rápida">⚡</button>
   <button class="btn-top" onclick="cerrarSesion()">Salir</button>
 </div>
@@ -1621,6 +1622,25 @@ function renderCarrito() {
 
   document.getElementById('btnCobrar').disabled = false;
   recalcular();
+  pushPantallaCliente();
+}
+
+function pushPantallaCliente() {
+  const subtotal = carrito.reduce((s, i) => s + i.precio_unit * i.cantidad, 0);
+  const desc = parseFloat(document.getElementById('descuentoInput')?.value) || 0;
+  fetch('/api/ventas/pantalla-cliente/estado', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      items: carrito.map(i => ({
+        nombre: i.nombre + (i.nombre_variante ? ' ' + i.nombre_variante : ''),
+        cantidad: i.cantidad,
+        precio_unit: i.precio_unit,
+        subtotal: i.precio_unit * i.cantidad,
+      })),
+      total: Math.max(0, subtotal - desc),
+    })
+  }).catch(() => {});
 }
 
 function recalcular() {

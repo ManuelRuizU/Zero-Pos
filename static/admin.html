@@ -407,10 +407,24 @@ input:checked + .slider:before{transform:translateX(20px);}
       <!-- Pantallas -->
       <div class="cfg-card">
         <div class="cfg-card-title">🖥️ Pantallas adicionales</div>
+
+        <!-- Pantalla cliente — acceso directo -->
+        <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Pantalla cliente</div>
+          <button class="btn primary sm" onclick="window.open('cliente.html','pantalla-cliente')" style="margin-bottom:12px;width:100%">
+            📺 Abrir pantalla cliente
+          </button>
+          <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;">Abre esta URL en la tablet del cliente:</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <code id="urlCliente" style="flex:1;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--accent2);word-break:break-all;"></code>
+            <button class="btn sm" onclick="copiarUrlCliente()" title="Copiar URL" style="flex-shrink:0">📋</button>
+          </div>
+        </div>
+
         <div class="toggle-row">
           <div class="toggle-info">
-            <span class="toggle-label">Pantalla cliente</span>
-            <span class="toggle-sub">Muestra total y QR al cliente en segundo monitor — <a href="cliente.html" target="_blank" style="color:var(--accent2);">abrir</a></span>
+            <span class="toggle-label">Pantalla cliente activa</span>
+            <span class="toggle-sub">Habilita actualizaciones en tiempo real desde el POS</span>
           </div>
           <label class="switch">
             <input type="checkbox" id="cfg_pantalla_cliente_activa">
@@ -580,6 +594,18 @@ async function init() {
   const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
   if (!me||me.error||me.rol!=='admin') { location.href='login.html'; return; }
   cargarDashboard();
+  const urlEl = document.getElementById('urlCliente');
+  if (urlEl) urlEl.textContent = `${location.protocol}//${location.host}/static/cliente.html`;
+}
+
+function copiarUrlCliente() {
+  const url = document.getElementById('urlCliente').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = orig, 1500);
+  }).catch(() => {});
 }
 
 function showTab(name, btn) {
