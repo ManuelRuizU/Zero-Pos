@@ -219,6 +219,21 @@ def _migrate_columns(conn: sqlite3.Connection):
     except Exception as e:
         logger.debug(f"migrate idx_vsv_unique: {e}")
 
+    # Limpiar admins duplicados (bug: INSERT OR IGNORE sin constraint en DBs antiguas)
+    conn.execute(
+        """DELETE FROM usuarios
+           WHERE nombre = 'Admin'
+           AND id NOT IN (SELECT MIN(id) FROM usuarios WHERE nombre = 'Admin')"""
+    )
+
+    # Unique index en usuarios.nombre (DBs antiguas pueden no tener el constraint)
+    try:
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_nombre ON usuarios(nombre)"
+        )
+    except Exception as e:
+        logger.debug(f"migrate idx_usuarios_nombre: {e}")
+
 
 def _seed_defaults(conn: sqlite3.Connection):
     """Inserta configuración inicial solo si la tabla está vacía."""
@@ -242,9 +257,10 @@ def _seed_defaults(conn: sqlite3.Connection):
     pin_default = b"1234"
     hashed = bcrypt.hashpw(pin_default, bcrypt.gensalt()).decode()
     conn.execute(
-        """INSERT OR IGNORE INTO usuarios (nombre, pin_hash, rol, activo)
-           VALUES (?, ?, ?, 1)""",
-        ("Admin", hashed, "admin")
+        """INSERT INTO usuarios (nombre, pin_hash, rol, activo)
+           SELECT 'Admin', ?, 'admin', 1
+           WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE rol = 'admin')""",
+        (hashed,)
     )
     if conn.execute("SELECT changes()").fetchone()[0]:
         logger.info("Usuario admin creado con PIN por defecto: 1234")
