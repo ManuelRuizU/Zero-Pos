@@ -12,6 +12,16 @@ def _usuario_activo(conn, usuario_id: int):
     ).fetchone()
 
 
+@auth_bp.route("/usuarios/publico", methods=["GET"])
+def listar_usuarios_publico():
+    """Lista nombre+id de usuarios activos para la pantalla de login (sin auth)."""
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT id, nombre FROM usuarios WHERE activo=1 ORDER BY nombre"
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
+
+
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json(silent=True) or {}
@@ -21,23 +31,34 @@ def login():
         return jsonify({"error": "PIN inválido"}), 400
 
     import bcrypt
+    usuario_id = data.get("usuario_id")
+
     with db_session() as conn:
-        usuarios = conn.execute(
-            "SELECT * FROM usuarios WHERE activo=1"
-        ).fetchall()
-        for u in usuarios:
+        if usuario_id:
+            # O(1): buscar directamente el usuario seleccionado
+            u = conn.execute(
+                "SELECT * FROM usuarios WHERE id=? AND activo=1", (usuario_id,)
+            ).fetchone()
+            candidatos = [u] if u else []
+        else:
+            # Fallback: recorrer todos (compatibilidad hacia atrás)
+            candidatos = conn.execute(
+                "SELECT * FROM usuarios WHERE activo=1"
+            ).fetchall()
+
+        for u in candidatos:
             try:
                 if bcrypt.checkpw(pin.encode(), u["pin_hash"].encode()):
-                    session["usuario_id"] = u["id"]
+                    session["usuario_id"]     = u["id"]
                     session["usuario_nombre"] = u["nombre"]
-                    session["usuario_rol"] = u["rol"]
+                    session["usuario_rol"]    = u["rol"]
                     logger.info(f"Login exitoso: {u['nombre']} (rol={u['rol']})")
                     return jsonify({
                         "ok": True,
                         "usuario": {
-                            "id": u["id"],
+                            "id":     u["id"],
                             "nombre": u["nombre"],
-                            "rol": u["rol"],
+                            "rol":    u["rol"],
                         }
                     })
             except Exception:

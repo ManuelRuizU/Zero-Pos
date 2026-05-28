@@ -121,6 +121,32 @@
     75% { transform: translateX(8px); }
   }
   .footer { color: var(--text-dim); font-size: 11px; margin-top: 24px; }
+  .user-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  .user-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .user-btn:hover { background: var(--surface-hover); color: var(--text); }
+  .user-btn.selected {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--text);
+  }
 </style>
 </head>
 <body>
@@ -128,6 +154,8 @@
   <div class="logo">🛍️</div>
   <h1>ZERO POS</h1>
   <p class="tagline">Sin internet. Sin comisiones. Solo tú y tus ventas.</p>
+
+  <div class="user-list" id="userList"></div>
 
   <div class="pin-display">
     <div class="pin-dot" id="d0"></div>
@@ -159,6 +187,31 @@
 
 <script>
 let pin = '';
+let usuarioSeleccionado = null;
+
+async function cargarUsuarios() {
+  try {
+    const usuarios = await fetch('/api/auth/usuarios/publico', {credentials: 'include'})
+      .then(r => r.json());
+    const lista = document.getElementById('userList');
+    if (!usuarios.length) return;
+    usuarios.forEach(u => {
+      const btn = document.createElement('button');
+      btn.className = 'user-btn';
+      btn.textContent = u.nombre;
+      btn.onclick = () => seleccionarUsuario(u, btn);
+      lista.appendChild(btn);
+    });
+    if (usuarios.length === 1) seleccionarUsuario(usuarios[0], lista.firstChild);
+  } catch(e) {}
+}
+
+function seleccionarUsuario(u, btn) {
+  usuarioSeleccionado = u;
+  document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  setError('');
+}
 
 function updateDisplay() {
   for (let i = 0; i < 4; i++) {
@@ -199,10 +252,12 @@ function setError(msg) {
 async function submitPin() {
   if (pin.length !== 4) { setError('Ingresa tu PIN de 4 dígitos'); return; }
   try {
+    const body = {pin};
+    if (usuarioSeleccionado) body.usuario_id = usuarioSeleccionado.id;
     const r = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({pin}),
+      body: JSON.stringify(body),
       credentials: 'include',
     });
     const data = await r.json();
@@ -229,6 +284,8 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Enter') submitPin();
   else if (e.key === 'Escape') clearPin();
 });
+
+cargarUsuarios();
 </script>
 </body>
 </html>
