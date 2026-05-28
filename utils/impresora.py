@@ -1,15 +1,13 @@
 import importlib.util
 import logging
+import urllib.parse
 from pathlib import Path
 
 logger = logging.getLogger("zero_pos.impresora")
 
-# Detecta si el paquete está instalado sin importar sus submódulos de hardware,
-# que requieren pyusb / pyserial y fallan con ImportError aunque escpos esté OK.
 try:
     ESCPOS_OK = importlib.util.find_spec("escpos") is not None
 except ValueError:
-    # find_spec lanza ValueError si el módulo ya está en sys.modules sin __spec__
     ESCPOS_OK = "escpos" in __import__("sys").modules
 if not ESCPOS_OK:
     logger.warning("python-escpos no instalado — impresión desactivada")
@@ -22,9 +20,7 @@ except ImportError:
 
 
 def _get_printer(config_imp: dict):
-    # Import lazy: solo cuando se va a imprimir de verdad.
     from escpos.printer import Network, Usb, File  # noqa: F401
-
     tipo = config_imp.get("tipo", "red")
     if tipo == "red":
         ip = config_imp.get("ip", "192.168.1.100")
@@ -40,9 +36,35 @@ def _get_printer(config_imp: dict):
     raise ValueError(f"Tipo de impresora desconocido: {tipo}")
 
 
-def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict) -> dict:
+def _maps_url(pedido: dict) -> str:
+    partes = [pedido.get("direccion") or ""]
+    if pedido.get("depto"):
+        partes.append(f"Depto {pedido['depto']}")
+    if pedido.get("comuna"):
+        partes.append(pedido["comuna"])
+    partes.append("Chile")
+    direccion = ", ".join(p for p in partes if p)
+    return f"https://maps.google.com/?q={urllib.parse.quote(direccion)}"
+
+
+def _generar_qr_bytes(url: str) -> bytes | None:
+    try:
+        import qrcode, io
+        qr = qrcode.QRCode(version=2, box_size=5, border=2)
+        qr.add_data(url)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception:
+        return None
+
+
+def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
+                    pedido: dict | None = None) -> dict:
     if not ESCPOS_OK:
-        texto = _formatear_texto(venta, items, config)
+        texto = _formatear_texto(venta, items, config, pedido)
         logger.info(f"[SIMULADO] Ticket venta #{venta['id']}")
         return {"ok": True, "simulado": True, "texto": texto}
 
@@ -50,32 +72,95 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict) ->
         p = _get_printer(config_imp)
         nombre_negocio = config.get("nombre_negocio", "ZERO POS")
         moneda = config.get("moneda", "CLP")
+        SEP = "─" * 32
 
         p.set(align="center", bold=True, height=2, width=2)
         p.text(f"{nombre_negocio}\n")
         p.set(align="center", bold=False, height=1, width=1)
-        p.text("-" * 32 + "\n")
-        p.text(f"Venta #{venta['id']}\n")
-        p.text(f"{venta['creado_en']}\n")
-        p.text("-" * 32 + "\n")
 
+        if pedido:
+            tipo = pedido.get("tipo", "")
+            numero = pedido.get("numero", "")
+            p.text(f"Pedido #{numero}\n")
+            p.text(f"{venta.get('creado_en', '')}\n")
+            if tipo == "delivery":
+                p.set(bold=True)
+                p.text("DELIVERY\n")
+            elif tipo == "retiro":
+                p.set(bold=True)
+                p.text("RETIRO EN LOCAL\n")
+            p.set(bold=False)
+            p.text(SEP + "\n")
+
+            # Datos cliente
+            p.set(align="left", bold=True)
+            p.text("CLIENTE:\n")
+            p.set(bold=False)
+            p.text(f"{pedido.get('cliente_nombre', '')}\n")
+            if pedido.get("cliente_tel"):
+                p.text(f"  {pedido['cliente_tel']}\n")
+            if tipo == "delivery":
+                if pedido.get("direccion"):
+                    p.text(f"  {pedido['direccion']}\n")
+                if pedido.get("depto"):
+                    p.text(f"  Depto {pedido['depto']}")
+                    if pedido.get("comuna"):
+                        p.text(f", {pedido['comuna']}")
+                    p.text("\n")
+                elif pedido.get("comuna"):
+                    p.text(f"  {pedido['comuna']}\n")
+                if pedido.get("referencia"):
+                    p.text(f"  Ref: {pedido['referencia']}\n")
+            elif tipo == "retiro" and pedido.get("notas"):
+                p.text(f"  Hora retiro: {pedido.get('hora_retiro','')}\n")
+        else:
+            p.text(f"Venta #{venta['id']}\n")
+            p.text(f"{venta.get('creado_en', '')}\n")
+
+        p.text(SEP + "\n")
         p.set(align="left")
         for it in items:
-            nombre = it["producto_nombre"][:20]
-            subtotal = f"{it['subtotal']:,.0f}"
-            p.text(f"{nombre}\n")
-            p.text(f"  {it['cantidad']} x {it['precio_unit']:,.0f} = {moneda} {subtotal}\n")
+            nombre = it.get("producto_nombre", it.get("nombre", "?"))[:20]
+            subtotal = f"{it.get('subtotal', 0):,.0f}"
+            cant = it.get("cantidad", 1)
+            pu = it.get("precio_unit", it.get("precio", 0))
+            p.text(f"{cant}x {nombre}\n")
+            p.text(f"   {pu:,.0f} = {moneda} {subtotal}\n")
+            if it.get("notas"):
+                p.text(f"   *** {it['notas']}\n")
 
-        p.text("-" * 32 + "\n")
+        p.text(SEP + "\n")
         p.set(align="right", bold=True)
         p.text(f"TOTAL: {moneda} {venta['total']:,.0f}\n")
         p.set(align="center", bold=False)
-        p.text(f"Pago: {venta['metodo_pago'].upper()}\n")
-        p.text("\nGracias por su compra!\n")
-        p.text("ZERO POS — Sin comisiones\n\n")
+        metodo = venta.get("metodo_pago", "efectivo").upper()
+        p.text(f"Pago: {metodo}\n")
+
+        if pedido and pedido.get("notas"):
+            p.text(SEP + "\n")
+            p.set(align="left")
+            p.text(f"Notas: {pedido['notas']}\n")
+
+        # QR ruta solo para delivery con dirección
+        if pedido and pedido.get("tipo") == "delivery" and pedido.get("direccion"):
+            url = _maps_url(pedido)
+            qr_bytes = _generar_qr_bytes(url)
+            p.text(SEP + "\n")
+            p.set(align="center")
+            if qr_bytes:
+                try:
+                    from PIL import Image
+                    import io
+                    img = Image.open(io.BytesIO(qr_bytes)).resize((200, 200))
+                    p.image(img)
+                except Exception:
+                    p.text(f"{url[:42]}\n")
+            else:
+                p.text(f"{url[:42]}\n")
+
+        p.text("\nGracias!\nZERO POS\n\n")
         p.cut()
         p.close()
-
         return {"ok": True}
     except Exception as e:
         logger.error(f"Error impresora: {e}")
@@ -106,23 +191,63 @@ def test_conexion() -> dict:
         return {"ok": False, "error": str(e)}
 
 
-def _formatear_texto(venta: dict, items: list, config: dict) -> str:
+def _formatear_texto(venta: dict, items: list, config: dict,
+                     pedido: dict | None = None) -> str:
     moneda = config.get("moneda", "CLP")
-    lineas = [
-        config.get("nombre_negocio", "ZERO POS"),
-        "=" * 32,
-        f"Venta #{venta['id']}",
-        f"Fecha: {venta.get('creado_en', '')}",
-        "-" * 32,
-    ]
+    nombre_negocio = config.get("nombre_negocio", "ZERO POS")
+    SEP = "=" * 32
+
+    if pedido:
+        tipo = pedido.get("tipo", "")
+        tipo_label = {"delivery": "DELIVERY", "retiro": "RETIRO EN LOCAL"}.get(tipo, tipo.upper())
+        lineas = [
+            nombre_negocio,
+            SEP,
+            f"Pedido #{pedido.get('numero', '')}",
+            f"Fecha: {venta.get('creado_en', '')}",
+            tipo_label,
+            "-" * 32,
+            "CLIENTE:",
+            f"  {pedido.get('cliente_nombre', '')}",
+        ]
+        if pedido.get("cliente_tel"):
+            lineas.append(f"  Tel: {pedido['cliente_tel']}")
+        if tipo == "delivery":
+            if pedido.get("direccion"):
+                lineas.append(f"  {pedido['direccion']}")
+            if pedido.get("depto"):
+                lineas.append(f"  Depto {pedido['depto']}")
+            if pedido.get("referencia"):
+                lineas.append(f"  Ref: {pedido['referencia']}")
+            if pedido.get("direccion"):
+                url = _maps_url(pedido)
+                lineas += ["-" * 32, f"Ruta: {url}"]
+    else:
+        lineas = [
+            nombre_negocio,
+            SEP,
+            f"Venta #{venta['id']}",
+            f"Fecha: {venta.get('creado_en', '')}",
+        ]
+
+    lineas.append("-" * 32)
     for it in items:
-        lineas.append(f"{it.get('producto_nombre', '?')}")
-        lineas.append(f"  {it['cantidad']} x {it['precio_unit']:,.0f} = {moneda} {it['subtotal']:,.0f}")
+        nombre = it.get("producto_nombre", it.get("nombre", "?"))
+        lineas.append(f"{nombre}")
+        pu = it.get("precio_unit", it.get("precio", 0))
+        lineas.append(f"  {it.get('cantidad',1)} x {pu:,.0f} = {moneda} {it.get('subtotal',0):,.0f}")
+        if it.get("notas"):
+            lineas.append(f"  *** {it['notas']}")
+
     lineas += [
         "-" * 32,
         f"TOTAL: {moneda} {venta['total']:,.0f}",
-        f"Pago: {venta['metodo_pago'].upper()}",
-        "",
-        "Gracias por su compra!",
+        f"Pago: {venta.get('metodo_pago','efectivo').upper()}",
     ]
+
+    if pedido and pedido.get("notas"):
+        lineas += ["-" * 32, f"Notas: {pedido['notas']}"]
+
+    lineas.append("")
+    lineas.append("Gracias!")
     return "\n".join(lineas)
