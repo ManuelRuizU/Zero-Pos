@@ -408,6 +408,41 @@ body {
 .qr-container { text-align: center; padding: 10px 0; }
 .qr-container img { border-radius: 12px; max-width: 180px; }
 
+/* Modales de entrega */
+.entrega-opciones { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+.entrega-btn {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface); border: 2px solid var(--border);
+  border-radius: 14px; padding: 16px 18px; cursor: pointer;
+  color: var(--text); transition: all .15s; text-align: left; width: 100%;
+}
+.entrega-btn:hover { background: var(--surface-hover); border-color: var(--accent); }
+.entrega-icon { font-size: 28px; flex-shrink: 0; }
+.entrega-label { font-size: 15px; font-weight: 700; }
+.entrega-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.form-field {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 11px 14px; color: var(--text);
+  font-size: 14px; outline: none; transition: border-color .2s; margin-bottom: 10px;
+}
+.form-field:focus { border-color: var(--accent); }
+.form-field::placeholder { color: var(--text-dim); }
+.form-row { display: flex; gap: 8px; }
+.form-row .form-field { margin-bottom: 0; }
+.buscar-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.buscar-row .form-field { flex: 1; margin-bottom: 0; }
+.btn-buscar {
+  background: var(--accent); border: none; color: #fff; border-radius: 10px;
+  padding: 0 16px; font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+}
+.modal-acciones-col { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.btn-atras {
+  background: none; border: 1px solid var(--border); color: var(--text-dim);
+  border-radius: 12px; padding: 11px; cursor: pointer; font-size: 13px;
+  transition: all .15s;
+}
+.btn-atras:hover { background: var(--surface-hover); }
+
 /* ── Modal variantes ──────────────────────── */
 .modal-variantes {
   background: #13131a; border: 1px solid var(--border);
@@ -607,6 +642,69 @@ body {
 
 <!-- Cart overlay (mobile) -->
 <div class="cart-overlay" id="cartOverlay" onclick="toggleCarritoMobile()"></div>
+
+<!-- Modal tipo de entrega -->
+<div class="modal-overlay" id="modalEntrega">
+  <div class="modal">
+    <div class="modal-title">¿Cómo entregamos?</div>
+    <div class="entrega-opciones">
+      <button class="entrega-btn" id="btnEntregaLocal" onclick="selEntrega('local')">
+        <span class="entrega-icon">🪑</span>
+        <div><div class="entrega-label">Aquí mismo</div><div class="entrega-sub">Sin datos adicionales</div></div>
+      </button>
+      <button class="entrega-btn" onclick="selEntrega('retiro')">
+        <span class="entrega-icon">🏠</span>
+        <div><div class="entrega-label">Retiro en local</div><div class="entrega-sub">Nombre y teléfono</div></div>
+      </button>
+      <button class="entrega-btn" onclick="selEntrega('delivery')">
+        <span class="entrega-icon">🛵</span>
+        <div><div class="entrega-label">Delivery</div><div class="entrega-sub">Datos completos del cliente</div></div>
+      </button>
+    </div>
+    <button class="btn-cancelar" onclick="cerrarEntregaModal()">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal retiro -->
+<div class="modal-overlay" id="modalRetiro">
+  <div class="modal">
+    <div class="modal-title">🏠 Retiro en local</div>
+    <input class="form-field" id="retiroNombre" placeholder="Nombre *">
+    <input class="form-field" id="retiroTel" placeholder="Teléfono" type="tel" inputmode="numeric">
+    <input class="form-field" id="retiroHora" placeholder="Hora de retiro (opcional)" type="time">
+    <div class="modal-acciones-col">
+      <button class="btn-confirmar" onclick="continuar_retiro()">Continuar al pago →</button>
+      <button class="btn-atras" onclick="volverEntrega()">← Atrás</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal delivery -->
+<div class="modal-overlay" id="modalDelivery">
+  <div class="modal" style="max-height:90vh;overflow-y:auto;">
+    <div class="modal-title">🛵 Delivery</div>
+    <div class="buscar-row">
+      <input class="form-field" id="delBuscarTel" placeholder="Buscar por teléfono" type="tel" inputmode="numeric">
+      <button class="btn-buscar" onclick="buscarClientePorTel()">Buscar</button>
+    </div>
+    <input class="form-field" id="delNombre" placeholder="Nombre *">
+    <div class="form-row" style="margin-bottom:10px;">
+      <input class="form-field" id="delTel" placeholder="Teléfono *" type="tel" inputmode="numeric">
+      <input class="form-field" id="delTel2" placeholder="Teléfono 2" type="tel" inputmode="numeric">
+    </div>
+    <input class="form-field" id="delDireccion" placeholder="Dirección *">
+    <div class="form-row" style="margin-bottom:10px;">
+      <input class="form-field" id="delDepto" placeholder="Depto / Casa">
+      <input class="form-field" id="delComuna" placeholder="Comuna">
+    </div>
+    <input class="form-field" id="delReferencia" placeholder="Referencias (portón verde, frente al parque...)">
+    <input class="form-field" id="delNotas" placeholder="Notas (sin wasabi, extra salsa, sin cebolla...)">
+    <div class="modal-acciones-col">
+      <button class="btn-confirmar" onclick="continuar_delivery()">Continuar al pago →</button>
+      <button class="btn-atras" onclick="volverEntrega()">← Atrás</button>
+    </div>
+  </div>
+</div>
 
 <!-- Modal cobro -->
 <div class="modal-overlay" id="modalCobro">
@@ -1687,9 +1785,103 @@ function toggleCarritoMobile() {
 }
 
 // ── Cobro ─────────────────────────────────────────────────────
+// ── Entrega ──────────────────────────────────────────────────
+let entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:''};
+
 function abrirCobro() {
   if (!carrito.length) return;
   recalcular();
+  const deliveryActivo = cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true;
+  if (deliveryActivo) {
+    // Modo mesas: ocultar "aquí mismo" si modo_mesas es false
+    const modoMesas = cfgApp.modo_mesas === '1' || cfgApp.modo_mesas === true;
+    document.getElementById('btnEntregaLocal').style.display = modoMesas === false ? 'none' : '';
+    entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:''};
+    document.getElementById('modalEntrega').classList.add('active');
+  } else {
+    _abrirModalCobro();
+  }
+}
+
+function cerrarEntregaModal() {
+  document.getElementById('modalEntrega').classList.remove('active');
+}
+
+function selEntrega(tipo) {
+  cerrarEntregaModal();
+  entregaActual.tipo = tipo;
+  if (tipo === 'local') {
+    _abrirModalCobro();
+  } else if (tipo === 'retiro') {
+    document.getElementById('retiroNombre').value = '';
+    document.getElementById('retiroTel').value = '';
+    document.getElementById('retiroHora').value = '';
+    document.getElementById('modalRetiro').classList.add('active');
+  } else {
+    _limpiarFormDelivery();
+    document.getElementById('modalDelivery').classList.add('active');
+  }
+}
+
+function volverEntrega() {
+  document.getElementById('modalRetiro').classList.remove('active');
+  document.getElementById('modalDelivery').classList.remove('active');
+  document.getElementById('modalEntrega').classList.add('active');
+}
+
+function continuar_retiro() {
+  const nombre = document.getElementById('retiroNombre').value.trim();
+  if (!nombre) { showToast('Ingresa un nombre', 'error'); return; }
+  entregaActual.nombre = nombre;
+  entregaActual.tel = document.getElementById('retiroTel').value.trim();
+  entregaActual.hora_retiro = document.getElementById('retiroHora').value;
+  document.getElementById('modalRetiro').classList.remove('active');
+  _abrirModalCobro();
+}
+
+function continuar_delivery() {
+  const nombre = document.getElementById('delNombre').value.trim();
+  const tel = document.getElementById('delTel').value.trim();
+  const dir = document.getElementById('delDireccion').value.trim();
+  if (!nombre || !tel || !dir) { showToast('Nombre, teléfono y dirección son obligatorios', 'error'); return; }
+  entregaActual.nombre   = nombre;
+  entregaActual.tel      = tel;
+  entregaActual.tel2     = document.getElementById('delTel2').value.trim();
+  entregaActual.direccion = dir;
+  entregaActual.depto    = document.getElementById('delDepto').value.trim();
+  entregaActual.comuna   = document.getElementById('delComuna').value.trim();
+  entregaActual.referencia = document.getElementById('delReferencia').value.trim();
+  entregaActual.notas    = document.getElementById('delNotas').value.trim();
+  document.getElementById('modalDelivery').classList.remove('active');
+  _abrirModalCobro();
+}
+
+async function buscarClientePorTel() {
+  const tel = document.getElementById('delBuscarTel').value.trim();
+  if (!tel) return;
+  try {
+    const r = await fetch(`/api/pedidos/clientes/buscar?telefono=${encodeURIComponent(tel)}`, {credentials:'include'}).then(r => r.json());
+    if (r && r.nombre) {
+      document.getElementById('delNombre').value    = r.nombre || '';
+      document.getElementById('delTel').value       = r.telefono || tel;
+      document.getElementById('delTel2').value      = r.telefono2 || '';
+      document.getElementById('delDireccion').value = r.direccion || '';
+      document.getElementById('delDepto').value     = r.depto || '';
+      document.getElementById('delComuna').value    = r.comuna || '';
+      showToast(`Cliente encontrado: ${r.nombre}`, 'success');
+    } else {
+      document.getElementById('delTel').value = tel;
+      showToast('Cliente nuevo', 'info');
+    }
+  } catch(e) { document.getElementById('delTel').value = tel; }
+}
+
+function _limpiarFormDelivery() {
+  ['delBuscarTel','delNombre','delTel','delTel2','delDireccion','delDepto','delComuna','delReferencia','delNotas']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+function _abrirModalCobro() {
   document.getElementById('modalTotal').textContent = fmt(total);
   document.getElementById('montoRecibido').value = '';
   document.getElementById('vueltoRow').style.display = 'none';
@@ -1697,7 +1889,10 @@ function abrirCobro() {
   selMetodo(document.querySelector('[data-met="efectivo"]'));
 }
 
-function cerrarCobro() { document.getElementById('modalCobro').classList.remove('active'); }
+function cerrarCobro() {
+  document.getElementById('modalCobro').classList.remove('active');
+  entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:''};
+}
 
 function selMetodo(btn) {
   document.querySelectorAll('.metodo-btn').forEach(b => b.classList.remove('selected'));
@@ -1797,6 +1992,34 @@ async function confirmarPago() {
       const data2 = await r2.json();
       if (!r2.ok) { showToast(data2.error || 'Error en venta rápida', 'error'); return; }
       ventaId = ventaId || data2.venta_id;
+    }
+
+    // Crear pedido si es delivery o retiro
+    if (entregaActual.tipo !== 'local') {
+      await fetch('/api/pedidos', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          tipo:          entregaActual.tipo,
+          cliente_nombre: entregaActual.nombre,
+          cliente_tel:   entregaActual.tel,
+          cliente_tel2:  entregaActual.tel2 || null,
+          direccion:     entregaActual.direccion || null,
+          depto:         entregaActual.depto || null,
+          referencia:    entregaActual.referencia || null,
+          comuna:        entregaActual.comuna || null,
+          notas:         entregaActual.notas || null,
+          metodo_pago:   metodoPago,
+          items: carrito.map(i => ({
+            producto_id: i.producto_id || null,
+            variante_id: i.variante_id || null,
+            nombre:      i.nombre + (i.nombre_variante ? ' ' + i.nombre_variante : ''),
+            cantidad:    i.cantidad,
+            precio:      i.precio_unit,
+            subtotal:    i.precio_unit * i.cantidad,
+          })),
+        }),
+      }).catch(() => {});
     }
 
     cerrarCobro();
