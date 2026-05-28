@@ -188,6 +188,19 @@ def create_app() -> Flask:
     def health():
         return {"status": "ok", "version": "1.0.0"}
 
+    @app.route("/manifest.json")
+    def manifest():
+        return send_from_directory("static", "manifest.json",
+                                   mimetype="application/manifest+json")
+
+    @app.route("/sw.js")
+    def service_worker():
+        response = send_from_directory("static", "sw.js",
+                                       mimetype="application/javascript")
+        response.headers["Service-Worker-Allowed"] = "/"
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
     # Cache static files in the browser for 1 hour
     @app.after_request
     def add_cache_headers(response):
