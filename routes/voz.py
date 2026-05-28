@@ -1322,6 +1322,147 @@ def _consultar_db(texto: str, ctx: str) -> dict:
                 resp = "Los más vendidos del mes: " + ", ".join(f"{n} ({v})" for n, v in items) + "."
                 return {"datos": items, "template": resp}
 
+        # ── Mejor día esta semana ──────────────────────────────────────
+        if any(k in t for k in ["mejor día", "mejor dia", "cuál fue el mejor", "cual fue el mejor",
+                                  "mejor semana"]):
+            hace7 = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+            row = conn.execute(
+                "SELECT DATE(creado_en) as fecha, SUM(total) as tot, COUNT(*) as n "
+                "FROM ventas WHERE estado='completada' AND DATE(creado_en)>=? "
+                "GROUP BY DATE(creado_en) ORDER BY tot DESC LIMIT 1",
+                (hace7,)
+            ).fetchone()
+            if row:
+                _dias = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+                try:
+                    _dt = datetime.strptime(str(row["fecha"]), "%Y-%m-%d")
+                    dia_nom = _dias[_dt.weekday()]
+                except Exception:
+                    dia_nom = str(row["fecha"])
+                resp = (f"El mejor día fue el {dia_nom} con "
+                        f"${int(row['tot']):,.0f} en {row['n']} ventas.").replace(",", ".")
+                return {"datos": dict(row), "template": resp}
+            return {"datos": None, "template": "No hay ventas esta semana."}
+
+        # ── Resumen del día / cierra el día ────────────────────────────
+        if any(k in t for k in ["resumen", "cierra el día", "cierra el dia", "cómo vamos",
+                                  "como vamos", "cuánto va", "cuanto va"]):
+            row_tot = conn.execute(
+                "SELECT COUNT(*) as n, COALESCE(SUM(total),0) as tot "
+                "FROM ventas WHERE DATE(creado_en)=DATE('now') AND estado='completada'"
+            ).fetchone()
+            metodos = conn.execute(
+                "SELECT metodo_pago, COUNT(*) as n, SUM(total) as tot "
+                "FROM ventas WHERE DATE(creado_en)=DATE('now') AND estado='completada' "
+                "GROUP BY metodo_pago"
+            ).fetchall()
+            top_prod = conn.execute(
+                "SELECT p.nombre, SUM(vi.cantidad) as cant "
+                "FROM venta_items vi JOIN productos p ON vi.producto_id=p.id "
+                "JOIN ventas v ON vi.venta_id=v.id "
+                "WHERE DATE(v.creado_en)=DATE('now') AND v.estado='completada' "
+                "GROUP BY vi.producto_id ORDER BY cant DESC LIMIT 3"
+            ).fetchall()
+            n_, tot_ = row_tot["n"], int(row_tot["tot"])
+            if n_ == 0:
+                return {"datos": {"total": 0, "ventas": 0},
+                        "template": "Hoy no hay ventas registradas."}
+            met_txt = ", ".join(
+                f"{r['metodo_pago']} ${int(r['tot']):,.0f}".replace(",", ".") for r in metodos
+            ) or "—"
+            top_txt = ", ".join(f"{r['nombre']} ({r['cant']})" for r in top_prod)
+            resp = (f"Hoy: ${tot_:,.0f} en {n_} {'venta' if n_==1 else 'ventas'}. "
+                    f"Métodos: {met_txt}. Más vendido: {top_txt}.").replace(",", ".")
+            return {"datos": {"total": tot_, "ventas": n_}, "template": resp}
+
+        # ── Predicción de compras ──────────────────────────────────────
+        if any(k in t for k in ["qué necesito pedir", "que necesito pedir", "qué pedir",
+                                  "que pedir", "lista de compras", "qué comprar", "que comprar",
+                                  "cuánto comprar", "cuanto comprar", "debo pedir", "necesito pedir"]):
+            hace4 = (datetime.now() - timedelta(weeks=4)).strftime("%Y-%m-%d")
+            rows_pred = conn.execute(
+                "SELECT p.nombre, p.stock, p.stock_minimo, "
+                "  (SELECT COALESCE(AVG(d.c),0) FROM ("
+                "    SELECT SUM(vi.cantidad) as c FROM venta_items vi "
+                "    JOIN ventas v ON vi.venta_id=v.id "
+                "    WHERE vi.producto_id=p.id AND v.estado='completada' "
+                "    AND DATE(v.creado_en)>=? GROUP BY DATE(v.creado_en)"
+                "  ) d) as prom_diario "
+                "FROM productos p "
+                "WHERE p.activo=1 AND p.modo_stock='normal' AND p.tiene_variantes=0 "
+                "  AND p.stock<=p.stock_minimo ORDER BY p.stock ASC LIMIT 8",
+                (hace4,)
+            ).fetchall()
+            if rows_pred:
+                items_pred = []
+                for r in rows_pred:
+                    prom = float(r["prom_diario"] or 0)
+                    sugerido = int(max(round(prom * 7), r["stock_minimo"] * 2, 1))
+                    items_pred.append(f"{r['nombre']}: pedir ~{sugerido} (tienes {r['stock']})")
+                resp = "Necesitas pedir: " + ". ".join(items_pred[:5]) + "."
+                return {"datos": [dict(r) for r in rows_pred], "template": resp}
+            return {"datos": None, "template": "No hay productos con stock bajo."}
+
+        # ── Búsqueda por proveedor ─────────────────────────────────────
+        _PROV_TRIGGERS = ["vendedor de", "proveedor de", "el de las", "el de los", "el de la",
+                          "el de", "qué le pido al", "que le pido al", "qué le pido a",
+                          "que le pido a", "productos de", "pedido de", "llegó el", "llego el"]
+        for _trigger in _PROV_TRIGGERS:
+            if _trigger in t:
+                nombre_buscar = t.split(_trigger, 1)[1].strip().split()[0:3]
+                nombre_buscar = " ".join(nombre_buscar)
+                if len(nombre_buscar) < 2:
+                    break
+                prov = conn.execute(
+                    "SELECT * FROM proveedores WHERE activo=1 "
+                    "AND (LOWER(nombre) LIKE ? OR LOWER(COALESCE(apodo,'')) LIKE ?) LIMIT 1",
+                    (f"%{nombre_buscar}%", f"%{nombre_buscar}%")
+                ).fetchone()
+                if not prov:
+                    # Buscar por productos que provee
+                    prov = conn.execute(
+                        "SELECT DISTINCT pr.* FROM proveedores pr "
+                        "JOIN ordenes_compra oc ON oc.proveedor_id=pr.id "
+                        "JOIN orden_items oi ON oi.orden_id=oc.id "
+                        "JOIN productos p ON p.id=oi.producto_id "
+                        "WHERE pr.activo=1 AND LOWER(p.nombre) LIKE ? LIMIT 1",
+                        (f"%{nombre_buscar}%",)
+                    ).fetchone()
+                if prov:
+                    prov_id = prov["id"]
+                    prov_nombre = prov["nombre"]
+                    prods_prov = conn.execute(
+                        "SELECT p.nombre, p.stock, p.stock_minimo FROM productos p "
+                        "JOIN orden_items oi ON oi.producto_id=p.id "
+                        "JOIN ordenes_compra oc ON oc.id=oi.orden_id "
+                        "WHERE oc.proveedor_id=? AND p.activo=1 "
+                        "GROUP BY p.id ORDER BY p.stock ASC LIMIT 10",
+                        (prov_id,)
+                    ).fetchall()
+                    last_oc = conn.execute(
+                        "SELECT creado_en FROM ordenes_compra "
+                        "WHERE proveedor_id=? ORDER BY creado_en DESC LIMIT 1",
+                        (prov_id,)
+                    ).fetchone()
+                    low = [dict(r) for r in prods_prov if r["stock"] <= r["stock_minimo"]]
+                    all_p = [dict(r) for r in prods_prov]
+                    last_txt = _tiempo_relativo(last_oc["creado_en"]) if last_oc else "sin pedidos"
+                    if low:
+                        det = ", ".join(f"{p['nombre']}: {p['stock']} u" for p in low[:5])
+                        resp = (f"El proveedor {prov_nombre} tiene stock bajo en: "
+                                f"{det}. Último pedido {last_txt}.")
+                    elif all_p:
+                        det = ", ".join(f"{p['nombre']}: {p['stock']} u" for p in all_p[:5])
+                        resp = (f"{prov_nombre}: {det}. Último pedido {last_txt}.")
+                    else:
+                        resp = f"{prov_nombre}: sin productos registrados. Último pedido {last_txt}."
+                    return {"datos": {"proveedor": prov_nombre, "low_stock": low, "productos": all_p},
+                            "template": resp}
+                else:
+                    return {"datos": None,
+                            "template": f"No encontré proveedor que coincida con '{nombre_buscar}'."}
+                break
+
         # ── Stock de producto específico ──────────────────────────────
         prod_buscar = ctx
         for kw in ["cuánto", "cuánta", "cuántos", "cuántas", "cuanto", "cuanta",

@@ -223,6 +223,25 @@ def _migrate_columns(conn: sqlite3.Connection):
     except Exception as e:
         logger.debug(f"migrate idx_vsv_unique: {e}")
 
+    # Columna apodo en proveedores (para búsqueda coloquial por voz)
+    try:
+        cols_prov = {r[1] for r in conn.execute("PRAGMA table_info(proveedores)").fetchall()}
+        if "apodo" not in cols_prov:
+            conn.execute("ALTER TABLE proveedores ADD COLUMN apodo TEXT")
+    except Exception as e:
+        logger.debug(f"migrate proveedores.apodo: {e}")
+
+    # Índices de código de barras para escaneo O(1)
+    try:
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_productos_barras ON productos(codigo_barras)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_variantes_barras ON producto_variantes(codigo_barras)"
+        )
+    except Exception as e:
+        logger.debug(f"migrate barcode indices: {e}")
+
     # Limpiar admins duplicados (bug: INSERT OR IGNORE sin constraint en DBs antiguas)
     conn.execute(
         """DELETE FROM usuarios
