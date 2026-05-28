@@ -22,6 +22,27 @@ def listar_usuarios_publico():
         return jsonify([dict(r) for r in rows])
 
 
+def _contar_sesiones_activas() -> int:
+    """Cuenta sesiones activas en flask_sessions (archivos con sesión válida)."""
+    try:
+        from flask import current_app
+        session_dir = current_app.config.get("SESSION_FILE_DIR", "flask_sessions")
+        import os, time
+        count = 0
+        now = time.time()
+        for f in os.listdir(session_dir):
+            path = os.path.join(session_dir, f)
+            try:
+                # Considerar sesiones activas si fueron modificadas en las últimas 8h
+                if now - os.path.getmtime(path) < 8 * 3600:
+                    count += 1
+            except OSError:
+                pass
+        return count
+    except Exception:
+        return 0
+
+
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = request.get_json(silent=True) or {}
@@ -35,13 +56,11 @@ def login():
 
     with db_session() as conn:
         if usuario_id:
-            # O(1): buscar directamente el usuario seleccionado
             u = conn.execute(
                 "SELECT * FROM usuarios WHERE id=? AND activo=1", (usuario_id,)
             ).fetchone()
             candidatos = [u] if u else []
         else:
-            # Fallback: recorrer todos (compatibilidad hacia atrás)
             candidatos = conn.execute(
                 "SELECT * FROM usuarios WHERE activo=1"
             ).fetchall()
@@ -49,6 +68,21 @@ def login():
         for u in candidatos:
             try:
                 if bcrypt.checkpw(pin.encode(), u["pin_hash"].encode()):
+                    # Verificar límite de cajeros (excepto admin)
+                    if u["rol"] != "admin":
+                        max_cfg = conn.execute(
+                            "SELECT valor FROM config WHERE clave='max_cajeros'"
+                        ).fetchone()
+                        max_cajeros = int(max_cfg["valor"]) if max_cfg else 2
+                        activas = _contar_sesiones_activas()
+                        if activas >= max_cajeros:
+                            logger.warning(f"Límite cajeros alcanzado ({activas}/{max_cajeros})")
+                            return jsonify({
+                                "error": "Límite de cajeros alcanzado",
+                                "mensaje": f"Ya hay {max_cajeros} cajeros activos. Upgrade para más.",
+                                "upgrade": True,
+                            }), 403
+
                     session["usuario_id"]     = u["id"]
                     session["usuario_nombre"] = u["nombre"]
                     session["usuario_rol"]    = u["rol"]

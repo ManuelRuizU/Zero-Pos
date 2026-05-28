@@ -266,6 +266,13 @@ async function submitPin() {
                     : data.usuario.rol === 'admin'  ? 'admin.html'
                     : 'pos.html';
       window.location.href = destino;
+    } else if (data.upgrade) {
+      setError('');
+      const msg = data.mensaje || 'Límite de cajeros alcanzado.';
+      document.getElementById('err').innerHTML =
+        `<span style="color:#f59e0b">${msg}</span>`;
+      pin = '';
+      updateDisplay();
     } else {
       setError(data.error || 'PIN incorrecto');
       pin = '';
