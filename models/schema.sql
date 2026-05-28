@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS config (
 -- Usuarios / cajeros
 CREATE TABLE IF NOT EXISTS usuarios (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre     TEXT NOT NULL,
+    nombre     TEXT NOT NULL UNIQUE,
     pin_hash   TEXT NOT NULL,
     rol        TEXT NOT NULL DEFAULT 'cajero', -- admin | cajero | cocina
     activo     INTEGER NOT NULL DEFAULT 1,

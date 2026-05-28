@@ -36,15 +36,35 @@ def db_session():
 
 def init_db():
     schema_main = BASE_DIR / "models" / "schema.sql"
-    schema_inv = BASE_DIR / "models" / "schema_inventario.sql"
+    schema_inv  = BASE_DIR / "models" / "schema_inventario.sql"
 
-    with db_session() as conn:
-        if schema_main.exists():
+    # Bloque 1: schema principal — executescript() maneja sus propios commits
+    if schema_main.exists():
+        try:
+            conn = get_connection()
             conn.executescript(schema_main.read_text())
-        if schema_inv.exists():
+            conn.close()
+        except Exception as e:
+            logger.error(f"init_db schema principal: {e}")
+            raise
+
+    # Bloque 2: schema inventario — independiente del bloque 1
+    if schema_inv.exists():
+        try:
+            conn = get_connection()
             conn.executescript(schema_inv.read_text())
-        _migrate_columns(conn)
-        _seed_defaults(conn)
+            conn.close()
+        except Exception as e:
+            logger.warning(f"init_db schema inventario: {e}")
+
+    # Bloque 3: migraciones y seeds — independiente de los bloques anteriores
+    try:
+        with db_session() as conn:
+            _migrate_columns(conn)
+            _seed_defaults(conn)
+    except Exception as e:
+        logger.error(f"init_db migraciones/seeds: {e}")
+        raise
 
     logger.info(f"Base de datos inicializada: {DB_PATH}")
 
@@ -85,18 +105,15 @@ def _seed_defaults(conn: sqlite3.Connection):
         )
         logger.info("Configuración inicial insertada")
 
-    existing_pin = conn.execute(
-        "SELECT COUNT(*) FROM usuarios WHERE rol = 'admin'"
-    ).fetchone()[0]
-    if existing_pin == 0:
-        import bcrypt
-        pin_default = b"1234"
-        hashed = bcrypt.hashpw(pin_default, bcrypt.gensalt()).decode()
-        conn.execute(
-            """INSERT INTO usuarios (nombre, pin_hash, rol, activo)
-               VALUES (?, ?, ?, 1)""",
-            ("Admin", hashed, "admin")
-        )
+    import bcrypt
+    pin_default = b"1234"
+    hashed = bcrypt.hashpw(pin_default, bcrypt.gensalt()).decode()
+    conn.execute(
+        """INSERT OR IGNORE INTO usuarios (nombre, pin_hash, rol, activo)
+           VALUES (?, ?, ?, 1)""",
+        ("Admin", hashed, "admin")
+    )
+    if conn.execute("SELECT changes()").fetchone()[0]:
         logger.info("Usuario admin creado con PIN por defecto: 1234")
 
     _seed_montos_chilenos(conn)
