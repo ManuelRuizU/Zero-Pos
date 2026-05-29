@@ -265,3 +265,18 @@ CREATE TABLE IF NOT EXISTS voz_sinonimos_variante (
     creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(palabra, producto_id, variante_id)
 );
+
+CREATE TABLE IF NOT EXISTS geografia_local (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    comuna       TEXT NOT NULL,
+    region       TEXT,
+    calle_nombre TEXT NOT NULL,
+    calle_limpia TEXT NOT NULL,
+    tipo_via     TEXT,
+    lat_min      REAL,
+    lat_max      REAL,
+    lon_min      REAL,
+    lon_max      REAL
+);
+CREATE INDEX IF NOT EXISTS idx_geo_calle  ON geografia_local(calle_limpia);
+CREATE INDEX IF NOT EXISTS idx_geo_comuna ON geografia_local(comuna);
