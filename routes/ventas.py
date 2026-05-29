@@ -45,7 +45,8 @@ def crear_venta():
     cliente_rut = data.get("cliente_rut")
     notas = data.get("notas")
     pedido_id = data.get("pedido_id")
-    turno_id = session.get("turno_id")
+    turno_id  = session.get("turno_id")
+    empleado  = session.get("usuario_nombre", "")
 
     venta_id = None
     total = 0
@@ -168,30 +169,47 @@ def crear_venta():
 
     # La transacción ya está committed. Imprimir sin afectar la respuesta.
     _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                           config_negocio, config_imp, pedido_data)
+                           config_negocio, config_imp, pedido_data, empleado)
 
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
 
 def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, config_imp,
-                           pedido=None):
+                           pedido=None, empleado=""):
     """Imprime en hilo separado para no bloquear la respuesta HTTP."""
     import threading
 
     def _print():
         try:
-            from utils.impresora import imprimir_recibo
+            from utils.impresora import imprimir_recibo, imprimir_comanda
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             venta_data = {
                 "id": venta_id,
                 "total": total,
                 "metodo_pago": metodo_pago,
-                "creado_en": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "creado_en": now_str,
+                "cajero": empleado,
             }
             resultado = imprimir_recibo(venta_data, items, config_negocio, config_imp, pedido)
             if resultado.get("ok"):
                 logger.info(f"Ticket venta #{venta_id} impreso OK")
             else:
                 logger.warning(f"Impresión venta #{venta_id}: {resultado.get('error', 'error desconocido')}")
+
+            # Comanda de cocina si hay pedido delivery/retiro y hay impresora cocina configurada
+            if pedido and pedido.get("tipo") in ("delivery", "retiro", "local"):
+                ip_cocina = config_negocio.get("impresora_cocina_ip", "")
+                if ip_cocina:
+                    config_cocina = {
+                        "tipo":   config_negocio.get("impresora_cocina_tipo", "red"),
+                        "ip":     ip_cocina,
+                        "puerto": config_negocio.get("impresora_cocina_puerto", "9100"),
+                    }
+                    res_c = imprimir_comanda(venta_data, items, config_negocio, config_cocina, pedido)
+                    if res_c.get("ok"):
+                        logger.info(f"Comanda venta #{venta_id} impresa OK")
+                    else:
+                        logger.warning(f"Comanda venta #{venta_id}: {res_c.get('error', '')}")
         except Exception as e:
             logger.warning(f"Error al imprimir ticket venta #{venta_id}: {e}")
 
@@ -444,7 +462,8 @@ def venta_rapida():
         logger.info(f"Venta rápida #{venta_id} — total={total}")
 
     _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                           config_negocio, config_imp)
+                           config_negocio, config_imp,
+                           empleado=session.get("usuario_nombre", ""))
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
 

@@ -14,13 +14,17 @@ def imprimir_ticket(venta_id):
     pedido = None
     with db_session() as conn:
         venta = conn.execute(
-            "SELECT * FROM ventas WHERE id=?", (venta_id,)
+            """SELECT v.*, u.nombre as cajero
+               FROM ventas v LEFT JOIN usuarios u ON u.id = v.usuario_id
+               WHERE v.id=?""",
+            (venta_id,)
         ).fetchone()
         if not venta:
             return jsonify({"error": "Venta no encontrada"}), 404
 
         items = conn.execute(
-            """SELECT vi.cantidad, vi.precio_unit, vi.subtotal, p.nombre as producto_nombre
+            """SELECT vi.cantidad, vi.precio_unit, vi.subtotal,
+                      p.nombre as producto_nombre, vi.notas
                FROM venta_items vi JOIN productos p ON vi.producto_id=p.id
                WHERE vi.venta_id=?""",
             (venta_id,)

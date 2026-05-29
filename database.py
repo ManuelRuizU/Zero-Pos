@@ -209,6 +209,8 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE venta_items ADD COLUMN variante_id INTEGER REFERENCES producto_variantes(id)")
     if "nombre_variante" not in cols_vitems:
         conn.execute("ALTER TABLE venta_items ADD COLUMN nombre_variante TEXT")
+    if "notas" not in cols_vitems:
+        conn.execute("ALTER TABLE venta_items ADD COLUMN notas TEXT")
     if "tipo" not in cols_aprendizaje:
         conn.execute("ALTER TABLE voz_aprendizaje ADD COLUMN tipo TEXT NOT NULL DEFAULT 'accion'")
     if "pedido_id" not in cols_ventas:
@@ -277,6 +279,14 @@ def _seed_defaults(conn: sqlite3.Connection):
             ("iva_porcentaje", "19")
         )
         logger.info("Configuración inicial insertada")
+
+    # Nuevos campos de ticket — INSERT OR IGNORE para DBs existentes
+    for _clave in ("whatsapp_negocio", "direccion_negocio", "telefono_negocio",
+                   "impresora_cocina_ip", "impresora_cocina_tipo", "impresora_cocina_puerto"):
+        conn.execute(
+            "INSERT OR IGNORE INTO config (clave, valor) VALUES (?, ?)",
+            (_clave, "")
+        )
 
     import bcrypt
     pin_default = b"1234"
