@@ -776,7 +776,20 @@ body {
       <input class="form-field" id="delReceptorNombre" placeholder="Nombre de quien recibe *" style="margin-bottom:10px;">
       <input class="form-field" id="delReceptorTel" placeholder="Teléfono de quien recibe" type="tel" inputmode="numeric" style="margin-bottom:10px;">
     </div>
-    <input class="form-field" id="delDireccion" placeholder="Dirección *">
+    <div style="position:relative;margin-bottom:10px;">
+      <input class="form-field" id="delDireccion" placeholder="Dirección *"
+             oninput="onDelDirInput(this.value)" autocomplete="off" style="margin-bottom:0;">
+      <div id="delDirAutocomplete"
+           style="display:none;position:absolute;top:100%;left:0;right:0;
+                  background:#1e1e28;border:1px solid rgba(255,255,255,.12);
+                  border-radius:8px;max-height:180px;overflow-y:auto;
+                  z-index:200;box-shadow:0 4px 14px rgba(0,0,0,.5);"></div>
+    </div>
+    <div id="delAlertaDireccion"
+         style="display:none;background:rgba(239,68,68,.1);
+                border:1px solid rgba(239,68,68,.4);border-radius:8px;
+                padding:7px 10px;font-size:12px;color:#ef4444;
+                margin-bottom:10px;line-height:1.7;"></div>
     <div class="form-row" style="margin-bottom:10px;">
       <input class="form-field" id="delDepto" placeholder="Depto / Casa">
       <input class="form-field" id="delComuna" placeholder="Comuna">
@@ -2052,6 +2065,122 @@ function rechazarDelReceptorSugerido() {
   toggleDelReceptor();
 }
 
+// ── Autocomplete + validación dirección (modal delivery) ──────────────────────
+let _delDirTimer = null;
+
+function onDelDirInput(val) {
+  clearTimeout(_delDirTimer);
+  document.getElementById('delAlertaDireccion').style.display = 'none';
+  document.getElementById('delDireccion').style.borderColor = '';
+  if (!val || val.length < 3) {
+    document.getElementById('delDirAutocomplete').style.display = 'none';
+    return;
+  }
+  _delDirTimer = setTimeout(() => _buscarDelDir(val), 320);
+}
+
+async function _buscarDelDir(q) {
+  const comuna = document.getElementById('delComuna').value.trim();
+  const params = new URLSearchParams({q});
+  if (comuna) params.set('comuna', comuna);
+  try {
+    const r = await fetch(`/api/direcciones/buscar?${params}`, {credentials:'include'}).then(r=>r.json());
+    const ac = document.getElementById('delDirAutocomplete');
+    if (!r || !r.length) { ac.style.display = 'none'; return; }
+    ac.innerHTML = r.map(item => {
+      const c   = item.calle.replace(/'/g, "\\'");
+      const com = (item.comuna || '').replace(/'/g, "\\'");
+      return `<div onclick="seleccionarDelDir('${c}','${com}')"
+                   style="padding:9px 12px;cursor:pointer;font-size:13px;
+                          border-bottom:1px solid rgba(255,255,255,.07);
+                          display:flex;justify-content:space-between;align-items:center;">
+        <span>${item.calle}</span>
+        <span style="font-size:11px;color:#94a3b8;">${item.comuna || ''}${item.fuente==='nominatim' ? ' 🌐' : ''}</span>
+      </div>`;
+    }).join('');
+    ac.style.display = '';
+  } catch(e) {
+    document.getElementById('delDirAutocomplete').style.display = 'none';
+  }
+}
+
+function seleccionarDelDir(calle, comuna) {
+  document.getElementById('delDireccion').value = calle;
+  document.getElementById('delDirAutocomplete').style.display = 'none';
+  document.getElementById('delAlertaDireccion').style.display = 'none';
+  document.getElementById('delDireccion').style.borderColor = '#22c55e';
+  if (comuna && !document.getElementById('delComuna').value.trim()) {
+    document.getElementById('delComuna').value = comuna;
+  }
+}
+
+function usarSugerenciaDelDir(calle) {
+  document.getElementById('delDireccion').value = calle;
+  document.getElementById('delAlertaDireccion').style.display = 'none';
+  document.getElementById('delDireccion').style.borderColor = '#22c55e';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const inputDir = document.getElementById('delDireccion');
+  if (!inputDir) return;
+
+  inputDir.addEventListener('blur', async () => {
+    setTimeout(() => {
+      document.getElementById('delDirAutocomplete').style.display = 'none';
+    }, 200);
+    const calle  = inputDir.value.trim();
+    const comuna = document.getElementById('delComuna').value.trim();
+    if (!calle || calle.length < 4) return;
+    try {
+      const res = await fetch('/api/direcciones/validar', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({calle, comuna}),
+      }).then(r => r.json());
+      const alertaEl = document.getElementById('delAlertaDireccion');
+      if (res.valida) {
+        alertaEl.style.display = 'none';
+        inputDir.style.borderColor = '#22c55e';
+        if (res.nombre_oficial && res.nombre_oficial !== calle) {
+          inputDir.value = res.nombre_oficial;
+        }
+        if (res.alerta) {
+          alertaEl.innerHTML = `ℹ️ ${res.alerta}`;
+          alertaEl.style.background = 'rgba(99,102,241,.1)';
+          alertaEl.style.borderColor = 'rgba(99,102,241,.3)';
+          alertaEl.style.color = '#818cf8';
+          alertaEl.style.display = '';
+        }
+      } else {
+        inputDir.style.borderColor = '#ef4444';
+        if (res.sugerencias?.length) {
+          const btns = res.sugerencias.map(s => {
+            const esc = s.replace(/'/g, "\\'");
+            return `<button onclick="usarSugerenciaDelDir('${esc}')"
+                      style="margin:2px 4px 2px 0;background:rgba(239,68,68,.15);
+                             border:1px solid rgba(239,68,68,.4);border-radius:5px;
+                             padding:2px 8px;font-size:11px;cursor:pointer;
+                             color:#ef4444;font-family:inherit;">${s}</button>`;
+          }).join('');
+          alertaEl.innerHTML = `⚠️ ${res.alerta}<br>${btns}`;
+        } else {
+          alertaEl.innerHTML = `⚠️ ${res.alerta || ''}`;
+        }
+        alertaEl.style.background = 'rgba(239,68,68,.1)';
+        alertaEl.style.borderColor = 'rgba(239,68,68,.4)';
+        alertaEl.style.color = '#ef4444';
+        if (res.alerta) alertaEl.style.display = '';
+      }
+    } catch(e) {}
+  });
+
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#delDireccion') && !e.target.closest('#delDirAutocomplete')) {
+      document.getElementById('delDirAutocomplete').style.display = 'none';
+    }
+  });
+});
+
 async function buscarClientePorTel() {
   const tel = document.getElementById('delBuscarTel').value.trim();
   if (!tel) return;
@@ -2083,6 +2212,9 @@ function _limpiarFormDelivery() {
   if (chk) chk.checked = false;
   document.getElementById('delCamposReceptor').style.display = 'none';
   document.getElementById('delReceptorSugerencia').style.display = 'none';
+  document.getElementById('delDirAutocomplete').style.display = 'none';
+  document.getElementById('delAlertaDireccion').style.display = 'none';
+  document.getElementById('delDireccion').style.borderColor = '';
   _delReceptorSugerido = null;
 }
 
