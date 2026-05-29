@@ -213,6 +213,8 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE voz_aprendizaje ADD COLUMN tipo TEXT NOT NULL DEFAULT 'accion'")
     if "pedido_id" not in cols_ventas:
         conn.execute("ALTER TABLE ventas ADD COLUMN pedido_id INTEGER REFERENCES pedidos(id)")
+    if "pendiente_verificar" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN pendiente_verificar INTEGER NOT NULL DEFAULT 0")
 
     # Unique index en voz_sinonimos_variante — silencioso si ya existe o hay duplicados
     try:

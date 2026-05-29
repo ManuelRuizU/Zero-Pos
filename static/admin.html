@@ -243,6 +243,11 @@ input:checked + .slider:before{transform:translateX(20px);}
       <div class="kpi-card"><div class="kpi-label">Total recaudado</div><div class="kpi-value" id="kpiTotal">—</div></div>
       <div class="kpi-card"><div class="kpi-label">Ticket promedio</div><div class="kpi-value" id="kpiTicket">—</div></div>
       <div class="kpi-card"><div class="kpi-label">Alertas stock</div><div class="kpi-value" id="kpiAlertas" style="color:var(--warning)">—</div></div>
+      <div class="kpi-card" id="kpiPendientesCard" style="display:none;cursor:pointer;" onclick="irAProductosPendientes()">
+        <div class="kpi-label">⚠️ Sin verificar</div>
+        <div class="kpi-value" id="kpiPendientes" style="color:var(--warning)">0</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Productos del mesón</div>
+      </div>
     </div>
 
     <div class="chart-row">
@@ -645,9 +650,10 @@ function showTab(name, btn) {
 }
 
 async function cargarDashboard() {
-  const [dia, alertas] = await Promise.all([
+  const [dia, alertas, pendientes] = await Promise.all([
     fetch('/api/reportes/ventas/dia',{credentials:'include'}).then(r=>r.json()).catch(()=>({por_metodo:[],por_hora:[],top_productos:[]})),
     fetch('/api/productos/alertas',{credentials:'include'}).then(r=>r.json()).catch(()=>[]),
+    fetch('/api/productos/pendientes-verificar',{credentials:'include'}).then(r=>r.json()).catch(()=>[]),
   ]);
 
   const totales = dia.por_metodo.reduce((a,r)=>({n:a.n+r.num_ventas,t:a.t+r.total}),{n:0,t:0});
@@ -656,8 +662,19 @@ async function cargarDashboard() {
   document.getElementById('kpiTicket').textContent = totales.n ? fmt(totales.t/totales.n) : '$0';
   document.getElementById('kpiAlertas').textContent = alertas.length;
 
+  if (pendientes.length) {
+    document.getElementById('kpiPendientes').textContent = pendientes.length;
+    document.getElementById('kpiPendientesCard').style.display = '';
+  }
+
   renderBars('chartHoras', dia.por_hora, r=>r.hora+':00', r=>r.total);
   renderBars('chartTop', dia.top_productos.slice(0,6), r=>r.nombre, r=>r.unidades);
+}
+
+function irAProductosPendientes() {
+  const btn = document.querySelector('.nav-btn[onclick*="productos"]');
+  if (btn) btn.click();
+  alert('Hay ' + document.getElementById('kpiPendientes').textContent + ' productos creados desde el mesón pendientes de verificar.');
 }
 
 function renderBars(elId, data, labelFn, valFn) {

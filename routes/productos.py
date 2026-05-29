@@ -304,13 +304,17 @@ def crear():
     if modo_stock not in ("normal", "produccion", "sin_stock"):
         modo_stock = "normal"
 
+    activo = int(bool(data.get("activo", 1)))
+    pendiente_verificar = int(bool(data.get("pendiente_verificar", 0)))
+
     with db_session() as conn:
         cur = conn.execute(
             """INSERT INTO productos
                (nombre, descripcion, precio, precio_costo, stock, stock_minimo,
-                codigo_barras, categoria_id, imagen_url,
-                es_granel, unidad_medida, precio_por, modo_stock, hora_reset_stock)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                codigo_barras, categoria_id, imagen_url, activo,
+                es_granel, unidad_medida, precio_por, modo_stock, hora_reset_stock,
+                pendiente_verificar)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 nombre,
                 data.get("descripcion"),
@@ -321,16 +325,19 @@ def crear():
                 data.get("codigo_barras"),
                 data.get("categoria_id"),
                 data.get("imagen_url"),
+                activo,
                 int(bool(data.get("es_granel", 0))),
                 data.get("unidad_medida", "unidad"),
                 data.get("precio_por", "unidad"),
                 modo_stock,
                 data.get("hora_reset_stock", "06:00"),
+                pendiente_verificar,
             )
         )
-        _registrar_movimiento(conn, cur.lastrowid, "entrada",
-                              int(data.get("stock", 0)), "stock_inicial",
-                              session.get("usuario_id"))
+        if int(data.get("stock", 0)) > 0:
+            _registrar_movimiento(conn, cur.lastrowid, "entrada",
+                                  int(data.get("stock", 0)), "stock_inicial",
+                                  session.get("usuario_id"))
         return jsonify({"ok": True, "id": cur.lastrowid}), 201
 
 
@@ -406,6 +413,38 @@ def eliminar(pid):
 
     with db_session() as conn:
         conn.execute("UPDATE productos SET activo=0 WHERE id=?", (pid,))
+        return jsonify({"ok": True})
+
+
+# ── Pendientes de verificar (creados desde mesón) ─────────────────────────────
+
+@productos_bp.route("/pendientes-verificar", methods=["GET"])
+def pendientes_verificar():
+    if session.get("usuario_rol") != "admin":
+        return jsonify({"error": "Sin permisos"}), 403
+    with db_session() as conn:
+        rows = conn.execute(
+            """SELECT id, nombre, precio, precio_costo, stock, codigo_barras, creado_en
+               FROM productos WHERE pendiente_verificar=1 ORDER BY creado_en DESC"""
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
+
+
+@productos_bp.route("/pendientes-verificar/<int:pid>/aprobar", methods=["POST"])
+def aprobar_pendiente(pid):
+    if session.get("usuario_rol") != "admin":
+        return jsonify({"error": "Sin permisos"}), 403
+    data = request.get_json(silent=True) or {}
+    with db_session() as conn:
+        campos = {"activo": 1, "pendiente_verificar": 0}
+        for k in ("nombre", "precio", "precio_costo", "categoria_id"):
+            if k in data:
+                campos[k] = data[k]
+        sets = ", ".join(f"{k}=?" for k in campos)
+        conn.execute(
+            f"UPDATE productos SET {sets}, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+            (*campos.values(), pid)
+        )
         return jsonify({"ok": True})
 
 
