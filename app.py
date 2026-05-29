@@ -93,7 +93,22 @@ def get_or_create_secret_key() -> bytes:
     return key
 
 
+HOTSPOT_IP = "192.168.4.1"
+
+
+def is_hotspot_mode() -> bool:
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind((HOTSPOT_IP, 0))
+        s.close()
+        return True
+    except Exception:
+        return False
+
+
 def get_ip_local() -> str:
+    if is_hotspot_mode():
+        return HOTSPOT_IP
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.settimeout(0.5)
@@ -304,12 +319,18 @@ if __name__ == "__main__":
     port = find_free_port(5001 if ssl_ctx else 5000)
     local_ip = get_ip_local()
     scheme = "https" if ssl_ctx else "http"
+    hotspot = local_ip == HOTSPOT_IP
 
     logger.info("=" * 60)
     logger.info("  ZERO POS  —  Sin internet. Sin comisiones. Tuyo.")
     logger.info("=" * 60)
     logger.info(f"  Local :  {scheme}://127.0.0.1:{port}")
     logger.info(f"  Red   :  {scheme}://{local_ip}:{port}")
+    if hotspot:
+        logger.info("  Modo hotspot activo")
+        logger.info("  Red WiFi: ZEROPOS  |  zeropos.local")
+        logger.info(f"  IP fija: {HOTSPOT_IP}")
+        logger.info(f"  URL: {scheme}://{HOTSPOT_IP}:{port}")
     if ssl_ctx:
         logger.info("  HTTPS activo — acepta el certificado en Chrome una vez")
     else:
