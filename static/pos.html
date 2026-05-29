@@ -738,11 +738,13 @@ body {
 <div class="modal-overlay" id="modalRetiro">
   <div class="modal">
     <div class="modal-title">🏠 Retiro en local</div>
-    <input class="form-field" id="retiroNombre" placeholder="Nombre *">
-    <input class="form-field" id="retiroTel" placeholder="Teléfono" type="tel" inputmode="numeric">
-    <input class="form-field" id="retiroHora" placeholder="Hora de retiro (opcional)" type="time">
+    <input class="form-field" id="retiroNombre" placeholder="Nombre *" style="margin-bottom:10px;">
+    <input class="form-field" id="retiroTel" placeholder="Teléfono *" type="tel" inputmode="numeric" style="margin-bottom:10px;">
+    <input class="form-field" id="retiroEmail" type="email" placeholder="Email (opcional — para boleta)" style="margin-bottom:10px;">
+    <input class="form-field" id="retiroHora" placeholder="Hora de retiro (opcional)" type="time" style="margin-bottom:10px;">
+    <input class="form-field" id="retiroNotas" placeholder="Notas del pedido" style="margin-bottom:10px;">
     <div class="modal-acciones-col">
-      <button class="btn-confirmar" onclick="continuar_retiro()">Continuar al pago →</button>
+      <button class="btn-confirmar" onclick="continuar_retiro()">Continuar →</button>
       <button class="btn-atras" onclick="volverEntrega()">← Atrás</button>
     </div>
   </div>
@@ -756,11 +758,12 @@ body {
       <input class="form-field" id="delBuscarTel" placeholder="Buscar por teléfono" type="tel" inputmode="numeric">
       <button class="btn-buscar" onclick="buscarClientePorTel()">Buscar</button>
     </div>
-    <input class="form-field" id="delNombre" placeholder="Nombre *">
+    <input class="form-field" id="delNombre" placeholder="Nombre *" style="margin-bottom:10px;">
     <div class="form-row" style="margin-bottom:10px;">
       <input class="form-field" id="delTel" placeholder="Teléfono *" type="tel" inputmode="numeric">
       <input class="form-field" id="delTel2" placeholder="Teléfono 2" type="tel" inputmode="numeric">
     </div>
+    <input class="form-field" id="delEmail" type="email" placeholder="Email (opcional — para boleta)" style="margin-bottom:10px;">
     <div id="delReceptorSugerencia" style="display:none;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;">
       <div id="delReceptorSugerenciaTexto" style="color:var(--accent2);margin-bottom:6px;"></div>
       <div style="display:flex;gap:8px;">
@@ -777,8 +780,13 @@ body {
       <input class="form-field" id="delReceptorTel" placeholder="Teléfono de quien recibe" type="tel" inputmode="numeric" style="margin-bottom:10px;">
     </div>
     <div style="position:relative;margin-bottom:10px;">
-      <input class="form-field" id="delDireccion" placeholder="Dirección *"
-             oninput="onDelDirInput(this.value)" autocomplete="off" style="margin-bottom:0;">
+      <div style="display:flex;gap:8px;">
+        <input class="form-field" id="delCalle" placeholder="Calle o avenida *"
+               oninput="onDelDirInput(this.value)" autocomplete="off"
+               style="flex:3;margin-bottom:0;">
+        <input class="form-field" id="delNumero" placeholder="Número"
+               type="text" inputmode="numeric" style="flex:1;margin-bottom:0;">
+      </div>
       <div id="delDirAutocomplete"
            style="display:none;position:absolute;top:100%;left:0;right:0;
                   background:#1e1e28;border:1px solid rgba(255,255,255,.12);
@@ -793,10 +801,32 @@ body {
     <input class="form-field" id="delDepto" placeholder="Depto / Casa" style="margin-bottom:10px;">
     <input type="hidden" id="delComuna">
     <input class="form-field" id="delReferencia" placeholder="Referencias (portón verde, frente al parque...)">
-    <input class="form-field" id="delNotas" placeholder="Notas (sin wasabi, extra salsa, sin cebolla...)">
+    <input class="form-field" id="delNotas" placeholder="Notas (sin wasabi, extra salsa, sin cebolla...)" style="margin-bottom:10px;">
+    <div id="delDistanciaRow" style="display:none;margin-bottom:10px;">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:6px;">Distancia aproximada:</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="radio" name="delKm" value="km1" checked onchange="actualizarPrecioReparto()"> Hasta 1km</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="radio" name="delKm" value="km3" onchange="actualizarPrecioReparto()"> 1–3km</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="radio" name="delKm" value="km5" onchange="actualizarPrecioReparto()"> 3–5km</label>
+        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:13px;"><input type="radio" name="delKm" value="mas5" onchange="actualizarPrecioReparto()"> +5km</label>
+      </div>
+      <div id="delCostoPreview" style="margin-top:6px;font-size:13px;color:var(--accent);font-weight:600;"></div>
+    </div>
     <div class="modal-acciones-col">
-      <button class="btn-confirmar" onclick="continuar_delivery()">Continuar al pago →</button>
+      <button class="btn-confirmar" onclick="continuar_delivery()">Continuar →</button>
       <button class="btn-atras" onclick="volverEntrega()">← Atrás</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal verificación final -->
+<div class="modal-overlay" id="modalVerificacion">
+  <div class="modal" style="max-height:90vh;overflow-y:auto;">
+    <div class="modal-title">✅ Verificar pedido</div>
+    <div id="verContenido" style="margin-bottom:16px;"></div>
+    <div class="modal-acciones-col">
+      <button class="btn-confirmar" onclick="confirmarVerificacion()">Confirmar y pagar →</button>
+      <button class="btn-atras" onclick="volverDeVerificacion()">← Corregir</button>
     </div>
   </div>
 </div>
@@ -1951,10 +1981,11 @@ function toggleCarritoMobile() {
 
 // ── Cobro ─────────────────────────────────────────────────────
 // ── Entrega ──────────────────────────────────────────────────
-let entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:'',receptor_nombre:null,receptor_tel:null};
+let entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',email:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:'',receptor_nombre:null,receptor_tel:null};
 
 function abrirCobro() {
   if (!carrito.length) return;
+  carrito = carrito.filter(i => !i.es_reparto);
   recalcular();
   const deliveryActivo = cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true;
   if (deliveryActivo) {
@@ -1978,12 +2009,13 @@ function selEntrega(tipo) {
   if (tipo === 'local') {
     _abrirModalCobro();
   } else if (tipo === 'retiro') {
-    document.getElementById('retiroNombre').value = '';
-    document.getElementById('retiroTel').value = '';
-    document.getElementById('retiroHora').value = '';
+    ['retiroNombre','retiroTel','retiroEmail','retiroHora','retiroNotas'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
     document.getElementById('modalRetiro').classList.add('active');
   } else {
     _limpiarFormDelivery();
+    _iniciarDistanciaRow();
     document.getElementById('modalDelivery').classList.add('active');
   }
 }
@@ -1997,36 +2029,42 @@ function volverEntrega() {
 function continuar_retiro() {
   const nombre = document.getElementById('retiroNombre').value.trim();
   if (!nombre) { showToast('Ingresa un nombre', 'error'); return; }
-  entregaActual.nombre = nombre;
-  entregaActual.tel = document.getElementById('retiroTel').value.trim();
+  entregaActual.nombre     = nombre;
+  entregaActual.tel        = document.getElementById('retiroTel').value.trim();
+  entregaActual.email      = document.getElementById('retiroEmail').value.trim();
   entregaActual.hora_retiro = document.getElementById('retiroHora').value;
+  entregaActual.notas      = document.getElementById('retiroNotas').value.trim();
   document.getElementById('modalRetiro').classList.remove('active');
-  _abrirModalCobro();
+  mostrarVerificacionFinal();
 }
 
 function continuar_delivery() {
   const nombre = document.getElementById('delNombre').value.trim();
-  const tel = document.getElementById('delTel').value.trim();
-  const dir = document.getElementById('delDireccion').value.trim();
-  if (!nombre || !tel || !dir) { showToast('Nombre, teléfono y dirección son obligatorios', 'error'); return; }
+  const tel    = document.getElementById('delTel').value.trim();
+  const calle  = document.getElementById('delCalle').value.trim();
+  const numero = document.getElementById('delNumero').value.trim();
+  if (!nombre || !tel || !calle) { showToast('Nombre, teléfono y calle son obligatorios', 'error'); return; }
   const chkRec = document.getElementById('delChkReceptor');
   if (chkRec?.checked && !document.getElementById('delReceptorNombre').value.trim()) {
     showToast('Ingresa el nombre de quien recibe', 'error'); return;
   }
-  entregaActual.nombre   = nombre;
-  entregaActual.tel      = tel;
-  entregaActual.tel2     = document.getElementById('delTel2').value.trim();
-  entregaActual.direccion = dir;
-  entregaActual.depto    = document.getElementById('delDepto').value.trim();
-  entregaActual.comuna   = document.getElementById('delComuna').value.trim() || cfgApp.comuna_negocio || '';
+  entregaActual.nombre    = nombre;
+  entregaActual.tel       = tel;
+  entregaActual.tel2      = document.getElementById('delTel2').value.trim();
+  entregaActual.email     = document.getElementById('delEmail').value.trim();
+  entregaActual.direccion = numero ? `${calle} ${numero}` : calle;
+  entregaActual.depto     = document.getElementById('delDepto').value.trim();
+  entregaActual.comuna    = document.getElementById('delComuna').value.trim() || cfgApp.comuna_negocio || '';
   entregaActual.referencia = document.getElementById('delReferencia').value.trim();
-  entregaActual.notas    = document.getElementById('delNotas').value.trim();
+  entregaActual.notas     = document.getElementById('delNotas').value.trim();
   entregaActual.receptor_nombre = chkRec?.checked
     ? document.getElementById('delReceptorNombre').value.trim() || null : null;
   entregaActual.receptor_tel = chkRec?.checked
     ? document.getElementById('delReceptorTel').value.trim() || null : null;
+  const km = document.querySelector('input[name="delKm"]:checked')?.value || 'km1';
+  _actualizarItemReparto(_calcularCostoReparto(km), km);
   document.getElementById('modalDelivery').classList.remove('active');
-  _abrirModalCobro();
+  mostrarVerificacionFinal();
 }
 
 let _delReceptorSugerido = null;
@@ -2069,7 +2107,7 @@ let _delDirTimer = null;
 function onDelDirInput(val) {
   clearTimeout(_delDirTimer);
   document.getElementById('delAlertaDireccion').style.display = 'none';
-  document.getElementById('delDireccion').style.borderColor = '';
+  document.getElementById('delCalle').style.borderColor = '';
   if (!val || val.length < 3) {
     document.getElementById('delDirAutocomplete').style.display = 'none';
     return;
@@ -2085,14 +2123,13 @@ async function _buscarDelDir(q) {
     const r = await fetch(`/api/direcciones/buscar?${params}`, {credentials:'include'}).then(r=>r.json());
     const ac = document.getElementById('delDirAutocomplete');
     if (!r || !r.length) { ac.style.display = 'none'; return; }
-    ac.innerHTML = r.map(item => {
-      const c   = item.calle.replace(/'/g, "\\'");
-      const com = (item.comuna || '').replace(/'/g, "\\'");
-      return `<div onclick="seleccionarDelDir('${c}','${com}')"
+    window._sugerenciasActuales = r;
+    ac.innerHTML = r.map((item, i) => {
+      return `<div onmousedown="event.preventDefault()" onclick="seleccionarDelDir(${i})"
                    style="padding:9px 12px;cursor:pointer;font-size:13px;
                           border-bottom:1px solid rgba(255,255,255,.07);
                           display:flex;justify-content:space-between;align-items:center;">
-        <span>${item.calle}</span>
+        <span>📍 ${item.calle}</span>
         <span style="font-size:11px;color:#94a3b8;">${item.comuna || ''}${item.fuente==='nominatim' ? ' 🌐' : ''}</span>
       </div>`;
     }).join('');
@@ -2102,24 +2139,27 @@ async function _buscarDelDir(q) {
   }
 }
 
-function seleccionarDelDir(calle, comuna) {
-  document.getElementById('delDireccion').value = calle;
+function seleccionarDelDir(index) {
+  const s = (window._sugerenciasActuales || [])[index];
+  if (!s) return;
+  document.getElementById('delCalle').value = s.calle;
   document.getElementById('delDirAutocomplete').style.display = 'none';
   document.getElementById('delAlertaDireccion').style.display = 'none';
-  document.getElementById('delDireccion').style.borderColor = '#22c55e';
-  if (comuna && !document.getElementById('delComuna').value.trim()) {
-    document.getElementById('delComuna').value = comuna;
+  document.getElementById('delCalle').style.borderColor = '#22c55e';
+  if (s.comuna && !document.getElementById('delComuna').value.trim()) {
+    document.getElementById('delComuna').value = s.comuna;
   }
+  document.getElementById('delNumero').focus();
 }
 
 function usarSugerenciaDelDir(calle) {
-  document.getElementById('delDireccion').value = calle;
+  document.getElementById('delCalle').value = calle;
   document.getElementById('delAlertaDireccion').style.display = 'none';
-  document.getElementById('delDireccion').style.borderColor = '#22c55e';
+  document.getElementById('delCalle').style.borderColor = '#22c55e';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const inputDir = document.getElementById('delDireccion');
+  const inputDir = document.getElementById('delCalle');
   if (!inputDir) return;
 
   inputDir.addEventListener('blur', async () => {
@@ -2173,7 +2213,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('click', e => {
-    if (!e.target.closest('#delDireccion') && !e.target.closest('#delDirAutocomplete')) {
+    if (!e.target.closest('#delCalle') && !e.target.closest('#delDirAutocomplete')) {
       document.getElementById('delDirAutocomplete').style.display = 'none';
     }
   });
@@ -2185,12 +2225,14 @@ async function buscarClientePorTel() {
   try {
     const r = await fetch(`/api/clientes/buscar?tel=${encodeURIComponent(tel)}`, {credentials:'include'}).then(r => r.json());
     if (r && r.nombre) {
-      document.getElementById('delNombre').value    = r.nombre || '';
-      document.getElementById('delTel').value       = r.telefono || tel;
-      document.getElementById('delTel2').value      = r.telefono2 || '';
-      document.getElementById('delDireccion').value = r.direccion || '';
-      document.getElementById('delDepto').value     = r.depto || '';
-      document.getElementById('delComuna').value    = r.comuna || '';
+      document.getElementById('delNombre').value  = r.nombre || '';
+      document.getElementById('delTel').value     = r.telefono || tel;
+      document.getElementById('delTel2').value    = r.telefono2 || '';
+      document.getElementById('delEmail').value   = r.email || '';
+      document.getElementById('delCalle').value   = r.direccion || '';
+      document.getElementById('delNumero').value  = '';
+      document.getElementById('delDepto').value   = r.depto || '';
+      document.getElementById('delComuna').value  = r.comuna || '';
       showToast(`Cliente encontrado: ${r.nombre}`, 'success');
       if (r.receptores_frecuentes && r.receptores_frecuentes.length > 0) {
         mostrarSugerenciaReceptorDel(r.receptores_frecuentes[0]);
@@ -2203,8 +2245,8 @@ async function buscarClientePorTel() {
 }
 
 function _limpiarFormDelivery() {
-  ['delBuscarTel','delNombre','delTel','delTel2','delDireccion','delDepto','delComuna','delReferencia','delNotas',
-   'delReceptorNombre','delReceptorTel']
+  ['delBuscarTel','delNombre','delTel','delTel2','delEmail','delCalle','delNumero',
+   'delDepto','delComuna','delReferencia','delNotas','delReceptorNombre','delReceptorTel']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   const chk = document.getElementById('delChkReceptor');
   if (chk) chk.checked = false;
@@ -2212,8 +2254,116 @@ function _limpiarFormDelivery() {
   document.getElementById('delReceptorSugerencia').style.display = 'none';
   document.getElementById('delDirAutocomplete').style.display = 'none';
   document.getElementById('delAlertaDireccion').style.display = 'none';
-  document.getElementById('delDireccion').style.borderColor = '';
+  document.getElementById('delCalle').style.borderColor = '';
+  const firstKm = document.querySelector('input[name="delKm"][value="km1"]');
+  if (firstKm) firstKm.checked = true;
+  actualizarPrecioReparto();
   _delReceptorSugerido = null;
+}
+
+// ── Verificación final ────────────────────────────────────────────────────────
+function mostrarVerificacionFinal() {
+  const ea = entregaActual;
+  const tipoLabel = ea.tipo === 'delivery' ? '🛵 DELIVERY' : '🏠 RETIRO EN LOCAL';
+  let info = '';
+  info += `<div style="font-size:14px;margin-bottom:4px;font-weight:600;">👤 ${ea.nombre}`;
+  if (ea.tel) info += ` — ${ea.tel}`;
+  info += '</div>';
+  if (ea.email) info += `<div style="font-size:12px;color:var(--text-dim);margin-bottom:2px;">✉️ ${ea.email}</div>`;
+  if (ea.tipo === 'delivery' && ea.direccion) {
+    let dir = ea.direccion;
+    if (ea.depto) dir += ', ' + ea.depto;
+    if (ea.comuna) dir += ', ' + ea.comuna;
+    info += `<div style="font-size:13px;color:var(--text-dim);margin-bottom:2px;">📍 ${dir}</div>`;
+  }
+  if (ea.hora_retiro) info += `<div style="font-size:12px;color:var(--text-dim);margin-bottom:2px;">🕐 Retiro: ${ea.hora_retiro}</div>`;
+  if (ea.receptor_nombre) info += `<div style="font-size:12px;color:var(--accent2);margin-bottom:2px;">📦 Entregar a: ${ea.receptor_nombre}</div>`;
+  if (ea.notas) info += `<div style="font-size:12px;color:var(--text-dim);">📝 ${ea.notas}</div>`;
+
+  const itemsHtml = carrito.map(i => {
+    const sub = i.precio_unit * i.cantidad;
+    return `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);">
+      <span>${i.cantidad}× ${i.nombre}</span>
+      <span style="white-space:nowrap;font-weight:500;">${fmt(sub)}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('verContenido').innerHTML = `
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:12px;color:var(--accent);letter-spacing:.05em;margin-bottom:8px;">${tipoLabel}</div>
+      ${info}
+    </div>
+    <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:10px;">${itemsHtml}</div>
+    <div style="background:var(--surface2);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;font-weight:700;font-size:15px;">
+      <span>TOTAL</span><span>${fmt(total)}</span>
+    </div>`;
+  document.getElementById('modalVerificacion').classList.add('active');
+}
+
+function confirmarVerificacion() {
+  document.getElementById('modalVerificacion').classList.remove('active');
+  _abrirModalCobro();
+}
+
+function volverDeVerificacion() {
+  document.getElementById('modalVerificacion').classList.remove('active');
+  if (entregaActual.tipo === 'delivery') {
+    carrito = carrito.filter(i => !i.es_reparto);
+    recalcular();
+    document.getElementById('modalDelivery').classList.add('active');
+  } else {
+    document.getElementById('modalRetiro').classList.add('active');
+  }
+}
+
+// ── Reparto ───────────────────────────────────────────────────────────────────
+function _calcularCostoReparto(km) {
+  const tipo = cfgApp.delivery_tarifa_tipo || 'gratis';
+  if (tipo === 'gratis') return 0;
+  if (tipo === 'fijo')   return parseInt(cfgApp.delivery_precio_fijo || 0);
+  const mapa = {
+    km1:  parseInt(cfgApp.delivery_precio_km1  || 0),
+    km3:  parseInt(cfgApp.delivery_precio_km3  || 0),
+    km5:  parseInt(cfgApp.delivery_precio_km5  || 0),
+    mas5: parseInt(cfgApp.delivery_precio_mas5 || 0),
+  };
+  return mapa[km] ?? 0;
+}
+
+function _actualizarItemReparto(precio, km) {
+  carrito = carrito.filter(i => !i.es_reparto);
+  if (precio > 0) {
+    const texto  = cfgApp.delivery_texto || 'Reparto';
+    const etiq   = {km1:'hasta 1km', km3:'1-3km', km5:'3-5km', mas5:'+5km'};
+    carrito.push({
+      nombre:      `${texto} (${etiq[km] || km})`,
+      precio_unit: precio,
+      cantidad:    1,
+      subtotal:    precio,
+      es_reparto:  true,
+      producto_id: null,
+      variante_id: null,
+    });
+  }
+  recalcular();
+  renderCarrito();
+}
+
+function actualizarPrecioReparto() {
+  const km   = document.querySelector('input[name="delKm"]:checked')?.value || 'km1';
+  const cost = _calcularCostoReparto(km);
+  const prev = document.getElementById('delCostoPreview');
+  if (prev) {
+    const texto = cfgApp.delivery_texto || 'Reparto';
+    prev.textContent = cost > 0 ? `${texto}: ${fmt(cost)}` : `${texto}: Gratis`;
+  }
+}
+
+function _iniciarDistanciaRow() {
+  const tipo = cfgApp.delivery_tarifa_tipo || 'gratis';
+  const row  = document.getElementById('delDistanciaRow');
+  if (row) row.style.display = tipo === 'distancia' ? '' : 'none';
+  actualizarPrecioReparto();
 }
 
 function _abrirModalCobro() {
@@ -2303,6 +2453,7 @@ async function confirmarPago() {
           cliente_nombre: entregaActual.nombre,
           cliente_tel:    entregaActual.tel,
           cliente_tel2:   entregaActual.tel2 || null,
+          cliente_email:  entregaActual.email || null,
           direccion:      entregaActual.direccion || null,
           depto:          entregaActual.depto || null,
           referencia:     entregaActual.referencia || null,
