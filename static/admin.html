@@ -482,6 +482,53 @@ input:checked + .slider:before{transform:translateX(20px);}
         </div>
       </div>
 
+      <!-- Tarifas delivery -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">🛵 Tarifas de delivery</div>
+        <div class="cfg-grid2">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Tipo de tarifa</label>
+            <select id="cfg_delivery_tarifa_tipo" onchange="toggleDeliveryTarifa()">
+              <option value="gratis">Siempre gratis</option>
+              <option value="fijo">Precio fijo</option>
+              <option value="distancia">Por distancia</option>
+            </select>
+          </div>
+          <div class="form-group" id="rowDeliveryFijo" style="grid-column:1/-1;display:none;">
+            <label>Precio fijo (CLP)</label>
+            <input type="number" id="cfg_delivery_precio_fijo" placeholder="2500" min="0">
+          </div>
+          <div id="rowDeliveryDistancia" style="grid-column:1/-1;display:none;">
+            <div class="cfg-grid2" style="gap:8px;">
+              <div class="form-group">
+                <label>Hasta 1 km (CLP)</label>
+                <input type="number" id="cfg_delivery_precio_km1" placeholder="0" min="0">
+              </div>
+              <div class="form-group">
+                <label>1 – 3 km (CLP)</label>
+                <input type="number" id="cfg_delivery_precio_km3" placeholder="2500" min="0">
+              </div>
+              <div class="form-group">
+                <label>3 – 5 km (CLP)</label>
+                <input type="number" id="cfg_delivery_precio_km5" placeholder="4000" min="0">
+              </div>
+              <div class="form-group">
+                <label>Más de 5 km (CLP)</label>
+                <input type="number" id="cfg_delivery_precio_mas5" placeholder="6000" min="0">
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Texto en ticket</label>
+            <input type="text" id="cfg_delivery_texto" placeholder="Reparto">
+          </div>
+        </div>
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_delivery">✓ Guardado</span>
+          <button class="btn primary sm" onclick="guardarSeccion('delivery')">Guardar tarifas</button>
+        </div>
+      </div>
+
       <!-- Mapa offline -->
       <div class="cfg-card">
         <div class="cfg-card-title">🗺️ Mapa offline de calles</div>
@@ -813,6 +860,14 @@ async function cargarConfig() {
   setChk('cfg_modo_mesas',             cfgActual.modo_mesas);
 
   set('cfg_google_maps_api_key', cfgActual.google_maps_api_key ? '••••••••' : '');
+  set('cfg_delivery_tarifa_tipo',   cfgActual.delivery_tarifa_tipo || 'gratis');
+  set('cfg_delivery_precio_fijo',   cfgActual.delivery_precio_fijo);
+  set('cfg_delivery_precio_km1',    cfgActual.delivery_precio_km1);
+  set('cfg_delivery_precio_km3',    cfgActual.delivery_precio_km3);
+  set('cfg_delivery_precio_km5',    cfgActual.delivery_precio_km5);
+  set('cfg_delivery_precio_mas5',   cfgActual.delivery_precio_mas5);
+  set('cfg_delivery_texto',         cfgActual.delivery_texto || 'Reparto');
+  toggleDeliveryTarifa();
   toggleImpresora();
   cargarListaBackups();
   cargarMapaInfo();
@@ -831,6 +886,7 @@ const SECCIONES = {
   khipu:     ['khipu_receiver_id','khipu_secret'],
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
   pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa','modulo_delivery','modo_mesas'],
+  delivery:  ['delivery_tarifa_tipo','delivery_precio_fijo','delivery_precio_km1','delivery_precio_km3','delivery_precio_km5','delivery_precio_mas5','delivery_texto'],
   backup:    ['backup_hora'],
 };
 
@@ -886,6 +942,14 @@ async function testImpresora() {
   const r = await fetch('/api/impresora/test',{method:'POST',credentials:'include'}).then(r=>r.json());
   res.textContent = r.ok ? '✓ Impresora conectada correctamente' : '✗ ' + (r.error || 'Sin respuesta');
   res.style.color = r.ok ? 'var(--success)' : 'var(--danger)';
+}
+
+function toggleDeliveryTarifa() {
+  const tipo = document.getElementById('cfg_delivery_tarifa_tipo')?.value || 'gratis';
+  const rowFijo = document.getElementById('rowDeliveryFijo');
+  const rowDist = document.getElementById('rowDeliveryDistancia');
+  if (rowFijo) rowFijo.style.display = tipo === 'fijo' ? '' : 'none';
+  if (rowDist) rowDist.style.display = tipo === 'distancia' ? '' : 'none';
 }
 
 async function cargarMapaInfo() {

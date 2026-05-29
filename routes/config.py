@@ -18,6 +18,13 @@ CLAVES_PERMITIDAS = {
     "modulo_delivery", "modo_mesas", "tipo_negocio",
     "google_maps_api_key",
     "comuna_negocio",
+    "delivery_tarifa_tipo",
+    "delivery_precio_fijo",
+    "delivery_precio_km1",
+    "delivery_precio_km3",
+    "delivery_precio_km5",
+    "delivery_precio_mas5",
+    "delivery_texto",
 }
 
 
