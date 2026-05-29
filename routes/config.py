@@ -16,6 +16,7 @@ CLAVES_PERMITIDAS = {
     "backup_hora",
     "pantalla_cliente_activa", "pantalla_cocina_activa",
     "modulo_delivery", "modo_mesas", "tipo_negocio",
+    "google_maps_api_key",
 }
 
 

@@ -478,6 +478,45 @@ input:checked + .slider:before{transform:translateX(20px);}
         </div>
       </div>
 
+      <!-- Mapa offline -->
+      <div class="cfg-card">
+        <div class="cfg-card-title">🗺️ Mapa offline de calles</div>
+        <div style="font-size:12px;margin-bottom:6px;">
+          <span style="color:var(--text-dim);">Capa 1 — Local (SQLite)</span>
+          <span id="mapaEstadoCapaLocal" style="margin-left:8px;color:var(--success);">—</span>
+        </div>
+        <div style="font-size:12px;margin-bottom:14px;">
+          <span style="color:var(--text-dim);">Capa 2 — Nominatim</span>
+          <span style="margin-left:8px;color:var(--accent2);">Automático · sin clave</span>
+          &nbsp;
+          <span style="color:var(--text-dim);">Capa 3 — Google Maps</span>
+          <span id="mapaEstadoGoogle" style="margin-left:8px;color:var(--text-dim);">No configurado</span>
+        </div>
+        <div id="mapaComunasList" style="display:flex;flex-direction:column;gap:3px;margin-bottom:14px;
+             max-height:140px;overflow-y:auto;"></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <input type="text" id="mapaInputComuna" placeholder="Nombre de la comuna (ej: Angol)"
+                 style="flex:1;" onkeydown="if(event.key==='Enter')cargarMapaComuna()">
+          <button class="btn primary sm" id="btnCargarMapa" onclick="cargarMapaComuna()">Descargar</button>
+        </div>
+        <div id="mapaProgreso" style="display:none;font-size:12px;padding:6px 0;"></div>
+        <hr style="border-color:var(--border);margin:14px 0;">
+        <div class="cfg-card-title" style="font-size:13px;margin-bottom:12px;">🔑 Google Maps API Key (opcional)</div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>API Key</label>
+          <input type="text" id="cfg_google_maps_api_key" placeholder="AIzaSy...">
+        </div>
+        <div id="mapaGoogleCosto" style="font-size:11px;color:var(--text-dim);margin-bottom:10px;display:none;"></div>
+        <div class="cfg-save">
+          <span class="save-feedback" id="fb_mapa">✓ Guardado</span>
+          <button class="btn primary sm" onclick="guardarMapaConfig()">Guardar API Key</button>
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);margin-top:8px;">
+          La descarga requiere internet. Los datos quedan guardados para uso
+          offline permanente. Fuente: OpenStreetMap / Overpass API.
+        </p>
+      </div>
+
       <!-- Backup -->
       <div class="cfg-card">
         <div class="cfg-card-title">💾 Backup automático</div>
@@ -768,8 +807,10 @@ async function cargarConfig() {
   setChk('cfg_modulo_delivery',         cfgActual.modulo_delivery);
   setChk('cfg_modo_mesas',             cfgActual.modo_mesas);
 
+  set('cfg_google_maps_api_key', cfgActual.google_maps_api_key ? '••••••••' : '');
   toggleImpresora();
   cargarListaBackups();
+  cargarMapaInfo();
 }
 
 function toggleImpresora() {
@@ -840,6 +881,81 @@ async function testImpresora() {
   const r = await fetch('/api/impresora/test',{method:'POST',credentials:'include'}).then(r=>r.json());
   res.textContent = r.ok ? '✓ Impresora conectada correctamente' : '✗ ' + (r.error || 'Sin respuesta');
   res.style.color = r.ok ? 'var(--success)' : 'var(--danger)';
+}
+
+async function cargarMapaInfo() {
+  const rows = await fetch('/api/mapa/comunas',{credentials:'include'})
+    .then(r=>r.json()).catch(()=>[]);
+  const listEl   = document.getElementById('mapaComunasList');
+  const estadoEl = document.getElementById('mapaEstadoCapaLocal');
+  const gmEl     = document.getElementById('mapaEstadoGoogle');
+  const costoEl  = document.getElementById('mapaGoogleCosto');
+
+  if (cfgActual.google_maps_api_key && cfgActual.google_maps_api_key !== '••••••••') {
+    gmEl.style.color = 'var(--success)';
+    gmEl.textContent = 'Activo';
+    costoEl.style.display = '';
+    costoEl.textContent = 'Google Maps: primeras 40.000 consultas/mes gratis · ~$5 USD por cada 1.000 adicionales.';
+  }
+
+  if (!rows || !rows.length) {
+    estadoEl.textContent = 'Sin datos cargados';
+    estadoEl.style.color = 'var(--text-dim)';
+    listEl.innerHTML = '<div style="font-size:12px;color:var(--text-dim);">Ninguna comuna cargada aún.</div>';
+    return;
+  }
+  const total = rows.reduce((s,r)=>s+r.calles,0);
+  estadoEl.textContent = `${rows.length} comunas · ${total.toLocaleString()} calles`;
+  estadoEl.style.color = 'var(--success)';
+  listEl.innerHTML = rows.map(r=>
+    `<div style="display:flex;justify-content:space-between;font-size:12px;
+                 padding:4px 0;border-bottom:1px solid var(--border);">
+       <span>${r.comuna}</span>
+       <span style="color:var(--text-dim)">${r.calles.toLocaleString()} calles</span>
+     </div>`
+  ).join('');
+}
+
+async function cargarMapaComuna() {
+  const comuna = document.getElementById('mapaInputComuna').value.trim();
+  if (!comuna) return;
+  const progEl = document.getElementById('mapaProgreso');
+  const btn    = document.getElementById('btnCargarMapa');
+  progEl.style.display = '';
+  progEl.style.color   = 'var(--accent2)';
+  progEl.textContent   = `Descargando calles de ${comuna}… (puede tomar hasta 60 s)`;
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/mapa/cargar-comuna',{
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({comuna}),
+    }).then(r=>r.json());
+    if (r.ok) {
+      progEl.style.color = 'var(--success)';
+      progEl.textContent = `✅ ${r.calles.toLocaleString()} calles cargadas para ${r.comuna}`;
+      document.getElementById('mapaInputComuna').value = '';
+      cargarMapaInfo();
+    } else {
+      progEl.style.color = 'var(--danger)';
+      progEl.textContent = `✗ ${r.error || 'Sin datos o sin internet'}`;
+    }
+  } catch(e) {
+    progEl.style.color = 'var(--danger)';
+    progEl.textContent = 'Error de conexión';
+  }
+  btn.disabled = false;
+}
+
+async function guardarMapaConfig() {
+  const key = document.getElementById('cfg_google_maps_api_key').value.trim();
+  if (!key || key === '••••••••') { showFeedback('fb_mapa'); return; }
+  const r = await fetch('/api/config',{
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({google_maps_api_key: key}),
+  }).then(r=>r.json());
+  if (r.ok) showFeedback('fb_mapa');
 }
 
 async function cargarListaBackups() {
