@@ -218,6 +218,12 @@ def _migrate_columns(conn: sqlite3.Connection):
     if "pendiente_verificar" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN pendiente_verificar INTEGER NOT NULL DEFAULT 0")
 
+    cols_pedidos = {r[1] for r in conn.execute("PRAGMA table_info(pedidos)").fetchall()}
+    if "receptor_nombre" not in cols_pedidos:
+        conn.execute("ALTER TABLE pedidos ADD COLUMN receptor_nombre TEXT")
+    if "receptor_tel" not in cols_pedidos:
+        conn.execute("ALTER TABLE pedidos ADD COLUMN receptor_tel TEXT")
+
     # Unique index en voz_sinonimos_variante — silencioso si ya existe o hay duplicados
     try:
         conn.execute(

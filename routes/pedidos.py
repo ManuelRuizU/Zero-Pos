@@ -26,14 +26,26 @@ def _fmt(n):
 def clientes_buscar():
     if not _auth():
         return jsonify({"error": "No autenticado"}), 401
-    tel = request.args.get("tel", "").strip()
+    tel = (request.args.get("tel") or request.args.get("telefono") or "").strip()
     if not tel:
         return jsonify(None)
     with db_session() as conn:
         row = conn.execute(
             "SELECT * FROM clientes WHERE telefono LIKE ?", (f"%{tel}%",)
         ).fetchone()
-    return jsonify(dict(row) if row else None)
+        if not row:
+            return jsonify(None)
+        result = dict(row)
+        recs = conn.execute(
+            """SELECT receptor_nombre as nombre, receptor_tel as tel, COUNT(*) as veces
+               FROM pedidos
+               WHERE cliente_id=? AND receptor_nombre IS NOT NULL AND receptor_nombre != ''
+               GROUP BY receptor_nombre, receptor_tel
+               ORDER BY veces DESC LIMIT 3""",
+            (row["id"],)
+        ).fetchall()
+        result["receptores_frecuentes"] = [dict(r) for r in recs]
+    return jsonify(result)
 
 
 @pedidos_bp.route("/clientes/<int:cid>", methods=["GET"])
@@ -292,8 +304,8 @@ def pedidos_crear():
             """INSERT INTO pedidos
                (numero, tipo, estado, origen, cliente_id, cliente_nombre, cliente_tel,
                 cliente_tel2, cliente_email, direccion, depto, referencia,
-                comuna, notas, total, metodo_pago, usuario_id)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                comuna, notas, total, metodo_pago, usuario_id, receptor_nombre, receptor_tel)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (numero, tipo, estado_inicial, origen, cliente_id, nombre,
              data.get("cliente_tel") or None,
              data.get("cliente_tel2") or None,
@@ -305,7 +317,9 @@ def pedidos_crear():
              data.get("notas") or None,
              total,
              data.get("metodo_pago", "efectivo"),
-             uid)
+             uid,
+             data.get("receptor_nombre") or None,
+             data.get("receptor_tel") or None)
         )
         pedido_id = cur.lastrowid
 

@@ -561,6 +561,29 @@ select { cursor: pointer; }
           <label>Email</label>
           <input id="fEmail" type="email" placeholder="correo@ejemplo.cl">
         </div>
+        <div id="receptorSugerencia" style="display:none;background:#6366f115;border:1px solid #6366f144;border-radius:7px;padding:8px 10px;font-size:12px;">
+          <div id="receptorSugerenciaTexto" style="color:var(--accent2);margin-bottom:6px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="aceptarReceptorSugerido()" style="flex:1;background:var(--accent);border:none;color:#fff;border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;font-family:inherit;">Sí</button>
+            <button onclick="rechazarReceptorSugerido()" style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;font-family:inherit;">No, otra persona</button>
+          </div>
+        </div>
+        <div id="toggleReceptor">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-dim);">
+            <input type="checkbox" id="chkReceptor" onchange="toggleReceptorFields()">
+            Entregar a otra persona
+          </label>
+        </div>
+        <div id="camposReceptor" style="display:none;flex-direction:column;gap:8px;">
+          <div>
+            <label>Nombre de quien recibe *</label>
+            <input id="receptorNombre" type="text" placeholder="Nombre de quien recibe">
+          </div>
+          <div>
+            <label>Teléfono de quien recibe</label>
+            <input id="receptorTel" type="tel" placeholder="Teléfono de quien recibe">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -732,11 +755,51 @@ async function buscarCliente(tel) {
     badge.style.display = '';
     badge.className = '';
     badge.textContent = `✓ Cliente conocido — ${cl.total_pedidos} pedidos anteriores`;
+    if (cl.receptores_frecuentes && cl.receptores_frecuentes.length > 0) {
+      mostrarSugerenciaReceptor(cl.receptores_frecuentes[0]);
+    } else {
+      document.getElementById('receptorSugerencia').style.display = 'none';
+    }
   } else {
     clienteActual = null;
     limpiarClienteBadge(true);
+    document.getElementById('receptorSugerencia').style.display = 'none';
   }
   validarForm();
+}
+
+let _receptorSugerido = null;
+
+function toggleReceptorFields() {
+  const chk = document.getElementById('chkReceptor');
+  const campos = document.getElementById('camposReceptor');
+  campos.style.display = chk.checked ? 'flex' : 'none';
+  if (chk.checked) document.getElementById('receptorNombre').focus();
+}
+
+function mostrarSugerenciaReceptor(rf) {
+  _receptorSugerido = rf;
+  const veces = rf.veces === 1 ? 'la última vez' : `las últimas ${rf.veces} veces`;
+  document.getElementById('receptorSugerenciaTexto').textContent =
+    `¿Entregamos a ${rf.nombre} como ${veces}?`;
+  document.getElementById('receptorSugerencia').style.display = '';
+}
+
+function aceptarReceptorSugerido() {
+  if (!_receptorSugerido) return;
+  document.getElementById('chkReceptor').checked = true;
+  toggleReceptorFields();
+  document.getElementById('receptorNombre').value = _receptorSugerido.nombre;
+  document.getElementById('receptorTel').value    = _receptorSugerido.tel || '';
+  document.getElementById('receptorSugerencia').style.display = 'none';
+  _receptorSugerido = null;
+}
+
+function rechazarReceptorSugerido() {
+  document.getElementById('receptorSugerencia').style.display = 'none';
+  _receptorSugerido = null;
+  document.getElementById('chkReceptor').checked = true;
+  toggleReceptorFields();
 }
 
 function limpiarClienteBadge(nuevo = false) {
@@ -917,6 +980,12 @@ async function confirmarPedido() {
     comuna:         document.getElementById('fComuna').value.trim(),
     notas:          document.getElementById('fNotas').value.trim(),
     metodo_pago:    document.getElementById('fPago').value,
+    receptor_nombre: document.getElementById('chkReceptor')?.checked
+                       ? document.getElementById('receptorNombre').value.trim() || null
+                       : null,
+    receptor_tel:   document.getElementById('chkReceptor')?.checked
+                       ? document.getElementById('receptorTel').value.trim() || null
+                       : null,
     items: carrito.map(i => ({
       producto_id: i.producto_id,
       variante_id: i.variante_id,
@@ -951,10 +1020,16 @@ async function confirmarPedido() {
 function limpiarForm() {
   carrito = [];
   clienteActual = null;
-  ['fTel','fNombre','fTel2','fEmail','fDir','fDepto','fRef','fComuna','fNotas'].forEach(id => {
+  _receptorSugerido = null;
+  ['fTel','fNombre','fTel2','fEmail','fDir','fDepto','fRef','fComuna','fNotas',
+   'receptorNombre','receptorTel'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  const chk = document.getElementById('chkReceptor');
+  if (chk) { chk.checked = false; }
+  document.getElementById('camposReceptor').style.display = 'none';
+  document.getElementById('receptorSugerencia').style.display = 'none';
   document.getElementById('clienteBadge').style.display = 'none';
   renderCarrito();
 }

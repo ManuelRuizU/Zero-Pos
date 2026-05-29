@@ -761,6 +761,21 @@ body {
       <input class="form-field" id="delTel" placeholder="Teléfono *" type="tel" inputmode="numeric">
       <input class="form-field" id="delTel2" placeholder="Teléfono 2" type="tel" inputmode="numeric">
     </div>
+    <div id="delReceptorSugerencia" style="display:none;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;">
+      <div id="delReceptorSugerenciaTexto" style="color:var(--accent2);margin-bottom:6px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="aceptarDelReceptorSugerido()" style="flex:1;background:var(--accent);border:none;color:#fff;border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;font-family:inherit;">Sí</button>
+        <button onclick="rechazarDelReceptorSugerido()" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;font-family:inherit;">No, otra persona</button>
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text-dim);margin-bottom:10px;">
+      <input type="checkbox" id="delChkReceptor" onchange="toggleDelReceptor()">
+      Entregar a otra persona
+    </label>
+    <div id="delCamposReceptor" style="display:none;">
+      <input class="form-field" id="delReceptorNombre" placeholder="Nombre de quien recibe *" style="margin-bottom:10px;">
+      <input class="form-field" id="delReceptorTel" placeholder="Teléfono de quien recibe" type="tel" inputmode="numeric" style="margin-bottom:10px;">
+    </div>
     <input class="form-field" id="delDireccion" placeholder="Dirección *">
     <div class="form-row" style="margin-bottom:10px;">
       <input class="form-field" id="delDepto" placeholder="Depto / Casa">
@@ -1925,7 +1940,7 @@ function toggleCarritoMobile() {
 
 // ── Cobro ─────────────────────────────────────────────────────
 // ── Entrega ──────────────────────────────────────────────────
-let entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:''};
+let entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:'',receptor_nombre:null,receptor_tel:null};
 
 function abrirCobro() {
   if (!carrito.length) return;
@@ -1935,7 +1950,7 @@ function abrirCobro() {
     // Modo mesas: ocultar "aquí mismo" si modo_mesas es false
     const modoMesas = cfgApp.modo_mesas === '1' || cfgApp.modo_mesas === true;
     document.getElementById('btnEntregaLocal').style.display = modoMesas === false ? 'none' : '';
-    entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:''};
+    entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:'',receptor_nombre:null,receptor_tel:null};
     document.getElementById('modalEntrega').classList.add('active');
   } else {
     _abrirModalCobro();
@@ -1983,6 +1998,10 @@ function continuar_delivery() {
   const tel = document.getElementById('delTel').value.trim();
   const dir = document.getElementById('delDireccion').value.trim();
   if (!nombre || !tel || !dir) { showToast('Nombre, teléfono y dirección son obligatorios', 'error'); return; }
+  const chkRec = document.getElementById('delChkReceptor');
+  if (chkRec?.checked && !document.getElementById('delReceptorNombre').value.trim()) {
+    showToast('Ingresa el nombre de quien recibe', 'error'); return;
+  }
   entregaActual.nombre   = nombre;
   entregaActual.tel      = tel;
   entregaActual.tel2     = document.getElementById('delTel2').value.trim();
@@ -1991,15 +2010,53 @@ function continuar_delivery() {
   entregaActual.comuna   = document.getElementById('delComuna').value.trim();
   entregaActual.referencia = document.getElementById('delReferencia').value.trim();
   entregaActual.notas    = document.getElementById('delNotas').value.trim();
+  entregaActual.receptor_nombre = chkRec?.checked
+    ? document.getElementById('delReceptorNombre').value.trim() || null : null;
+  entregaActual.receptor_tel = chkRec?.checked
+    ? document.getElementById('delReceptorTel').value.trim() || null : null;
   document.getElementById('modalDelivery').classList.remove('active');
   _abrirModalCobro();
+}
+
+let _delReceptorSugerido = null;
+
+function toggleDelReceptor() {
+  const chk = document.getElementById('delChkReceptor');
+  const campos = document.getElementById('delCamposReceptor');
+  campos.style.display = chk.checked ? 'block' : 'none';
+  if (chk.checked) document.getElementById('delReceptorNombre').focus();
+}
+
+function mostrarSugerenciaReceptorDel(rf) {
+  _delReceptorSugerido = rf;
+  const veces = rf.veces === 1 ? 'la última vez' : `las últimas ${rf.veces} veces`;
+  document.getElementById('delReceptorSugerenciaTexto').textContent =
+    `¿Entregamos a ${rf.nombre} como ${veces}?`;
+  document.getElementById('delReceptorSugerencia').style.display = '';
+}
+
+function aceptarDelReceptorSugerido() {
+  if (!_delReceptorSugerido) return;
+  document.getElementById('delChkReceptor').checked = true;
+  toggleDelReceptor();
+  document.getElementById('delReceptorNombre').value = _delReceptorSugerido.nombre;
+  document.getElementById('delReceptorTel').value    = _delReceptorSugerido.tel || '';
+  document.getElementById('delReceptorSugerencia').style.display = 'none';
+  _delReceptorSugerido = null;
+}
+
+function rechazarDelReceptorSugerido() {
+  document.getElementById('delReceptorSugerencia').style.display = 'none';
+  _delReceptorSugerido = null;
+  document.getElementById('delChkReceptor').checked = true;
+  toggleDelReceptor();
 }
 
 async function buscarClientePorTel() {
   const tel = document.getElementById('delBuscarTel').value.trim();
   if (!tel) return;
   try {
-    const r = await fetch(`/api/pedidos/clientes/buscar?telefono=${encodeURIComponent(tel)}`, {credentials:'include'}).then(r => r.json());
+    const r = await fetch(`/api/clientes/buscar?tel=${encodeURIComponent(tel)}`, {credentials:'include'}).then(r => r.json());
     if (r && r.nombre) {
       document.getElementById('delNombre').value    = r.nombre || '';
       document.getElementById('delTel').value       = r.telefono || tel;
@@ -2008,6 +2065,9 @@ async function buscarClientePorTel() {
       document.getElementById('delDepto').value     = r.depto || '';
       document.getElementById('delComuna').value    = r.comuna || '';
       showToast(`Cliente encontrado: ${r.nombre}`, 'success');
+      if (r.receptores_frecuentes && r.receptores_frecuentes.length > 0) {
+        mostrarSugerenciaReceptorDel(r.receptores_frecuentes[0]);
+      }
     } else {
       document.getElementById('delTel').value = tel;
       showToast('Cliente nuevo', 'info');
@@ -2016,8 +2076,14 @@ async function buscarClientePorTel() {
 }
 
 function _limpiarFormDelivery() {
-  ['delBuscarTel','delNombre','delTel','delTel2','delDireccion','delDepto','delComuna','delReferencia','delNotas']
+  ['delBuscarTel','delNombre','delTel','delTel2','delDireccion','delDepto','delComuna','delReferencia','delNotas',
+   'delReceptorNombre','delReceptorTel']
     .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const chk = document.getElementById('delChkReceptor');
+  if (chk) chk.checked = false;
+  document.getElementById('delCamposReceptor').style.display = 'none';
+  document.getElementById('delReceptorSugerencia').style.display = 'none';
+  _delReceptorSugerido = null;
 }
 
 function _abrirModalCobro() {
@@ -2030,7 +2096,7 @@ function _abrirModalCobro() {
 
 function cerrarCobro() {
   document.getElementById('modalCobro').classList.remove('active');
-  entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:''};
+  entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:'',receptor_nombre:null,receptor_tel:null};
 }
 
 function selMetodo(btn) {
@@ -2113,6 +2179,8 @@ async function confirmarPago() {
           comuna:         entregaActual.comuna || null,
           notas:          entregaActual.notas || null,
           hora_retiro:    entregaActual.hora_retiro || null,
+          receptor_nombre: entregaActual.receptor_nombre || null,
+          receptor_tel:   entregaActual.receptor_tel || null,
           metodo_pago:    metodoPago,
           items: carrito.map(i => ({
             producto_id: i.producto_id || null,

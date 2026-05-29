@@ -169,20 +169,38 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
             p.text(SEP + "\n")
 
             # Bloque cliente
-            p.text(f"Cliente: {cliente_n}\n")
-            if tipo == "delivery" and pedido.get("direccion"):
-                dir_full = limpiar_texto(pedido["direccion"])
-                if pedido.get("depto"):
-                    dir_full += " Dpto " + limpiar_texto(str(pedido["depto"]))
-                if pedido.get("comuna"):
-                    dir_full += ", " + limpiar_texto(pedido["comuna"])
-                p.text(dir_full + "\n")
-                if pedido.get("referencia"):
-                    p.text("Ref: " + limpiar_texto(pedido["referencia"]) + "\n")
-            elif tipo == "retiro" and pedido.get("hora_retiro"):
-                p.text("Retiro: " + limpiar_texto(str(pedido["hora_retiro"])) + "\n")
-            if pedido.get("cliente_tel"):
-                p.text(limpiar_texto(str(pedido["cliente_tel"])) + "\n")
+            receptor_n = limpiar_texto(pedido.get("receptor_nombre") or "")
+            if receptor_n:
+                p.text(f"Pedido de: {cliente_n}\n")
+                if pedido.get("cliente_tel"):
+                    p.text("  Tel: " + limpiar_texto(str(pedido["cliente_tel"])) + "\n")
+                p.text(f"Entregar a: {receptor_n}\n")
+                if pedido.get("receptor_tel"):
+                    p.text("  Tel: " + limpiar_texto(str(pedido["receptor_tel"])) + "\n")
+                if tipo == "delivery" and pedido.get("direccion"):
+                    dir_full = limpiar_texto(pedido["direccion"])
+                    if pedido.get("depto"):
+                        dir_full += " Dpto " + limpiar_texto(str(pedido["depto"]))
+                    if pedido.get("comuna"):
+                        dir_full += ", " + limpiar_texto(pedido["comuna"])
+                    p.text("  " + dir_full + "\n")
+                    if pedido.get("referencia"):
+                        p.text("  Ref: " + limpiar_texto(pedido["referencia"]) + "\n")
+            else:
+                p.text(f"Cliente: {cliente_n}\n")
+                if tipo == "delivery" and pedido.get("direccion"):
+                    dir_full = limpiar_texto(pedido["direccion"])
+                    if pedido.get("depto"):
+                        dir_full += " Dpto " + limpiar_texto(str(pedido["depto"]))
+                    if pedido.get("comuna"):
+                        dir_full += ", " + limpiar_texto(pedido["comuna"])
+                    p.text(dir_full + "\n")
+                    if pedido.get("referencia"):
+                        p.text("Ref: " + limpiar_texto(pedido["referencia"]) + "\n")
+                elif tipo == "retiro" and pedido.get("hora_retiro"):
+                    p.text("Retiro: " + limpiar_texto(str(pedido["hora_retiro"])) + "\n")
+                if pedido.get("cliente_tel"):
+                    p.text(limpiar_texto(str(pedido["cliente_tel"])) + "\n")
 
             tipo_labels = {"delivery": "DELIVERY", "retiro": "RETIRO EN LOCAL", "local": "VENTA LOCAL"}
             p.text(SEP2 + "\n")
@@ -406,26 +424,44 @@ def _formatear_texto(venta: dict, items: list, config: dict,
     if pedido:
         cliente_n = limpiar_texto(pedido.get("cliente_nombre", ""))
         tipo = pedido.get("tipo", "local")
+        receptor_n = limpiar_texto(pedido.get("receptor_nombre") or "")
         lineas += [
             f"Pedido: {cliente_n} - {hora_str}",
             f"Empleado: {cajero}",
             "Terminal: ZERO POS",
             SEP,
-            f"Cliente: {cliente_n}",
         ]
-        if tipo == "delivery" and pedido.get("direccion"):
-            dir_full = limpiar_texto(pedido["direccion"])
-            if pedido.get("depto"):
-                dir_full += " Dpto " + limpiar_texto(str(pedido["depto"]))
-            if pedido.get("comuna"):
-                dir_full += ", " + limpiar_texto(pedido["comuna"])
-            lineas.append(dir_full)
-            if pedido.get("referencia"):
-                lineas.append("Ref: " + limpiar_texto(pedido["referencia"]))
-        elif tipo == "retiro" and pedido.get("hora_retiro"):
-            lineas.append("Retiro: " + limpiar_texto(str(pedido["hora_retiro"])))
-        if pedido.get("cliente_tel"):
-            lineas.append(limpiar_texto(str(pedido["cliente_tel"])))
+        if receptor_n:
+            lineas.append(f"Pedido de: {cliente_n}")
+            if pedido.get("cliente_tel"):
+                lineas.append("  Tel: " + limpiar_texto(str(pedido["cliente_tel"])))
+            lineas.append(f"Entregar a: {receptor_n}")
+            if pedido.get("receptor_tel"):
+                lineas.append("  Tel: " + limpiar_texto(str(pedido["receptor_tel"])))
+            if tipo == "delivery" and pedido.get("direccion"):
+                dir_full = limpiar_texto(pedido["direccion"])
+                if pedido.get("depto"):
+                    dir_full += " Dpto " + limpiar_texto(str(pedido["depto"]))
+                if pedido.get("comuna"):
+                    dir_full += ", " + limpiar_texto(pedido["comuna"])
+                lineas.append("  " + dir_full)
+                if pedido.get("referencia"):
+                    lineas.append("  Ref: " + limpiar_texto(pedido["referencia"]))
+        else:
+            lineas.append(f"Cliente: {cliente_n}")
+            if tipo == "delivery" and pedido.get("direccion"):
+                dir_full = limpiar_texto(pedido["direccion"])
+                if pedido.get("depto"):
+                    dir_full += " Dpto " + limpiar_texto(str(pedido["depto"]))
+                if pedido.get("comuna"):
+                    dir_full += ", " + limpiar_texto(pedido["comuna"])
+                lineas.append(dir_full)
+                if pedido.get("referencia"):
+                    lineas.append("Ref: " + limpiar_texto(pedido["referencia"]))
+            elif tipo == "retiro" and pedido.get("hora_retiro"):
+                lineas.append("Retiro: " + limpiar_texto(str(pedido["hora_retiro"])))
+            if pedido.get("cliente_tel"):
+                lineas.append(limpiar_texto(str(pedido["cliente_tel"])))
         tipo_labels = {"delivery": "DELIVERY", "retiro": "RETIRO EN LOCAL", "local": "VENTA LOCAL"}
         lineas += [SEP2, tipo_labels.get(tipo, tipo.upper()).center(N), SEP2]
     else:
