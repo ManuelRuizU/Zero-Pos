@@ -616,10 +616,7 @@ select { cursor: pointer; }
             <input id="fRef" type="text" placeholder="Portón verde">
           </div>
         </div>
-        <div>
-          <label>Comuna</label>
-          <input id="fComuna" type="text" placeholder="Santiago">
-        </div>
+        <input id="fComuna" type="hidden">
       </div>
     </div>
 
@@ -701,7 +698,8 @@ select { cursor: pointer; }
 <script>
 // ─── State ───────────────────────────────────────────────
 let pedidoTipo  = 'delivery';
-let carrito     = [];       // [{producto_id, variante_id, nombre, cantidad, precio, subtotal, notas}]
+let carrito     = [];
+let cfgComuna   = '';       // [{producto_id, variante_id, nombre, cantidad, precio, subtotal, notas}]
 let clienteActual = null;
 let todosProd   = [];
 let colaFiltro  = 'activos';
@@ -728,6 +726,8 @@ async function apiFetch(url, opts = {}) {
 // ─── Init ────────────────────────────────────────────────
 async function init() {
   todosProd = await apiFetch('/api/productos/completos') || [];
+  const cfg = await apiFetch('/api/config') || {};
+  cfgComuna = cfg.comuna_negocio || '';
   await cargarCola();
   setInterval(cargarCola, 15000);
 }
@@ -828,7 +828,7 @@ function onDirInput(val) {
 }
 
 async function _buscarDirecciones(q) {
-  const comuna = document.getElementById('fComuna').value.trim();
+  const comuna = document.getElementById('fComuna').value.trim() || cfgComuna;
   const params = new URLSearchParams({q});
   if (comuna) params.set('comuna', comuna);
   const results = await apiFetch(`/api/direcciones/buscar?${params}`) || [];
@@ -1038,7 +1038,7 @@ async function confirmarPedido() {
     direccion:      document.getElementById('fDir').value.trim(),
     depto:          document.getElementById('fDepto').value.trim(),
     referencia:     document.getElementById('fRef').value.trim(),
-    comuna:         document.getElementById('fComuna').value.trim(),
+    comuna:         document.getElementById('fComuna').value.trim() || cfgComuna,
     notas:          document.getElementById('fNotas').value.trim(),
     metodo_pago:    document.getElementById('fPago').value,
     receptor_nombre: document.getElementById('chkReceptor')?.checked
@@ -1340,7 +1340,7 @@ document.getElementById('fDir').addEventListener('blur', async () => {
     document.getElementById('dirAutocomplete').style.display = 'none';
   }, 200);
   const calle = document.getElementById('fDir').value.trim();
-  const comuna = document.getElementById('fComuna').value.trim();
+  const comuna = document.getElementById('fComuna').value.trim() || cfgComuna;
   if (!calle || calle.length < 4) return;
   const res = await apiFetch('/api/direcciones/validar', {
     method: 'POST', body: {calle, comuna}

@@ -224,6 +224,13 @@ def _migrate_columns(conn: sqlite3.Connection):
     if "receptor_tel" not in cols_pedidos:
         conn.execute("ALTER TABLE pedidos ADD COLUMN receptor_tel TEXT")
 
+    try:
+        cols_geo = {r[1] for r in conn.execute("PRAGMA table_info(geografia_local)").fetchall()}
+        if "direcciones_frecuentes" not in cols_geo:
+            conn.execute("ALTER TABLE geografia_local ADD COLUMN direcciones_frecuentes TEXT")
+    except Exception as e:
+        logger.debug(f"migrate geografia_local.direcciones_frecuentes: {e}")
+
     # Unique index en voz_sinonimos_variante — silencioso si ya existe o hay duplicados
     try:
         conn.execute(
@@ -288,7 +295,8 @@ def _seed_defaults(conn: sqlite3.Connection):
 
     # Nuevos campos de ticket — INSERT OR IGNORE para DBs existentes
     for _clave in ("whatsapp_negocio", "direccion_negocio", "telefono_negocio",
-                   "impresora_cocina_ip", "impresora_cocina_tipo", "impresora_cocina_puerto"):
+                   "impresora_cocina_ip", "impresora_cocina_tipo", "impresora_cocina_puerto",
+                   "comuna_negocio"):
         conn.execute(
             "INSERT OR IGNORE INTO config (clave, valor) VALUES (?, ?)",
             (_clave, "")

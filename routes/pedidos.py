@@ -4,6 +4,7 @@ import logging
 from datetime import date
 from flask import Blueprint, request, jsonify, session
 from database import db_session, pesos
+from routes.direcciones import registrar_direccion_pedido
 
 pedidos_bp = Blueprint("pedidos", __name__, url_prefix="/api")
 logger = logging.getLogger("zero_pos.pedidos")
@@ -322,6 +323,7 @@ def pedidos_crear():
              data.get("receptor_tel") or None)
         )
         pedido_id = cur.lastrowid
+        registrar_direccion_pedido(conn, data.get("direccion"), data.get("comuna") or "")
 
         for item in items:
             subtotal = pesos(item.get("subtotal", 0))

@@ -320,6 +320,10 @@ input:checked + .slider:before{transform:translateX(20px);}
             <label>IVA (%)</label>
             <input type="number" id="cfg_iva_porcentaje" placeholder="19" min="0" max="100">
           </div>
+          <div class="form-group">
+            <label>Comuna del negocio</label>
+            <input type="text" id="cfg_comuna_negocio" placeholder="Ej: Angol">
+          </div>
         </div>
         <div class="cfg-save">
           <span class="save-feedback" id="fb_negocio">✓ Guardado</span>
@@ -789,6 +793,7 @@ async function cargarConfig() {
 
   set('cfg_nombre_negocio',      cfgActual.nombre_negocio);
   set('cfg_rut_negocio',         cfgActual.rut_negocio);
+  set('cfg_comuna_negocio',      cfgActual.comuna_negocio);
   set('cfg_moneda',              cfgActual.moneda || 'CLP');
   set('cfg_iva_porcentaje',      cfgActual.iva_porcentaje ?? '19');
   set('cfg_impresora_tipo',      cfgActual.impresora_tipo || 'red');
@@ -821,7 +826,7 @@ function toggleImpresora() {
 }
 
 const SECCIONES = {
-  negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje'],
+  negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje','comuna_negocio'],
   impresora: ['impresora_tipo','impresora_ip','impresora_puerto'],
   khipu:     ['khipu_receiver_id','khipu_secret'],
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
