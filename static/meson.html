@@ -64,6 +64,9 @@ body{background:var(--bg);color:var(--text);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #clienteLabel{display:none;align-items:center;gap:4px;flex:1;min-width:0;}
 #clienteLabel span{font-size:11px;color:var(--text-dim);white-space:nowrap;}
+#inputCliente{background:transparent;border:none;border-bottom:1px solid var(--accent);
+  color:var(--text);font-size:12px;width:110px;outline:none;padding:2px 4px;
+  font-family:inherit;}
 .btn-back{background:var(--surface);border:1px solid var(--border);color:var(--text);
   border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;
   font-weight:600;font-family:inherit;flex-shrink:0;}
@@ -342,10 +345,9 @@ body{background:var(--bg);color:var(--text);
   <div class="topbar">
     <div class="logo">ZERO<span>POS</span></div>
     <span id="topbarModo" style="font-size:11px;color:var(--text-dim);">Mesón</span>
-    <!-- clienteLabel: texto estático en commit 2, input en commit 3 -->
     <div id="clienteLabel">
       <span>Cliente:</span>
-      <span id="clienteLabelTexto" style="color:var(--text-dim);font-size:11px;">—</span>
+      <input id="inputCliente" placeholder="Nombre o #auto" autocomplete="off">
     </div>
     <div class="topbar-spacer"></div>
     <span class="topbar-user" id="topUser"></span>
@@ -640,7 +642,7 @@ function irModo(modo) {
   if (modo === 'venta') {
     document.getElementById('topbarModo').textContent = 'Nueva venta';
     document.getElementById('clienteLabel').style.display = 'flex';
-    document.getElementById('clienteLabelTexto').textContent = '—';
+    document.getElementById('inputCliente').value = '';
     document.getElementById('modoVenta').style.display = 'flex';
     carrito = [];
     actualizarFAB();
@@ -794,9 +796,7 @@ function renderDrawerItems() {
 }
 
 function _getNombreCliente() {
-  // En commit 2 el nombre viene de un campo en topbar (static text).
-  // En commit 3 esto se reemplaza por el input.
-  return '';
+  return (document.getElementById('inputCliente')?.value || '').trim();
 }
 
 function cambiarCant(idx, delta) {
