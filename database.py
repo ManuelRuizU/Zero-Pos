@@ -298,6 +298,8 @@ def _seed_defaults(conn: sqlite3.Connection):
                    "impresora_cocina_ip", "impresora_cocina_tipo", "impresora_cocina_puerto",
                    "comuna_negocio", "subtipo_negocio",
                    "nombre_responsable", "email_negocio", "sii_activo",
+                   "responsable_nombre", "responsable_telefono", "responsable_email",
+                   "razon_social", "giro",
                    "delivery_tarifa_tipo", "delivery_precio_fijo",
                    "delivery_precio_km1", "delivery_precio_km3",
                    "delivery_precio_km5", "delivery_precio_mas5",

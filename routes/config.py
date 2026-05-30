@@ -31,6 +31,11 @@ CLAVES_PERMITIDAS = {
     "nombre_responsable",
     "email_negocio",
     "sii_activo",
+    "responsable_nombre",
+    "responsable_telefono",
+    "responsable_email",
+    "razon_social",
+    "giro",
 }
 
 
