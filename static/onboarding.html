@@ -246,8 +246,11 @@ async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
 
-  const estado = await fetch('/api/onboarding/estado', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
-  if (estado.completado) { location.href = 'pos.html'; return; }
+  const forzar = new URLSearchParams(window.location.search).get('forzar');
+  if (!forzar) {
+    const estado = await fetch('/api/onboarding/estado', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
+    if (estado.completado) { location.href = 'pos.html'; return; }
+  }
 
   tiposData = await fetch('/api/onboarding/tipos', {credentials:'include'}).then(r => r.json()).catch(() => []);
 }
