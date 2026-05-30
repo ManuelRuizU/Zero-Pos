@@ -242,6 +242,48 @@ let tipoSeleccionado = null;
 let tiposData = [];
 let zeroTipoSeleccionado = null;
 
+const TIPOS_POR_PRODUCTO = {
+  store: [
+    {id:'almacen',      nombre:'Almacén',       icono:'🏪'},
+    {id:'minimarket',   nombre:'Minimarket',     icono:'🏬'},
+    {id:'botilleria',   nombre:'Botillería',     icono:'🍷'},
+    {id:'panaderia',    nombre:'Panadería',       icono:'🥖'},
+    {id:'cafe',         nombre:'Café/Cafetería', icono:'☕'},
+    {id:'farmacia',     nombre:'Farmacia',       icono:'💊'},
+    {id:'ferreteria',   nombre:'Ferretería',     icono:'🔧'},
+    {id:'bazar',        nombre:'Bazar/Tienda',   icono:'🛍️'},
+    {id:'otro_store',   nombre:'Otro',           icono:'🏪'},
+  ],
+  food: [
+    {id:'food_truck',   nombre:'Food Truck',     icono:'🚚'},
+    {id:'sushi',        nombre:'Sushi/Delivery', icono:'🍣'},
+    {id:'pizzeria',     nombre:'Pizzería',       icono:'🍕'},
+    {id:'dark_kitchen', nombre:'Dark Kitchen',   icono:'🍱'},
+    {id:'hamburguesas', nombre:'Hamburguesas',   icono:'🍔'},
+    {id:'otro_food',    nombre:'Otro',           icono:'🍽️'},
+  ],
+  resto: [
+    {id:'restaurante',  nombre:'Restaurante',    icono:'🍽️'},
+    {id:'cafe_salon',   nombre:'Café con salón', icono:'☕'},
+    {id:'bar',          nombre:'Bar/Pub',        icono:'🍺'},
+    {id:'otro_resto',   nombre:'Otro',           icono:'🍴'},
+  ],
+  service: [
+    {id:'peluqueria',   nombre:'Peluquería',     icono:'✂️'},
+    {id:'barberia',     nombre:'Barbería',        icono:'💈'},
+    {id:'nail',         nombre:'Nail Art/Spa',   icono:'💅'},
+    {id:'veterinaria',  nombre:'Veterinaria',    icono:'🐾'},
+    {id:'otro_service', nombre:'Otro',           icono:'🔧'},
+  ],
+};
+
+const TITULO_PASO1 = {
+  store:   '¿Qué tipo de tienda tienes?',
+  food:    '¿Qué tipo de comida preparas?',
+  resto:   '¿Cómo es tu restaurante?',
+  service: '¿Qué servicio ofreces?',
+};
+
 async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
@@ -269,7 +311,10 @@ async function irPaso1() {
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({tipo_negocio: zeroTipoSeleccionado}),
   }).catch(() => {});
-  renderTipos();
+  const tipos = TIPOS_POR_PRODUCTO[zeroTipoSeleccionado] || tiposData;
+  renderTipos(tipos);
+  document.querySelector('#paso1 .step-title').textContent =
+    TITULO_PASO1[zeroTipoSeleccionado] || '¿Qué tipo de negocio tienes?';
   document.getElementById('paso0').style.display = 'none';
   document.getElementById('paso1').style.display = 'block';
   document.getElementById('progressFill').style.width = '50%';
@@ -283,10 +328,10 @@ function irPaso0() {
   document.getElementById('btnSiguiente').disabled = true;
 }
 
-function renderTipos() {
+function renderTipos(lista) {
   const grid = document.getElementById('tiposGrid');
   grid.innerHTML = '';
-  tiposData.forEach(t => {
+  (lista || tiposData).forEach(t => {
     const card = document.createElement('div');
     card.className = 'tipo-card';
     card.dataset.id = t.id;
