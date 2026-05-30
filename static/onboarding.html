@@ -129,6 +129,35 @@ body{
   border:1px solid rgba(99,102,241,0.3);color:var(--accent2);
   border-radius:99px;padding:3px 10px;font-size:12px;
 }
+
+/* Formulario datos negocio */
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;}
+.form-group input{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;
+  font-family:inherit;outline:none;transition:border-color .15s;
+}
+.form-group input:focus{border-color:var(--accent);}
+.form-group input::placeholder{color:var(--text-dim);}
+
+/* Modal error */
+.modal-error-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.7);z-index:100;
+  align-items:center;justify-content:center;padding:24px;
+}
+.modal-error-box{
+  background:#1a1a2e;border:1px solid rgba(239,68,68,.4);
+  border-radius:var(--radius);padding:28px;max-width:400px;width:100%;
+  text-align:center;
+}
+.modal-error-box h3{font-size:18px;margin-bottom:10px;}
+.modal-error-box p{color:var(--text-dim);font-size:14px;margin-bottom:20px;line-height:1.5;}
+.btn-cerrar-error{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:10px;padding:10px 24px;cursor:pointer;font-size:14px;font-family:inherit;
+}
 </style>
 </head>
 <body>
@@ -201,9 +230,36 @@ body{
     </div>
   </div>
 
-  <!-- Paso 2: Confirmar -->
+  <!-- Paso 2: Nombre y datos básicos -->
   <div id="paso2" style="display:none">
-    <div class="step-title">Configuración lista</div>
+    <div class="step-title">Datos de tu negocio</div>
+    <div class="step-sub" style="margin-bottom:24px;">
+      Esta información aparece en tus tickets y recibos.
+    </div>
+    <div class="form-group">
+      <label>Nombre del negocio *</label>
+      <input id="nombreNegocio" type="text" placeholder="Ej: Almacén La Esquina"
+             oninput="document.getElementById('btnPaso3').disabled=!this.value.trim()">
+    </div>
+    <div class="form-group">
+      <label>Teléfono</label>
+      <input id="telNegocio" type="tel" placeholder="+56 9 1234 5678">
+    </div>
+    <div class="form-group">
+      <label>Dirección</label>
+      <input id="dirNegocio" type="text" placeholder="Calle Principal 123">
+    </div>
+    <div class="acciones">
+      <button class="btn-back" onclick="volverAPaso1()">← Atrás</button>
+      <button class="btn-primary" id="btnPaso3" disabled onclick="irPaso3()">
+        Continuar →
+      </button>
+    </div>
+  </div>
+
+  <!-- Paso 3: Confirmar y cargar -->
+  <div id="paso3" style="display:none">
+    <div class="step-title">¡Todo listo para comenzar!</div>
     <div class="step-sub" style="margin-bottom:24px;">
       Vamos a cargar lo siguiente para tu negocio:
     </div>
@@ -212,7 +268,7 @@ body{
       <div class="resumen-lista" id="resumenLista"></div>
     </div>
     <div class="acciones">
-      <button class="btn-back" onclick="volverPaso1()">← Cambiar</button>
+      <button class="btn-back" onclick="volverPaso2()">← Cambiar</button>
       <button class="btn-primary" onclick="confirmar()">
         ✓ Cargar y comenzar
       </button>
@@ -222,7 +278,7 @@ body{
   <!-- Loading -->
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <div class="loading-msg">Cargando productos...</div>
+    <div class="loading-msg" id="loadingMsg">Cargando productos...</div>
   </div>
 
   <!-- Éxito -->
@@ -237,17 +293,46 @@ body{
   </div>
 </div>
 
+<!-- Modal error -->
+<div class="modal-error-overlay" id="modalError">
+  <div class="modal-error-box">
+    <h3>⚠️ Error</h3>
+    <p id="errorMsg">Ha ocurrido un error.</p>
+    <button class="btn-cerrar-error" onclick="cerrarError()">Aceptar</button>
+  </div>
+</div>
+
 <script>
-let tipoSeleccionado = null;
-let tiposData = [];
+let tipoSeleccionado    = null;
+let tiposData           = [];
 let zeroTipoSeleccionado = null;
+
+const SUBTIPO_A_BASE = {
+  food_truck:    'foodtruck',
+  dark_kitchen:  'sushi',
+  hamburguesas:  'otro',
+  pizzeria:      'otro',
+  otro_food:     'otro',
+  restaurante:   'cafe',
+  cafe_salon:    'cafe',
+  bar:           'otro',
+  otro_resto:    'otro',
+  farmacia:      'almacen',
+  ferreteria:    'almacen',
+  bazar:         'almacen',
+  otro_store:    'otro',
+  barberia:      'peluqueria',
+  nail:          'otro',
+  veterinaria:   'otro',
+  otro_service:  'otro',
+};
 
 const TIPOS_POR_PRODUCTO = {
   store: [
     {id:'almacen',      nombre:'Almacén',       icono:'🏪'},
     {id:'minimarket',   nombre:'Minimarket',     icono:'🏬'},
     {id:'botilleria',   nombre:'Botillería',     icono:'🍷'},
-    {id:'panaderia',    nombre:'Panadería',       icono:'🥖'},
+    {id:'panaderia',    nombre:'Panadería',      icono:'🥖'},
     {id:'cafe',         nombre:'Café/Cafetería', icono:'☕'},
     {id:'farmacia',     nombre:'Farmacia',       icono:'💊'},
     {id:'ferreteria',   nombre:'Ferretería',     icono:'🔧'},
@@ -270,7 +355,7 @@ const TIPOS_POR_PRODUCTO = {
   ],
   service: [
     {id:'peluqueria',   nombre:'Peluquería',     icono:'✂️'},
-    {id:'barberia',     nombre:'Barbería',        icono:'💈'},
+    {id:'barberia',     nombre:'Barbería',       icono:'💈'},
     {id:'nail',         nombre:'Nail Art/Spa',   icono:'💅'},
     {id:'veterinaria',  nombre:'Veterinaria',    icono:'🐾'},
     {id:'otro_service', nombre:'Otro',           icono:'🔧'},
@@ -283,6 +368,15 @@ const TITULO_PASO1 = {
   resto:   '¿Cómo es tu restaurante?',
   service: '¿Qué servicio ofreces?',
 };
+
+function mostrarError(msg) {
+  document.getElementById('errorMsg').textContent = msg;
+  document.getElementById('modalError').style.display = 'flex';
+}
+function cerrarError() { document.getElementById('modalError').style.display = 'none'; }
+function _show(id)  { document.getElementById(id).style.display = 'block'; }
+function _hide(id)  { document.getElementById(id).style.display = 'none'; }
+function _prog(pct) { document.getElementById('progressFill').style.width = pct; }
 
 async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
@@ -306,6 +400,7 @@ function seleccionarZero(card, tipo) {
 
 async function irPaso1() {
   if (!zeroTipoSeleccionado) return;
+  console.log('[ZERO] Tipo guardado:', zeroTipoSeleccionado);
   await fetch('/api/config', {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type': 'application/json'},
@@ -315,15 +410,15 @@ async function irPaso1() {
   renderTipos(tipos);
   document.querySelector('#paso1 .step-title').textContent =
     TITULO_PASO1[zeroTipoSeleccionado] || '¿Qué tipo de negocio tienes?';
-  document.getElementById('paso0').style.display = 'none';
-  document.getElementById('paso1').style.display = 'block';
-  document.getElementById('progressFill').style.width = '50%';
+  _hide('paso0');
+  _show('paso1');
+  _prog('40%');
 }
 
 function irPaso0() {
-  document.getElementById('paso1').style.display = 'none';
-  document.getElementById('paso0').style.display = 'block';
-  document.getElementById('progressFill').style.width = '20%';
+  _hide('paso1');
+  _show('paso0');
+  _prog('20%');
   tipoSeleccionado = null;
   document.getElementById('btnSiguiente').disabled = true;
 }
@@ -350,60 +445,95 @@ function seleccionarTipo(card, tipo) {
 
 function irPaso2() {
   if (!tipoSeleccionado) return;
-  document.getElementById('paso1').style.display = 'none';
-  document.getElementById('paso2').style.display = 'block';
-  document.getElementById('progressFill').style.width = '80%';
+  console.log('[ZERO] Subtipo:', tipoSeleccionado.id);
+  _hide('paso1');
+  _show('paso2');
+  _prog('60%');
+}
+
+function volverAPaso1() {
+  _hide('paso2');
+  _show('paso1');
+  _prog('40%');
+}
+
+async function irPaso3() {
+  const nombre = document.getElementById('nombreNegocio').value.trim();
+  if (!nombre) return;
+  const tel    = document.getElementById('telNegocio').value.trim();
+  const dir    = document.getElementById('dirNegocio').value.trim();
+  const subtipo = tipoSeleccionado.id;
+
+  await fetch('/api/config', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      nombre_negocio:    nombre,
+      telefono_negocio:  tel,
+      direccion_negocio: dir,
+      subtipo_negocio:   subtipo,
+    }),
+  }).catch(() => {});
 
   document.getElementById('resumenIcon').textContent = tipoSeleccionado.icono;
   document.getElementById('resumenTipo').textContent = tipoSeleccionado.nombre;
-
   const lista = document.getElementById('resumenLista');
   lista.innerHTML = `
+    <div class="resumen-item">${nombre}</div>
     <div class="resumen-item">Categorías y subcategorías específicas del rubro</div>
     <div class="resumen-item">Productos más comunes con precios de referencia en CLP</div>
     <div class="resumen-item">Variantes de tamaño/presentación configuradas</div>
-    <div class="resumen-item">Stock inicial estimado</div>
     <div class="resumen-item">Puedes editar precios, stock y agregar más productos después</div>
   `;
+
+  _hide('paso2');
+  _show('paso3');
+  _prog('80%');
 }
 
-function volverPaso1() {
-  document.getElementById('paso2').style.display = 'none';
-  document.getElementById('paso1').style.display = 'block';
-  document.getElementById('progressFill').style.width = '50%';
+function volverPaso2() {
+  _hide('paso3');
+  _show('paso2');
+  _prog('60%');
 }
 
 async function confirmar() {
   if (!tipoSeleccionado) return;
+  const subtipo  = tipoSeleccionado.id;
+  const tipoBase = SUBTIPO_A_BASE[subtipo] || subtipo;
+  console.log('[ZERO] Cargando productos para:', subtipo, '→ base:', tipoBase);
 
-  document.getElementById('paso2').style.display = 'none';
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('progressFill').style.width = '85%';
+  _hide('paso3');
+  _show('loading');
+  _prog('90%');
+  document.getElementById('loadingMsg').textContent = 'Cargando productos...';
 
   try {
     const r = await fetch('/api/onboarding/setup', {
       method: 'POST',
       credentials: 'include',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({tipo: tipoSeleccionado.id}),
+      body: JSON.stringify({tipo: tipoBase, subtipo: subtipo}),
     });
     const data = await r.json();
 
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('progressFill').style.width = '100%';
+    _hide('loading');
+    _prog('100%');
 
     if (data.ok) {
-      document.getElementById('exito').style.display = 'block';
+      _show('exito');
       document.getElementById('exitoMsg').textContent =
         `Se cargaron ${data.productos_cargados} productos para tu ${tipoSeleccionado.nombre}. ¡A vender!`;
     } else {
-      alert('Error: ' + (data.error || 'Error desconocido'));
-      irPaso2();
+      mostrarError('Error: ' + (data.error || 'Error desconocido'));
+      _show('paso3');
+      _prog('80%');
     }
   } catch(e) {
-    document.getElementById('loading').style.display = 'none';
-    alert('Error de conexión');
-    irPaso2();
+    _hide('loading');
+    mostrarError('Error de conexión. Verifica que el servidor esté activo e intenta de nuevo.');
+    _show('paso3');
+    _prog('80%');
   }
 }
 

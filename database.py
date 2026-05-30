@@ -296,7 +296,7 @@ def _seed_defaults(conn: sqlite3.Connection):
     # Nuevos campos de ticket — INSERT OR IGNORE para DBs existentes
     for _clave in ("whatsapp_negocio", "direccion_negocio", "telefono_negocio",
                    "impresora_cocina_ip", "impresora_cocina_tipo", "impresora_cocina_puerto",
-                   "comuna_negocio",
+                   "comuna_negocio", "subtipo_negocio",
                    "delivery_tarifa_tipo", "delivery_precio_fijo",
                    "delivery_precio_km1", "delivery_precio_km3",
                    "delivery_precio_km5", "delivery_precio_mas5",

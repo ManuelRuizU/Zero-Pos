@@ -55,13 +55,16 @@ def setup():
         return jsonify({"error": "No autenticado"}), 401
 
     body = request.get_json(silent=True) or {}
-    tipo = body.get("tipo", "").strip()
+    tipo   = body.get("tipo", "").strip()
+    subtipo = body.get("subtipo", "").strip()
     if not tipo:
         return jsonify({"error": "tipo requerido"}), 400
 
     data = _load_data()
     if tipo not in data:
-        return jsonify({"error": "Tipo de negocio no reconocido"}), 400
+        tipo = "otro"
+    if tipo not in data:
+        return jsonify({"error": "Datos de productos no disponibles"}), 500
 
     config = data[tipo]
     uid = session.get("usuario_id")
@@ -85,6 +88,11 @@ def setup():
         conn.execute(
             "INSERT OR REPLACE INTO config (clave, valor) VALUES ('tipo_negocio', ?)", (tipo,)
         )
+        if subtipo:
+            conn.execute(
+                "INSERT OR REPLACE INTO config (clave, valor) VALUES ('subtipo_negocio', ?)",
+                (subtipo,)
+            )
         conn.execute(
             "INSERT OR REPLACE INTO config (clave, valor) VALUES ('onboarding_completado', '1')"
         )
