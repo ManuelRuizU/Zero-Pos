@@ -14,7 +14,8 @@
 :root{
   --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
   --border:rgba(255,255,255,0.1);--accent:#6366f1;--accent2:#818cf8;
-  --text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--radius:16px;
+  --text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--danger:#ef4444;
+  --radius:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
@@ -26,43 +27,43 @@ body{
     radial-gradient(ellipse 40% 40% at 80% 80%,rgba(99,102,241,0.08) 0%,transparent 60%);
   padding:24px;
 }
-.container{width:100%;max-width:760px;animation:fadeIn .4s ease;}
+.container{width:100%;max-width:720px;animation:fadeIn .4s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
 
-.header{text-align:center;margin-bottom:48px;}
-.logo{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:12px;}
+.header{text-align:center;margin-bottom:40px;}
+.logo{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:10px;}
 .logo span{color:var(--accent);}
 .tagline{color:var(--text-dim);font-size:15px;}
-.step-title{font-size:24px;font-weight:700;margin-bottom:8px;}
-.step-sub{color:var(--text-dim);font-size:14px;}
+
+.step-title{font-size:22px;font-weight:700;margin-bottom:6px;}
+.step-sub{color:var(--text-dim);font-size:14px;margin-bottom:24px;}
 
 /* Progress */
-.progress-bar{height:4px;background:var(--surface2);border-radius:2px;margin-bottom:40px;overflow:hidden;}
+.progress-bar{height:4px;background:var(--surface2);border-radius:2px;margin-bottom:36px;overflow:hidden;}
 .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s ease;}
 
-/* Tipo selector */
+/* Tipo selector — 4 cards */
 .tipos-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-  gap:14px;margin-bottom:32px;
-}
-.sii-grid{
-  display:grid;grid-template-columns:repeat(2,1fr);
-  gap:14px;margin-bottom:32px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));
+  gap:12px;margin-bottom:28px;
 }
 .tipo-card{
   background:var(--surface);border:2px solid var(--border);
-  border-radius:var(--radius);padding:24px 16px;
+  border-radius:var(--radius);padding:22px 14px;
   cursor:pointer;transition:all .2s;text-align:center;user-select:none;
 }
-.tipo-card:hover{background:var(--surface2);border-color:rgba(99,102,241,0.5);transform:translateY(-3px);}
+.tipo-card:hover{background:var(--surface2);border-color:rgba(99,102,241,0.5);transform:translateY(-2px);}
 .tipo-card.selected{background:rgba(99,102,241,0.15);border-color:var(--accent);}
-.tipo-icon{font-size:40px;margin-bottom:10px;display:block;}
+.tipo-icon{font-size:38px;margin-bottom:8px;display:block;}
 .tipo-nombre{font-size:14px;font-weight:600;}
+.tipo-desc{font-size:11px;color:var(--text-dim);margin-top:5px;line-height:1.4;}
 
 /* Formulario */
 .form-group{margin-bottom:16px;}
-.form-group label{display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;}
+.form-group label{
+  display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;
+}
+.form-group label .optional{color:var(--text-dim);font-size:12px;font-weight:400;}
 .form-group input,
 .form-group select{
   width:100%;background:var(--surface);border:1px solid var(--border);
@@ -79,26 +80,55 @@ body{
   content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);
   color:var(--text-dim);pointer-events:none;font-size:14px;
 }
+/* Validación inline */
+.campo-error{border-color:var(--danger) !important;}
+.error-msg{font-size:12px;color:var(--danger);margin-top:5px;min-height:18px;}
+
+/* Nota subtipo */
 .subtipo-note{
   font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5;
-  padding:8px 12px;background:var(--surface);border-radius:8px;
+  padding:8px 12px;background:var(--surface);border-radius:8px;border-left:3px solid rgba(99,102,241,0.4);
 }
 
-/* Resumen */
-.resumen-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius);padding:24px;margin-bottom:24px;
+/* Aviso info */
+.aviso-info{
+  background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);
+  border-radius:10px;padding:12px 16px;font-size:13px;
+  color:var(--text-dim);line-height:1.6;margin-bottom:20px;
 }
-.resumen-titulo{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
-.resumen-lista{display:flex;flex-direction:column;gap:8px;}
-.resumen-item{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-dim);}
-.resumen-item::before{content:'✓';color:var(--success);font-weight:700;}
+
+/* SII toggle */
+.sii-opcion{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 20px;
+  background:var(--surface);border:2px solid var(--border);
+  border-radius:12px;cursor:pointer;margin-bottom:10px;
+  transition:all .2s;font-size:15px;user-select:none;
+}
+.sii-opcion:hover{background:var(--surface2);border-color:rgba(99,102,241,0.4);}
+.sii-opcion.selected{background:rgba(99,102,241,0.12);border-color:var(--accent);}
+.sii-radio{
+  width:20px;height:20px;flex-shrink:0;
+  border:2px solid var(--text-dim);border-radius:50%;
+  transition:all .2s;position:relative;
+}
+.sii-opcion.selected .sii-radio{
+  border-color:var(--accent);background:var(--accent);
+  box-shadow:0 0 0 3px rgba(99,102,241,0.2);
+}
+.sii-opcion.selected .sii-radio::after{
+  content:'';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:7px;height:7px;background:#fff;border-radius:50%;
+}
+.sii-campos{margin-top:20px;}
 
 /* Acciones */
 .acciones{display:flex;gap:12px;margin-top:24px;}
 .btn-back{
   background:var(--surface);border:1px solid var(--border);color:var(--text);
-  border-radius:12px;padding:14px 24px;cursor:pointer;font-size:14px;transition:all .15s;
+  border-radius:12px;padding:14px 24px;cursor:pointer;font-size:14px;
+  transition:all .15s;white-space:nowrap;
 }
 .btn-back:hover{background:var(--surface2);}
 .btn-primary{
@@ -106,28 +136,28 @@ body{
   border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;
   cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(99,102,241,0.4);
 }
-.btn-primary:hover{filter:brightness(1.12);}
-.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-primary:hover{filter:brightness(1.1);}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;}
 
 /* Loading */
-.loading{text-align:center;padding:40px;display:none;}
+.loading{text-align:center;padding:48px;display:none;}
 .spinner{
   width:48px;height:48px;border:3px solid var(--border);
   border-top-color:var(--accent);border-radius:50%;
-  animation:spin 0.8s linear infinite;margin:0 auto 20px;
+  animation:spin .8s linear infinite;margin:0 auto 20px;
 }
 @keyframes spin{to{transform:rotate(360deg);}}
 .loading-msg{color:var(--text-dim);font-size:14px;}
 
 /* Éxito */
 .exito{text-align:center;padding:40px;display:none;}
-.exito-icon{font-size:72px;margin-bottom:16px;}
+.exito-icon{font-size:68px;margin-bottom:14px;}
 .exito-titulo{font-size:22px;font-weight:700;margin-bottom:8px;}
-.exito-sub{color:var(--text-dim);font-size:14px;margin-bottom:32px;}
+.exito-sub{color:var(--text-dim);font-size:14px;margin-bottom:28px;}
 
 /* Modal error */
 .modal-error-overlay{
-  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
   z-index:100;align-items:center;justify-content:center;padding:24px;
 }
 .modal-error-box{
@@ -151,149 +181,164 @@ body{
   </div>
 
   <div class="progress-bar">
-    <div class="progress-fill" id="progressFill" style="width:20%"></div>
+    <div class="progress-fill" id="progressFill" style="width:25%"></div>
   </div>
 
-  <!-- Paso 1: Elegir producto ZERO -->
+  <!-- ═══ PASO 1: Tipo de producto ZERO ═══ -->
   <div id="paso1">
-    <div class="step-title" style="margin-bottom:8px;">¿Qué tipo de negocio tienes?</div>
-    <div class="step-sub" style="margin-bottom:28px;">
+    <div class="step-title">¿Qué tipo de negocio tienes?</div>
+    <div class="step-sub">
       Elige tu producto ZERO para personalizar la experiencia de venta.
     </div>
     <div class="tipos-grid">
       <div class="tipo-card" data-zero="store" onclick="seleccionarZero(this,'store')">
         <span class="tipo-icon">🏪</span>
         <div class="tipo-nombre">ZERO STORE</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
-          Tienda, almacén,<br>minimarket, farmacia,<br>ferretería, panadería
-        </div>
+        <div class="tipo-desc">Tienda, almacén,<br>minimarket, farmacia,<br>ferretería, panadería</div>
       </div>
       <div class="tipo-card" data-zero="food" onclick="seleccionarZero(this,'food')">
         <span class="tipo-icon">🍕</span>
         <div class="tipo-nombre">ZERO FOOD</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
-          Food truck, dark kitchen,<br>sushi, pizzería, delivery
-        </div>
+        <div class="tipo-desc">Food truck, dark kitchen,<br>sushi, pizzería, delivery</div>
       </div>
       <div class="tipo-card" data-zero="resto" onclick="seleccionarZero(this,'resto')">
         <span class="tipo-icon">🍽️</span>
         <div class="tipo-nombre">ZERO RESTO</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
-          Restaurante con salón,<br>café, bar con mesas
-        </div>
+        <div class="tipo-desc">Restaurante con salón,<br>café, bar con mesas</div>
       </div>
       <div class="tipo-card" data-zero="service" onclick="seleccionarZero(this,'service')">
         <span class="tipo-icon">✂️</span>
         <div class="tipo-nombre">ZERO SERVICE</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
-          Peluquería, barbería,<br>servicios con agenda
-        </div>
+        <div class="tipo-desc">Peluquería, barbería,<br>servicios con agenda</div>
       </div>
     </div>
     <div class="acciones">
-      <button class="btn-primary" id="btnZeroContinuar" disabled onclick="irPaso2()">
+      <button class="btn-primary" id="btnContinuar1" disabled onclick="irPaso2()">
         Continuar →
       </button>
     </div>
   </div>
 
-  <!-- Paso 2: Datos del negocio + subtipo opcional -->
+  <!-- ═══ PASO 2: Datos del negocio ═══ -->
   <div id="paso2" style="display:none">
-    <div class="step-title" style="margin-bottom:8px;">Datos de tu negocio</div>
-    <div class="step-sub" style="margin-bottom:24px;">
-      Esta información aparece en tus tickets y recibos.
-    </div>
+    <div class="step-title">Datos de tu negocio</div>
+    <div class="step-sub">Esta información aparece en tus tickets y recibos.</div>
+
     <div class="form-group">
       <label>Nombre del negocio *</label>
       <input id="nombreNegocio" type="text" placeholder="Ej: Almacén La Esquina"
-             oninput="document.getElementById('btnPaso3').disabled=!this.value.trim()">
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="nombreNegocioError"></div>
     </div>
     <div class="form-group">
-      <label>Teléfono</label>
-      <input id="telNegocio" type="tel" placeholder="+56 9 1234 5678">
+      <label>Dirección *</label>
+      <input id="dirNegocio" type="text" placeholder="Calle Principal 123"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="dirNegocioError"></div>
     </div>
     <div class="form-group">
-      <label>Dirección</label>
-      <input id="dirNegocio" type="text" placeholder="Calle Principal 123">
+      <label>Teléfono *</label>
+      <input id="telNegocio" type="tel" placeholder="+56 9 1234 5678"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="telNegocioError"></div>
     </div>
     <div class="form-group">
       <label>
         ¿Qué tipo de negocio tienes?
-        <span style="color:var(--text-dim);font-size:12px;font-weight:400;"> (opcional)</span>
+        <span class="optional"> (opcional)</span>
       </label>
       <div class="select-wrap">
-        <select id="subtipoNegocio">
-          <option value="">Selecciona (opcional)</option>
-        </select>
+        <select id="subtipoNegocio"></select>
       </div>
       <div class="subtipo-note">
         Esta información nos ayuda a mejorar ZERO POS. No afecta el funcionamiento.
       </div>
     </div>
+
     <div class="acciones">
       <button class="btn-back" onclick="volverPaso1()">← Atrás</button>
-      <button class="btn-primary" id="btnPaso3" disabled onclick="irPaso3()">
-        Continuar →
-      </button>
+      <button class="btn-primary" onclick="irPaso3()">Continuar →</button>
     </div>
   </div>
 
-  <!-- Paso 3: Datos del responsable -->
+  <!-- ═══ PASO 3: Datos del responsable ═══ -->
   <div id="paso3" style="display:none">
-    <div class="step-title" style="margin-bottom:8px;">Datos del responsable</div>
-    <div class="step-sub" style="margin-bottom:24px;">
-      ¿Quién administra este punto de venta? Todos los campos son opcionales.
+    <div class="step-title">Datos del responsable</div>
+    <div class="step-sub">¿Quién administra este punto de venta?</div>
+
+    <div class="aviso-info">
+      Estos datos son para soporte técnico y recuperación de acceso.<br>
+      No se comparten con terceros.
+    </div>
+
+    <div class="form-group">
+      <label>Nombre completo *</label>
+      <input id="responsableNombre" type="text" placeholder="Ej: María González"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="responsableNombreError"></div>
     </div>
     <div class="form-group">
-      <label>Nombre del responsable</label>
-      <input id="nombreResponsable" type="text" placeholder="Ej: María González">
+      <label>Teléfono *</label>
+      <input id="responsableTel" type="tel" placeholder="+56 9 1234 5678"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="responsableTelError"></div>
     </div>
     <div class="form-group">
-      <label>Email de contacto</label>
-      <input id="emailNegocio" type="email" placeholder="correo@ejemplo.com">
+      <label>Email *</label>
+      <input id="responsableEmail" type="email" placeholder="correo@ejemplo.com"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="responsableEmailError"></div>
     </div>
-    <div class="form-group">
-      <label>RUT del negocio</label>
-      <input id="rutNegocio" type="text" placeholder="12.345.678-9">
-    </div>
+
     <div class="acciones">
       <button class="btn-back" onclick="volverPaso2()">← Atrás</button>
       <button class="btn-primary" onclick="irPaso4()">Continuar →</button>
     </div>
   </div>
 
-  <!-- Paso 4: SII + Cargar -->
+  <!-- ═══ PASO 4: SII + Carga ═══ -->
   <div id="paso4" style="display:none">
-    <div class="step-title" style="margin-bottom:8px;">¿Emites boleta electrónica?</div>
-    <div class="step-sub" style="margin-bottom:28px;">
+    <div class="step-title">¿Emites boleta electrónica?</div>
+    <div class="step-sub">
       Puedes configurar la integración con el SII más tarde en Ajustes.
     </div>
-    <div class="sii-grid">
-      <div class="tipo-card" id="siiSi" onclick="seleccionarSII(this,'si')">
-        <span class="tipo-icon">📄</span>
-        <div class="tipo-nombre">Sí, uso el SII</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
-          Emito boletas electrónicas
-        </div>
+
+    <div id="opNoSII" class="sii-opcion selected" onclick="selSII('no')">
+      <div class="sii-radio"></div>
+      <span>No por ahora — empezar a vender</span>
+    </div>
+    <div id="opSiSII" class="sii-opcion" onclick="selSII('si')">
+      <div class="sii-radio"></div>
+      <span>Sí — quiero emitir boletas electrónicas</span>
+    </div>
+
+    <div class="sii-campos" id="siiCampos" style="display:none">
+      <div class="form-group">
+        <label>RUT del negocio</label>
+        <input id="rutNegocio" type="text" placeholder="12.345.678-9">
       </div>
-      <div class="tipo-card" id="siiNo" onclick="seleccionarSII(this,'no')">
-        <span class="tipo-icon">💵</span>
-        <div class="tipo-nombre">No por ahora</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
-          Solo efectivo o transferencia
-        </div>
+      <div class="form-group">
+        <label>Razón social</label>
+        <input id="razonSocial" type="text" placeholder="Nombre legal del negocio">
+      </div>
+      <div class="form-group">
+        <label>Giro</label>
+        <input id="giroNegocio" type="text" placeholder="Ej: Comercio al por menor">
       </div>
     </div>
+
     <div class="acciones">
       <button class="btn-back" onclick="volverPaso3()">← Atrás</button>
-      <button class="btn-primary" onclick="confirmar()">✓ Cargar y comenzar</button>
+      <button class="btn-primary" id="btnEmpezar" onclick="confirmar()">
+        ¡Empezar a vender!
+      </button>
     </div>
   </div>
 
   <!-- Loading -->
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <div class="loading-msg" id="loadingMsg">Cargando productos...</div>
+    <div class="loading-msg" id="loadingMsg">Cargando tus productos...</div>
   </div>
 
   <!-- Éxito -->
@@ -319,7 +364,7 @@ body{
 
 <script>
 let zeroTipoSeleccionado = null;
-let siiSeleccionado      = null;
+let siiSeleccionado      = 'no';
 
 const SUBTIPOS = {
   store: [
@@ -355,43 +400,75 @@ const SUBTIPOS = {
   ],
 };
 
-const ZERO_A_BASE = {
-  store:   'almacen',
-  food:    'foodtruck',
-  resto:   'cafe',
-  service: 'peluqueria',
-};
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function $(id)      { return document.getElementById(id); }
+function _show(id)  { $(id).style.display = 'block'; }
+function _hide(id)  { $(id).style.display = 'none'; }
+function _prog(pct) { $('progressFill').style.width = pct; }
 
 function mostrarError(msg) {
-  document.getElementById('errorMsg').textContent = msg;
-  document.getElementById('modalError').style.display = 'flex';
+  $('errorMsg').textContent = msg;
+  $('modalError').style.display = 'flex';
 }
-function cerrarError() { document.getElementById('modalError').style.display = 'none'; }
-function _show(id)  { document.getElementById(id).style.display = 'block'; }
-function _hide(id)  { document.getElementById(id).style.display = 'none'; }
-function _prog(pct) { document.getElementById('progressFill').style.width = pct; }
+function cerrarError() { $('modalError').style.display = 'none'; }
+
+function limpiarError(input) {
+  input.classList.remove('campo-error');
+  const err = document.getElementById(input.id + 'Error');
+  if (err) err.textContent = '';
+}
+
+function _setErr(id, msg) {
+  const el = $(id);
+  el.classList.add('campo-error');
+  const err = $(id + 'Error');
+  if (err) err.textContent = msg;
+}
+
+function _validar(campos) {
+  let ok = true;
+  let primero = null;
+  campos.forEach(({id, msg}) => {
+    const val = $(id).value.trim();
+    if (!val) {
+      _setErr(id, msg);
+      ok = false;
+      if (!primero) primero = $(id);
+    }
+  });
+  if (primero) primero.focus();
+  return ok;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
 
 async function init() {
-  const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
+  const me = await fetch('/api/auth/me', {credentials:'include'})
+    .then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
 
   const forzar = new URLSearchParams(window.location.search).get('forzar');
   if (!forzar) {
-    const estado = await fetch('/api/onboarding/estado', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
+    const estado = await fetch('/api/onboarding/estado', {credentials:'include'})
+      .then(r => r.json()).catch(() => ({}));
     if (estado.completado) { location.href = 'pos.html'; return; }
   }
 }
+
+// ── Paso 1 ───────────────────────────────────────────────────────────────────
 
 function seleccionarZero(card, tipo) {
   document.querySelectorAll('[data-zero]').forEach(c => c.classList.remove('selected'));
   card.classList.add('selected');
   zeroTipoSeleccionado = tipo;
-  document.getElementById('btnZeroContinuar').disabled = false;
+  $('btnContinuar1').disabled = false;
   _poblarSubtipos(tipo);
+  console.log('[ZERO] Tipo seleccionado:', tipo);
 }
 
 function _poblarSubtipos(tipo) {
-  const sel = document.getElementById('subtipoNegocio');
+  const sel = $('subtipoNegocio');
   sel.innerHTML = '<option value="">Selecciona (opcional)</option>';
   (SUBTIPOS[tipo] || []).forEach(s => {
     const opt = document.createElement('option');
@@ -403,116 +480,129 @@ function _poblarSubtipos(tipo) {
 
 function irPaso2() {
   if (!zeroTipoSeleccionado) return;
-  console.log('[ZERO] Tipo:', zeroTipoSeleccionado);
-  fetch('/api/config', {
-    method: 'POST', credentials: 'include',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({tipo_negocio: zeroTipoSeleccionado}),
-  }).catch(() => {});
-  _hide('paso1'); _show('paso2'); _prog('40%');
+  _hide('paso1'); _show('paso2'); _prog('50%');
 }
 
 function volverPaso1() {
-  _hide('paso2'); _show('paso1'); _prog('20%');
+  _hide('paso2'); _show('paso1'); _prog('25%');
 }
 
-async function irPaso3() {
-  const nombre = document.getElementById('nombreNegocio').value.trim();
-  if (!nombre) return;
-  const tel     = document.getElementById('telNegocio').value.trim();
-  const dir     = document.getElementById('dirNegocio').value.trim();
-  const subtipo = document.getElementById('subtipoNegocio').value;
-  console.log('[ZERO] Negocio:', nombre, '| Subtipo:', subtipo || '(ninguno)');
+// ── Paso 2 ───────────────────────────────────────────────────────────────────
 
-  const payload = {nombre_negocio: nombre};
-  if (tel)     payload.telefono_negocio  = tel;
-  if (dir)     payload.direccion_negocio = dir;
-  if (subtipo) payload.subtipo_negocio   = subtipo;
-
-  await fetch('/api/config', {
-    method: 'POST', credentials: 'include',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(payload),
-  }).catch(() => {});
-
-  _hide('paso2'); _show('paso3'); _prog('60%');
+function irPaso3() {
+  const ok = _validar([
+    {id: 'nombreNegocio', msg: 'El nombre del negocio es obligatorio'},
+    {id: 'dirNegocio',    msg: 'La dirección es obligatoria'},
+    {id: 'telNegocio',    msg: 'El teléfono es obligatorio'},
+  ]);
+  if (!ok) return;
+  console.log('[ZERO] Negocio:', $('nombreNegocio').value.trim(),
+              '| Subtipo:', $('subtipoNegocio').value || '(ninguno)');
+  _hide('paso2'); _show('paso3'); _prog('75%');
 }
 
 function volverPaso2() {
-  _hide('paso3'); _show('paso2'); _prog('40%');
+  _hide('paso3'); _show('paso2'); _prog('50%');
 }
 
-async function irPaso4() {
-  const nombre = document.getElementById('nombreResponsable').value.trim();
-  const email  = document.getElementById('emailNegocio').value.trim();
-  const rut    = document.getElementById('rutNegocio').value.trim();
+// ── Paso 3 ───────────────────────────────────────────────────────────────────
 
-  const payload = {};
-  if (nombre) payload.nombre_responsable = nombre;
-  if (email)  payload.email_negocio      = email;
-  if (rut)    payload.rut_negocio        = rut;
-
-  if (Object.keys(payload).length) {
-    await fetch('/api/config', {
-      method: 'POST', credentials: 'include',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
-    }).catch(() => {});
-  }
-
-  _hide('paso3'); _show('paso4'); _prog('80%');
+function irPaso4() {
+  const ok = _validar([
+    {id: 'responsableNombre', msg: 'El nombre es obligatorio'},
+    {id: 'responsableTel',    msg: 'El teléfono es obligatorio'},
+    {id: 'responsableEmail',  msg: 'El email es obligatorio'},
+  ]);
+  if (!ok) return;
+  _hide('paso3'); _show('paso4'); _prog('100%');
 }
 
 function volverPaso3() {
-  _hide('paso4'); _show('paso3'); _prog('60%');
+  _hide('paso4'); _show('paso3'); _prog('75%');
 }
 
-function seleccionarSII(card, val) {
-  document.querySelectorAll('.sii-grid .tipo-card').forEach(c => c.classList.remove('selected'));
-  card.classList.add('selected');
+// ── Paso 4 ───────────────────────────────────────────────────────────────────
+
+function selSII(val) {
   siiSeleccionado = val;
+  $('opNoSII').classList.toggle('selected', val === 'no');
+  $('opSiSII').classList.toggle('selected', val === 'si');
+  $('siiCampos').style.display = val === 'si' ? 'block' : 'none';
 }
 
 async function confirmar() {
-  const tipoBase = ZERO_A_BASE[zeroTipoSeleccionado] || 'almacen';
-  const subtipo  = document.getElementById('subtipoNegocio').value;
-  console.log('[ZERO] Cargando productos → base:', tipoBase, '| subtipo:', subtipo || '(ninguno)');
+  $('btnEmpezar').disabled = true;
 
-  if (siiSeleccionado) {
-    fetch('/api/config', {
-      method: 'POST', credentials: 'include',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({sii_activo: siiSeleccionado === 'si' ? '1' : '0'}),
-    }).catch(() => {});
+  const nombre    = $('nombreNegocio').value.trim();
+  const dir       = $('dirNegocio').value.trim();
+  const tel       = $('telNegocio').value.trim();
+  const subtipo   = $('subtipoNegocio').value;
+  const respNom   = $('responsableNombre').value.trim();
+  const respTel   = $('responsableTel').value.trim();
+  const respEmail = $('responsableEmail').value.trim();
+
+  const configPayload = {
+    nombre_negocio:      nombre,
+    direccion_negocio:   dir,
+    telefono_negocio:    tel,
+    responsable_nombre:  respNom,
+    responsable_telefono: respTel,
+    responsable_email:   respEmail,
+    sii_activo:          siiSeleccionado === 'si' ? '1' : '0',
+    tipo_negocio:        zeroTipoSeleccionado,
+  };
+  if (subtipo) configPayload.subtipo_negocio = subtipo;
+
+  if (siiSeleccionado === 'si') {
+    const rut   = $('rutNegocio').value.trim();
+    const razon = $('razonSocial').value.trim();
+    const giro  = $('giroNegocio').value.trim();
+    if (rut)   configPayload.rut_negocio  = rut;
+    if (razon) configPayload.razon_social = razon;
+    if (giro)  configPayload.giro         = giro;
   }
 
-  _hide('paso4'); _show('loading'); _prog('90%');
-  document.getElementById('loadingMsg').textContent = 'Cargando productos...';
+  console.log('[ZERO] Guardando config…', {tipo: zeroTipoSeleccionado, subtipo});
+
+  _hide('paso4'); _show('loading');
+  $('loadingMsg').textContent = 'Cargando tus productos...';
 
   try {
-    const r = await fetch('/api/onboarding/setup', {
-      method: 'POST',
-      credentials: 'include',
+    // 1. Guardar configuración
+    const rCfg = await fetch('/api/config', {
+      method: 'POST', credentials: 'include',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({tipo: tipoBase, subtipo: subtipo}),
+      body: JSON.stringify(configPayload),
     });
-    const data = await r.json();
+    if (!rCfg.ok) {
+      const err = await rCfg.json().catch(() => ({}));
+      throw new Error(err.error || 'Error al guardar configuración');
+    }
+
+    // 2. Cargar productos
+    const rComp = await fetch('/api/onboarding/completar', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tipo: zeroTipoSeleccionado, subtipo}),
+    });
+    const data = await rComp.json();
 
     _hide('loading');
-    _prog('100%');
 
     if (data.ok) {
       _show('exito');
-      document.getElementById('exitoMsg').textContent =
+      $('exitoMsg').textContent =
         `Se cargaron ${data.productos_cargados} productos. ¡A vender!`;
     } else {
       mostrarError('Error: ' + (data.error || 'Error desconocido'));
-      _show('paso4'); _prog('80%');
+      _show('paso4');
+      $('btnEmpezar').disabled = false;
     }
   } catch(e) {
     _hide('loading');
-    mostrarError('Error de conexión. Verifica que el servidor esté activo e intenta de nuevo.');
-    _show('paso4'); _prog('80%');
+    mostrarError(e.message || 'Error de conexión. Verifica que el servidor esté activo.');
+    _show('paso4');
+    $('btnEmpezar').disabled = false;
   }
 }
 
