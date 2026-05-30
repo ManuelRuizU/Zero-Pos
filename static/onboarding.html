@@ -15,7 +15,6 @@
   --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
   --border:rgba(255,255,255,0.1);--accent:#6366f1;--accent2:#818cf8;
   --text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--radius:16px;
-  --blur:blur(20px);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
@@ -27,11 +26,7 @@ body{
     radial-gradient(ellipse 40% 40% at 80% 80%,rgba(99,102,241,0.08) 0%,transparent 60%);
   padding:24px;
 }
-
-.container{
-  width:100%;max-width:760px;
-  animation:fadeIn .4s ease;
-}
+.container{width:100%;max-width:760px;animation:fadeIn .4s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
 
 .header{text-align:center;margin-bottom:48px;}
@@ -41,75 +36,81 @@ body{
 .step-title{font-size:24px;font-weight:700;margin-bottom:8px;}
 .step-sub{color:var(--text-dim);font-size:14px;}
 
+/* Progress */
+.progress-bar{height:4px;background:var(--surface2);border-radius:2px;margin-bottom:40px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s ease;}
+
 /* Tipo selector */
 .tipos-grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
   gap:14px;margin-bottom:32px;
 }
+.sii-grid{
+  display:grid;grid-template-columns:repeat(2,1fr);
+  gap:14px;margin-bottom:32px;
+}
 .tipo-card{
   background:var(--surface);border:2px solid var(--border);
   border-radius:var(--radius);padding:24px 16px;
-  cursor:pointer;transition:all .2s;text-align:center;
-  user-select:none;
+  cursor:pointer;transition:all .2s;text-align:center;user-select:none;
 }
-.tipo-card:hover{
-  background:var(--surface2);
-  border-color:rgba(99,102,241,0.5);
-  transform:translateY(-3px);
-}
-.tipo-card.selected{
-  background:rgba(99,102,241,0.15);
-  border-color:var(--accent);
-}
+.tipo-card:hover{background:var(--surface2);border-color:rgba(99,102,241,0.5);transform:translateY(-3px);}
+.tipo-card.selected{background:rgba(99,102,241,0.15);border-color:var(--accent);}
 .tipo-icon{font-size:40px;margin-bottom:10px;display:block;}
 .tipo-nombre{font-size:14px;font-weight:600;}
 
-/* Progress */
-.progress-bar{
-  height:4px;background:var(--surface2);border-radius:2px;
-  margin-bottom:40px;overflow:hidden;
+/* Formulario */
+.form-group{margin-bottom:16px;}
+.form-group label{display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;}
+.form-group input,
+.form-group select{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;
+  font-family:inherit;outline:none;transition:border-color .15s;
+  appearance:none;-webkit-appearance:none;
 }
-.progress-fill{
-  height:100%;background:var(--accent);border-radius:2px;
-  transition:width .5s ease;
+.form-group input:focus,
+.form-group select:focus{border-color:var(--accent);}
+.form-group input::placeholder{color:var(--text-dim);}
+.form-group select option{background:#1a1a2e;color:var(--text);}
+.select-wrap{position:relative;}
+.select-wrap::after{
+  content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  color:var(--text-dim);pointer-events:none;font-size:14px;
+}
+.subtipo-note{
+  font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5;
+  padding:8px 12px;background:var(--surface);border-radius:8px;
 }
 
-/* Paso 2 - confirmación */
+/* Resumen */
 .resumen-card{
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius);padding:24px;margin-bottom:24px;
 }
 .resumen-titulo{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
 .resumen-lista{display:flex;flex-direction:column;gap:8px;}
-.resumen-item{
-  display:flex;align-items:center;gap:10px;
-  font-size:13px;color:var(--text-dim);
-}
+.resumen-item{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-dim);}
 .resumen-item::before{content:'✓';color:var(--success);font-weight:700;}
 
 /* Acciones */
-.acciones{display:flex;gap:12px;}
+.acciones{display:flex;gap:12px;margin-top:24px;}
 .btn-back{
   background:var(--surface);border:1px solid var(--border);color:var(--text);
-  border-radius:12px;padding:14px 24px;cursor:pointer;font-size:14px;
-  transition:all .15s;
+  border-radius:12px;padding:14px 24px;cursor:pointer;font-size:14px;transition:all .15s;
 }
 .btn-back:hover{background:var(--surface2);}
 .btn-primary{
   flex:1;background:var(--accent);border:none;color:#fff;
   border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;
-  cursor:pointer;transition:all .2s;
-  box-shadow:0 4px 20px rgba(99,102,241,0.4);
+  cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(99,102,241,0.4);
 }
 .btn-primary:hover{filter:brightness(1.12);}
 .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
 
 /* Loading */
-.loading{
-  text-align:center;padding:40px;
-  display:none;
-}
+.loading{text-align:center;padding:40px;display:none;}
 .spinner{
   width:48px;height:48px;border:3px solid var(--border);
   border-top-color:var(--accent);border-radius:50%;
@@ -124,33 +125,14 @@ body{
 .exito-titulo{font-size:22px;font-weight:700;margin-bottom:8px;}
 .exito-sub{color:var(--text-dim);font-size:14px;margin-bottom:32px;}
 
-.badge{
-  display:inline-block;background:rgba(99,102,241,0.15);
-  border:1px solid rgba(99,102,241,0.3);color:var(--accent2);
-  border-radius:99px;padding:3px 10px;font-size:12px;
-}
-
-/* Formulario datos negocio */
-.form-group{margin-bottom:16px;}
-.form-group label{display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;}
-.form-group input{
-  width:100%;background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;
-  font-family:inherit;outline:none;transition:border-color .15s;
-}
-.form-group input:focus{border-color:var(--accent);}
-.form-group input::placeholder{color:var(--text-dim);}
-
 /* Modal error */
 .modal-error-overlay{
-  display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.7);z-index:100;
-  align-items:center;justify-content:center;padding:24px;
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:100;align-items:center;justify-content:center;padding:24px;
 }
 .modal-error-box{
   background:#1a1a2e;border:1px solid rgba(239,68,68,.4);
-  border-radius:var(--radius);padding:28px;max-width:400px;width:100%;
-  text-align:center;
+  border-radius:var(--radius);padding:28px;max-width:400px;width:100%;text-align:center;
 }
 .modal-error-box h3{font-size:18px;margin-bottom:10px;}
 .modal-error-box p{color:var(--text-dim);font-size:14px;margin-bottom:20px;line-height:1.5;}
@@ -172,9 +154,9 @@ body{
     <div class="progress-fill" id="progressFill" style="width:20%"></div>
   </div>
 
-  <!-- Paso 0: Elegir producto ZERO -->
-  <div id="paso0">
-    <div class="step-title">¿Qué tipo de negocio tienes?</div>
+  <!-- Paso 1: Elegir producto ZERO -->
+  <div id="paso1">
+    <div class="step-title" style="margin-bottom:8px;">¿Qué tipo de negocio tienes?</div>
     <div class="step-sub" style="margin-bottom:28px;">
       Elige tu producto ZERO para personalizar la experiencia de venta.
     </div>
@@ -209,30 +191,15 @@ body{
       </div>
     </div>
     <div class="acciones">
-      <button class="btn-primary" id="btnZeroContinuar" disabled onclick="irPaso1()">
+      <button class="btn-primary" id="btnZeroContinuar" disabled onclick="irPaso2()">
         Continuar →
       </button>
     </div>
   </div>
 
-  <!-- Paso 1: Elegir tipo específico -->
-  <div id="paso1" style="display:none">
-    <div class="step-title">¿Qué tipo de negocio tienes?</div>
-    <div class="step-sub" style="margin-bottom:28px;">
-      Cargamos categorías y productos base para que puedas vender de inmediato.
-    </div>
-    <div class="tipos-grid" id="tiposGrid"></div>
-    <div class="acciones">
-      <button class="btn-back" onclick="irPaso0()">← Atrás</button>
-      <button class="btn-primary" id="btnSiguiente" disabled onclick="irPaso2()" style="flex:1">
-        Continuar →
-      </button>
-    </div>
-  </div>
-
-  <!-- Paso 2: Nombre y datos básicos -->
+  <!-- Paso 2: Datos del negocio + subtipo opcional -->
   <div id="paso2" style="display:none">
-    <div class="step-title">Datos de tu negocio</div>
+    <div class="step-title" style="margin-bottom:8px;">Datos de tu negocio</div>
     <div class="step-sub" style="margin-bottom:24px;">
       Esta información aparece en tus tickets y recibos.
     </div>
@@ -249,29 +216,77 @@ body{
       <label>Dirección</label>
       <input id="dirNegocio" type="text" placeholder="Calle Principal 123">
     </div>
+    <div class="form-group">
+      <label>
+        ¿Qué tipo de negocio tienes?
+        <span style="color:var(--text-dim);font-size:12px;font-weight:400;"> (opcional)</span>
+      </label>
+      <div class="select-wrap">
+        <select id="subtipoNegocio">
+          <option value="">Selecciona (opcional)</option>
+        </select>
+      </div>
+      <div class="subtipo-note">
+        Esta información nos ayuda a mejorar ZERO POS. No afecta el funcionamiento.
+      </div>
+    </div>
     <div class="acciones">
-      <button class="btn-back" onclick="volverAPaso1()">← Atrás</button>
+      <button class="btn-back" onclick="volverPaso1()">← Atrás</button>
       <button class="btn-primary" id="btnPaso3" disabled onclick="irPaso3()">
         Continuar →
       </button>
     </div>
   </div>
 
-  <!-- Paso 3: Confirmar y cargar -->
+  <!-- Paso 3: Datos del responsable -->
   <div id="paso3" style="display:none">
-    <div class="step-title">¡Todo listo para comenzar!</div>
+    <div class="step-title" style="margin-bottom:8px;">Datos del responsable</div>
     <div class="step-sub" style="margin-bottom:24px;">
-      Vamos a cargar lo siguiente para tu negocio:
+      ¿Quién administra este punto de venta? Todos los campos son opcionales.
     </div>
-    <div class="resumen-card">
-      <div class="resumen-titulo"><span id="resumenIcon">🏪</span> <span id="resumenTipo"></span></div>
-      <div class="resumen-lista" id="resumenLista"></div>
+    <div class="form-group">
+      <label>Nombre del responsable</label>
+      <input id="nombreResponsable" type="text" placeholder="Ej: María González">
+    </div>
+    <div class="form-group">
+      <label>Email de contacto</label>
+      <input id="emailNegocio" type="email" placeholder="correo@ejemplo.com">
+    </div>
+    <div class="form-group">
+      <label>RUT del negocio</label>
+      <input id="rutNegocio" type="text" placeholder="12.345.678-9">
     </div>
     <div class="acciones">
-      <button class="btn-back" onclick="volverPaso2()">← Cambiar</button>
-      <button class="btn-primary" onclick="confirmar()">
-        ✓ Cargar y comenzar
-      </button>
+      <button class="btn-back" onclick="volverPaso2()">← Atrás</button>
+      <button class="btn-primary" onclick="irPaso4()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- Paso 4: SII + Cargar -->
+  <div id="paso4" style="display:none">
+    <div class="step-title" style="margin-bottom:8px;">¿Emites boleta electrónica?</div>
+    <div class="step-sub" style="margin-bottom:28px;">
+      Puedes configurar la integración con el SII más tarde en Ajustes.
+    </div>
+    <div class="sii-grid">
+      <div class="tipo-card" id="siiSi" onclick="seleccionarSII(this,'si')">
+        <span class="tipo-icon">📄</span>
+        <div class="tipo-nombre">Sí, uso el SII</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
+          Emito boletas electrónicas
+        </div>
+      </div>
+      <div class="tipo-card" id="siiNo" onclick="seleccionarSII(this,'no')">
+        <span class="tipo-icon">💵</span>
+        <div class="tipo-nombre">No por ahora</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
+          Solo efectivo o transferencia
+        </div>
+      </div>
+    </div>
+    <div class="acciones">
+      <button class="btn-back" onclick="volverPaso3()">← Atrás</button>
+      <button class="btn-primary" onclick="confirmar()">✓ Cargar y comenzar</button>
     </div>
   </div>
 
@@ -303,70 +318,48 @@ body{
 </div>
 
 <script>
-let tipoSeleccionado    = null;
-let tiposData           = [];
 let zeroTipoSeleccionado = null;
+let siiSeleccionado      = null;
 
-const SUBTIPO_A_BASE = {
-  food_truck:    'foodtruck',
-  dark_kitchen:  'sushi',
-  hamburguesas:  'otro',
-  pizzeria:      'otro',
-  otro_food:     'otro',
-  restaurante:   'cafe',
-  cafe_salon:    'cafe',
-  bar:           'otro',
-  otro_resto:    'otro',
-  farmacia:      'almacen',
-  ferreteria:    'almacen',
-  bazar:         'almacen',
-  otro_store:    'otro',
-  barberia:      'peluqueria',
-  nail:          'otro',
-  veterinaria:   'otro',
-  otro_service:  'otro',
-};
-
-const TIPOS_POR_PRODUCTO = {
+const SUBTIPOS = {
   store: [
-    {id:'almacen',      nombre:'Almacén',       icono:'🏪'},
-    {id:'minimarket',   nombre:'Minimarket',     icono:'🏬'},
-    {id:'botilleria',   nombre:'Botillería',     icono:'🍷'},
-    {id:'panaderia',    nombre:'Panadería',      icono:'🥖'},
-    {id:'cafe',         nombre:'Café/Cafetería', icono:'☕'},
-    {id:'farmacia',     nombre:'Farmacia',       icono:'💊'},
-    {id:'ferreteria',   nombre:'Ferretería',     icono:'🔧'},
-    {id:'bazar',        nombre:'Bazar/Tienda',   icono:'🛍️'},
-    {id:'otro_store',   nombre:'Otro',           icono:'🏪'},
+    {value:'almacen',    label:'Almacén / Minimarket'},
+    {value:'botilleria', label:'Botillería'},
+    {value:'panaderia',  label:'Panadería / Pastelería'},
+    {value:'ropa',       label:'Tienda de ropa'},
+    {value:'farmacia',   label:'Farmacia'},
+    {value:'ferreteria', label:'Ferretería'},
+    {value:'kiosco',     label:'Kiosco'},
+    {value:'otro_store', label:'Otro'},
   ],
   food: [
-    {id:'food_truck',   nombre:'Food Truck',     icono:'🚚'},
-    {id:'sushi',        nombre:'Sushi/Delivery', icono:'🍣'},
-    {id:'pizzeria',     nombre:'Pizzería',       icono:'🍕'},
-    {id:'dark_kitchen', nombre:'Dark Kitchen',   icono:'🍱'},
-    {id:'hamburguesas', nombre:'Hamburguesas',   icono:'🍔'},
-    {id:'otro_food',    nombre:'Otro',           icono:'🍽️'},
+    {value:'food_truck',   label:'Food Truck'},
+    {value:'sushi',        label:'Sushi / Delivery'},
+    {value:'pizzeria',     label:'Pizzería'},
+    {value:'dark_kitchen', label:'Dark Kitchen'},
+    {value:'hamburguesas', label:'Hamburguesas'},
+    {value:'otro_food',    label:'Otro'},
   ],
   resto: [
-    {id:'restaurante',  nombre:'Restaurante',    icono:'🍽️'},
-    {id:'cafe_salon',   nombre:'Café con salón', icono:'☕'},
-    {id:'bar',          nombre:'Bar/Pub',        icono:'🍺'},
-    {id:'otro_resto',   nombre:'Otro',           icono:'🍴'},
+    {value:'restaurante', label:'Restaurante'},
+    {value:'cafe_salon',  label:'Café con salón'},
+    {value:'bar',         label:'Bar / Pub'},
+    {value:'otro_resto',  label:'Otro'},
   ],
   service: [
-    {id:'peluqueria',   nombre:'Peluquería',     icono:'✂️'},
-    {id:'barberia',     nombre:'Barbería',       icono:'💈'},
-    {id:'nail',         nombre:'Nail Art/Spa',   icono:'💅'},
-    {id:'veterinaria',  nombre:'Veterinaria',    icono:'🐾'},
-    {id:'otro_service', nombre:'Otro',           icono:'🔧'},
+    {value:'peluqueria',   label:'Peluquería'},
+    {value:'barberia',     label:'Barbería'},
+    {value:'nail',         label:'Nail Art / Spa'},
+    {value:'veterinaria',  label:'Veterinaria'},
+    {value:'otro_service', label:'Otro'},
   ],
 };
 
-const TITULO_PASO1 = {
-  store:   '¿Qué tipo de tienda tienes?',
-  food:    '¿Qué tipo de comida preparas?',
-  resto:   '¿Cómo es tu restaurante?',
-  service: '¿Qué servicio ofreces?',
+const ZERO_A_BASE = {
+  store:   'almacen',
+  food:    'foodtruck',
+  resto:   'cafe',
+  service: 'peluqueria',
 };
 
 function mostrarError(msg) {
@@ -387,8 +380,6 @@ async function init() {
     const estado = await fetch('/api/onboarding/estado', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
     if (estado.completado) { location.href = 'pos.html'; return; }
   }
-
-  tiposData = await fetch('/api/onboarding/tipos', {credentials:'include'}).then(r => r.json()).catch(() => []);
 }
 
 function seleccionarZero(card, tipo) {
@@ -396,116 +387,106 @@ function seleccionarZero(card, tipo) {
   card.classList.add('selected');
   zeroTipoSeleccionado = tipo;
   document.getElementById('btnZeroContinuar').disabled = false;
+  _poblarSubtipos(tipo);
 }
 
-async function irPaso1() {
+function _poblarSubtipos(tipo) {
+  const sel = document.getElementById('subtipoNegocio');
+  sel.innerHTML = '<option value="">Selecciona (opcional)</option>';
+  (SUBTIPOS[tipo] || []).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.value;
+    opt.textContent = s.label;
+    sel.appendChild(opt);
+  });
+}
+
+function irPaso2() {
   if (!zeroTipoSeleccionado) return;
-  console.log('[ZERO] Tipo guardado:', zeroTipoSeleccionado);
-  await fetch('/api/config', {
+  console.log('[ZERO] Tipo:', zeroTipoSeleccionado);
+  fetch('/api/config', {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({tipo_negocio: zeroTipoSeleccionado}),
   }).catch(() => {});
-  const tipos = TIPOS_POR_PRODUCTO[zeroTipoSeleccionado] || tiposData;
-  renderTipos(tipos);
-  document.querySelector('#paso1 .step-title').textContent =
-    TITULO_PASO1[zeroTipoSeleccionado] || '¿Qué tipo de negocio tienes?';
-  _hide('paso0');
-  _show('paso1');
-  _prog('40%');
+  _hide('paso1'); _show('paso2'); _prog('40%');
 }
 
-function irPaso0() {
-  _hide('paso1');
-  _show('paso0');
-  _prog('20%');
-  tipoSeleccionado = null;
-  document.getElementById('btnSiguiente').disabled = true;
-}
-
-function renderTipos(lista) {
-  const grid = document.getElementById('tiposGrid');
-  grid.innerHTML = '';
-  (lista || tiposData).forEach(t => {
-    const card = document.createElement('div');
-    card.className = 'tipo-card';
-    card.dataset.id = t.id;
-    card.innerHTML = `<span class="tipo-icon">${t.icono}</span><div class="tipo-nombre">${t.nombre}</div>`;
-    card.onclick = () => seleccionarTipo(card, t);
-    grid.appendChild(card);
-  });
-}
-
-function seleccionarTipo(card, tipo) {
-  document.querySelectorAll('#tiposGrid .tipo-card').forEach(c => c.classList.remove('selected'));
-  card.classList.add('selected');
-  tipoSeleccionado = tipo;
-  document.getElementById('btnSiguiente').disabled = false;
-}
-
-function irPaso2() {
-  if (!tipoSeleccionado) return;
-  console.log('[ZERO] Subtipo:', tipoSeleccionado.id);
-  _hide('paso1');
-  _show('paso2');
-  _prog('60%');
-}
-
-function volverAPaso1() {
-  _hide('paso2');
-  _show('paso1');
-  _prog('40%');
+function volverPaso1() {
+  _hide('paso2'); _show('paso1'); _prog('20%');
 }
 
 async function irPaso3() {
   const nombre = document.getElementById('nombreNegocio').value.trim();
   if (!nombre) return;
-  const tel    = document.getElementById('telNegocio').value.trim();
-  const dir    = document.getElementById('dirNegocio').value.trim();
-  const subtipo = tipoSeleccionado.id;
+  const tel     = document.getElementById('telNegocio').value.trim();
+  const dir     = document.getElementById('dirNegocio').value.trim();
+  const subtipo = document.getElementById('subtipoNegocio').value;
+  console.log('[ZERO] Negocio:', nombre, '| Subtipo:', subtipo || '(ninguno)');
+
+  const payload = {nombre_negocio: nombre};
+  if (tel)     payload.telefono_negocio  = tel;
+  if (dir)     payload.direccion_negocio = dir;
+  if (subtipo) payload.subtipo_negocio   = subtipo;
 
   await fetch('/api/config', {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      nombre_negocio:    nombre,
-      telefono_negocio:  tel,
-      direccion_negocio: dir,
-      subtipo_negocio:   subtipo,
-    }),
+    body: JSON.stringify(payload),
   }).catch(() => {});
 
-  document.getElementById('resumenIcon').textContent = tipoSeleccionado.icono;
-  document.getElementById('resumenTipo').textContent = tipoSeleccionado.nombre;
-  const lista = document.getElementById('resumenLista');
-  lista.innerHTML = `
-    <div class="resumen-item">${nombre}</div>
-    <div class="resumen-item">Categorías y subcategorías específicas del rubro</div>
-    <div class="resumen-item">Productos más comunes con precios de referencia en CLP</div>
-    <div class="resumen-item">Variantes de tamaño/presentación configuradas</div>
-    <div class="resumen-item">Puedes editar precios, stock y agregar más productos después</div>
-  `;
-
-  _hide('paso2');
-  _show('paso3');
-  _prog('80%');
+  _hide('paso2'); _show('paso3'); _prog('60%');
 }
 
 function volverPaso2() {
-  _hide('paso3');
-  _show('paso2');
-  _prog('60%');
+  _hide('paso3'); _show('paso2'); _prog('40%');
+}
+
+async function irPaso4() {
+  const nombre = document.getElementById('nombreResponsable').value.trim();
+  const email  = document.getElementById('emailNegocio').value.trim();
+  const rut    = document.getElementById('rutNegocio').value.trim();
+
+  const payload = {};
+  if (nombre) payload.nombre_responsable = nombre;
+  if (email)  payload.email_negocio      = email;
+  if (rut)    payload.rut_negocio        = rut;
+
+  if (Object.keys(payload).length) {
+    await fetch('/api/config', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }
+
+  _hide('paso3'); _show('paso4'); _prog('80%');
+}
+
+function volverPaso3() {
+  _hide('paso4'); _show('paso3'); _prog('60%');
+}
+
+function seleccionarSII(card, val) {
+  document.querySelectorAll('.sii-grid .tipo-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  siiSeleccionado = val;
 }
 
 async function confirmar() {
-  if (!tipoSeleccionado) return;
-  const subtipo  = tipoSeleccionado.id;
-  const tipoBase = SUBTIPO_A_BASE[subtipo] || subtipo;
-  console.log('[ZERO] Cargando productos para:', subtipo, '→ base:', tipoBase);
+  const tipoBase = ZERO_A_BASE[zeroTipoSeleccionado] || 'almacen';
+  const subtipo  = document.getElementById('subtipoNegocio').value;
+  console.log('[ZERO] Cargando productos → base:', tipoBase, '| subtipo:', subtipo || '(ninguno)');
 
-  _hide('paso3');
-  _show('loading');
-  _prog('90%');
+  if (siiSeleccionado) {
+    fetch('/api/config', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sii_activo: siiSeleccionado === 'si' ? '1' : '0'}),
+    }).catch(() => {});
+  }
+
+  _hide('paso4'); _show('loading'); _prog('90%');
   document.getElementById('loadingMsg').textContent = 'Cargando productos...';
 
   try {
@@ -523,17 +504,15 @@ async function confirmar() {
     if (data.ok) {
       _show('exito');
       document.getElementById('exitoMsg').textContent =
-        `Se cargaron ${data.productos_cargados} productos para tu ${tipoSeleccionado.nombre}. ¡A vender!`;
+        `Se cargaron ${data.productos_cargados} productos. ¡A vender!`;
     } else {
       mostrarError('Error: ' + (data.error || 'Error desconocido'));
-      _show('paso3');
-      _prog('80%');
+      _show('paso4'); _prog('80%');
     }
   } catch(e) {
     _hide('loading');
     mostrarError('Error de conexión. Verifica que el servidor esté activo e intenta de nuevo.');
-    _show('paso3');
-    _prog('80%');
+    _show('paso4'); _prog('80%');
   }
 }
 

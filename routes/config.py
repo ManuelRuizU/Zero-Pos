@@ -28,6 +28,9 @@ CLAVES_PERMITIDAS = {
     "subtipo_negocio",
     "telefono_negocio",
     "direccion_negocio",
+    "nombre_responsable",
+    "email_negocio",
+    "sii_activo",
 }
 
 
