@@ -140,18 +140,62 @@ body{
   </div>
 
   <div class="progress-bar">
-    <div class="progress-fill" id="progressFill" style="width:25%"></div>
+    <div class="progress-fill" id="progressFill" style="width:20%"></div>
   </div>
 
-  <!-- Paso 1: Elegir tipo -->
-  <div id="paso1">
+  <!-- Paso 0: Elegir producto ZERO -->
+  <div id="paso0">
+    <div class="step-title">¿Qué tipo de negocio tienes?</div>
+    <div class="step-sub" style="margin-bottom:28px;">
+      Elige tu producto ZERO para personalizar la experiencia de venta.
+    </div>
+    <div class="tipos-grid">
+      <div class="tipo-card" data-zero="store" onclick="seleccionarZero(this,'store')">
+        <span class="tipo-icon">🏪</span>
+        <div class="tipo-nombre">ZERO STORE</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
+          Tienda, almacén,<br>minimarket, farmacia,<br>ferretería, panadería
+        </div>
+      </div>
+      <div class="tipo-card" data-zero="food" onclick="seleccionarZero(this,'food')">
+        <span class="tipo-icon">🍕</span>
+        <div class="tipo-nombre">ZERO FOOD</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
+          Food truck, dark kitchen,<br>sushi, pizzería, delivery
+        </div>
+      </div>
+      <div class="tipo-card" data-zero="resto" onclick="seleccionarZero(this,'resto')">
+        <span class="tipo-icon">🍽️</span>
+        <div class="tipo-nombre">ZERO RESTO</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
+          Restaurante con salón,<br>café, bar con mesas
+        </div>
+      </div>
+      <div class="tipo-card" data-zero="service" onclick="seleccionarZero(this,'service')">
+        <span class="tipo-icon">✂️</span>
+        <div class="tipo-nombre">ZERO SERVICE</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;line-height:1.4;">
+          Peluquería, barbería,<br>servicios con agenda
+        </div>
+      </div>
+    </div>
+    <div class="acciones">
+      <button class="btn-primary" id="btnZeroContinuar" disabled onclick="irPaso1()">
+        Continuar →
+      </button>
+    </div>
+  </div>
+
+  <!-- Paso 1: Elegir tipo específico -->
+  <div id="paso1" style="display:none">
     <div class="step-title">¿Qué tipo de negocio tienes?</div>
     <div class="step-sub" style="margin-bottom:28px;">
       Cargamos categorías y productos base para que puedas vender de inmediato.
     </div>
     <div class="tipos-grid" id="tiposGrid"></div>
     <div class="acciones">
-      <button class="btn-primary" id="btnSiguiente" disabled onclick="irPaso2()">
+      <button class="btn-back" onclick="irPaso0()">← Atrás</button>
+      <button class="btn-primary" id="btnSiguiente" disabled onclick="irPaso2()" style="flex:1">
         Continuar →
       </button>
     </div>
@@ -168,7 +212,7 @@ body{
       <div class="resumen-lista" id="resumenLista"></div>
     </div>
     <div class="acciones">
-      <button class="btn-back" onclick="irPaso1()">← Cambiar</button>
+      <button class="btn-back" onclick="volverPaso1()">← Cambiar</button>
       <button class="btn-primary" onclick="confirmar()">
         ✓ Cargar y comenzar
       </button>
@@ -196,22 +240,44 @@ body{
 <script>
 let tipoSeleccionado = null;
 let tiposData = [];
+let zeroTipoSeleccionado = null;
 
 async function init() {
-  // Verificar auth
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
 
-  // Verificar si ya está configurado
   const estado = await fetch('/api/onboarding/estado', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
-  if (estado.completado) {
-    location.href = 'pos.html';
-    return;
-  }
+  if (estado.completado) { location.href = 'pos.html'; return; }
 
-  // Cargar tipos
   tiposData = await fetch('/api/onboarding/tipos', {credentials:'include'}).then(r => r.json()).catch(() => []);
+}
+
+function seleccionarZero(card, tipo) {
+  document.querySelectorAll('[data-zero]').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  zeroTipoSeleccionado = tipo;
+  document.getElementById('btnZeroContinuar').disabled = false;
+}
+
+async function irPaso1() {
+  if (!zeroTipoSeleccionado) return;
+  await fetch('/api/config', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({tipo_negocio: zeroTipoSeleccionado}),
+  }).catch(() => {});
   renderTipos();
+  document.getElementById('paso0').style.display = 'none';
+  document.getElementById('paso1').style.display = 'block';
+  document.getElementById('progressFill').style.width = '50%';
+}
+
+function irPaso0() {
+  document.getElementById('paso1').style.display = 'none';
+  document.getElementById('paso0').style.display = 'block';
+  document.getElementById('progressFill').style.width = '20%';
+  tipoSeleccionado = null;
+  document.getElementById('btnSiguiente').disabled = true;
 }
 
 function renderTipos() {
@@ -228,7 +294,7 @@ function renderTipos() {
 }
 
 function seleccionarTipo(card, tipo) {
-  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('#tiposGrid .tipo-card').forEach(c => c.classList.remove('selected'));
   card.classList.add('selected');
   tipoSeleccionado = tipo;
   document.getElementById('btnSiguiente').disabled = false;
@@ -238,7 +304,7 @@ function irPaso2() {
   if (!tipoSeleccionado) return;
   document.getElementById('paso1').style.display = 'none';
   document.getElementById('paso2').style.display = 'block';
-  document.getElementById('progressFill').style.width = '66%';
+  document.getElementById('progressFill').style.width = '80%';
 
   document.getElementById('resumenIcon').textContent = tipoSeleccionado.icono;
   document.getElementById('resumenTipo').textContent = tipoSeleccionado.nombre;
@@ -253,10 +319,10 @@ function irPaso2() {
   `;
 }
 
-function irPaso1() {
+function volverPaso1() {
   document.getElementById('paso2').style.display = 'none';
   document.getElementById('paso1').style.display = 'block';
-  document.getElementById('progressFill').style.width = '25%';
+  document.getElementById('progressFill').style.width = '50%';
 }
 
 async function confirmar() {

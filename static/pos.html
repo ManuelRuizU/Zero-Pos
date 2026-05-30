@@ -1609,8 +1609,14 @@ async function init() {
   }
 
   cfgApp = await fetch('/api/config', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
+  await window.ZERO?._initPromise;
+  const deliveryActivo = cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true;
   const btnPedidos = document.querySelector('[onclick*="pedidos.html"]');
-  if (btnPedidos) btnPedidos.style.display = (cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true) ? '' : 'none';
+  if (btnPedidos) {
+    // Store: show only if delivery module explicitly enabled
+    // Food/Resto/Service: always show (delivery is native)
+    btnPedidos.style.display = (!window.ZERO?.isStore() || deliveryActivo) ? '' : 'none';
+  }
 
   // Mostrar botón cola si es minimarket (sin módulo mesas ni delivery)
   document.getElementById('btnColaEspera').style.display = '';
@@ -3121,6 +3127,7 @@ function iniciarPollCola() {
   }, 5000);
 }
 </script>
+<script src="/static/js/zero-config.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

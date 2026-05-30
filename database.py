@@ -305,6 +305,9 @@ def _seed_defaults(conn: sqlite3.Connection):
             "INSERT OR IGNORE INTO config (clave, valor) VALUES (?, ?)",
             (_clave, "")
         )
+    conn.execute(
+        "INSERT OR IGNORE INTO config (clave, valor) VALUES ('tipo_negocio', 'store')"
+    )
 
     import bcrypt
     pin_default = b"1234"

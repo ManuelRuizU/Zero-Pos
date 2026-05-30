@@ -196,6 +196,18 @@ def create_app() -> Flask:
     ):
         app.register_blueprint(bp)
 
+    @app.route("/api/sistema/tipo")
+    def sistema_tipo():
+        from database import db_session
+        try:
+            with db_session() as conn:
+                row = conn.execute(
+                    "SELECT valor FROM config WHERE clave='tipo_negocio'"
+                ).fetchone()
+            return {"tipo": row["valor"] if row and row["valor"] else "store"}
+        except Exception:
+            return {"tipo": "store"}
+
     @app.route("/")
     def index():
         return redirect(url_for("static", filename="login.html"))
