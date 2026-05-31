@@ -121,10 +121,7 @@ select option{background:#13131a;}
 </head>
 <body>
 
-<div id="escanerOverlayInv">
-  <div class="esc-spin"></div>
-  <p style="color:var(--text-dim);font-size:14px">Analizando código...</p>
-</div>
+
 
 <div class="topbar">
   <div class="logo">ZERO<span>POS</span> Inventario</div>
@@ -266,7 +263,7 @@ select option{background:#13131a;}
     <label>Código de barras</label>
     <div style="display:flex;gap:8px">
       <input id="prodBarras" type="text" placeholder="Código de barras (opcional)" inputmode="numeric" style="flex:1">
-      <button type="button" class="btn" style="padding:9px 14px;font-size:16px;flex-shrink:0" onclick="escanearNuevoProducto()" title="Escanear con cámara">📷</button>
+      <button type="button" class="btn" style="padding:9px 14px;font-size:16px;flex-shrink:0" onclick="escanearProductoConIA()" title="Escanear con cámara + IA">📷</button>
     </div>
   </div>
   <div class="form-group"><label>Categoría</label>
@@ -426,9 +423,6 @@ async function init() {
   cargarCatFiltros();
 
   cargarProductos();
-  if (!('BarcodeDetector' in window)) {
-    setTimeout(() => _cargarZXingEscaner().catch(()=>{}), 0);
-  }
 }
 
 function showTab(name, btn) {
@@ -533,67 +527,111 @@ async function buscarPorCodigoBarras(codigo) {
 }
 
 // ── Escáner de cámara ─────────────────────────────────────────────────
-async function _cargarZXingEscaner() {
-  if (window.ZXing) return;
-  await new Promise(resolve => {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
-    s.onload = () => resolve();
-    s.onerror = () => resolve();
-    document.head.appendChild(s);
+function abrirEscanerVideo(onCodigo) {
+  const modal = document.createElement('div');
+  modal.id = 'modalEscanerVideo';
+  modal.style.cssText = 'position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;';
+  modal.innerHTML = `
+    <div style="position:relative;width:100%;max-width:400px;padding:0 16px">
+      <video id="videoScan" autoplay playsinline muted style="width:100%;border-radius:12px;display:block"></video>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;aspect-ratio:2/1;border:3px solid #6366f1;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);pointer-events:none">
+        <div style="position:absolute;left:0;right:0;height:2px;background:#6366f1;animation:scanLine 1.5s ease-in-out infinite"></div>
+      </div>
+      <p style="color:white;text-align:center;margin-top:16px;font-size:15px;opacity:.8">Apunta al código de barras</p>
+      <button onclick="cerrarEscanerVideo()" style="position:absolute;top:4px;right:20px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;line-height:36px;text-align:center">✕</button>
+    </div>
+    <style>@keyframes scanLine{0%,100%{top:0}50%{top:calc(100% - 2px)}}</style>
+  `;
+  document.body.appendChild(modal);
+
+  let stream = null, intervalId = null, detectando = false;
+
+  window.cerrarEscanerVideo = () => {
+    if (intervalId) clearInterval(intervalId);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    modal.remove();
+    delete window.cerrarEscanerVideo;
+  };
+
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+  }).then(s => {
+    stream = s;
+    const video = document.getElementById('videoScan');
+    video.srcObject = s;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+    intervalId = setInterval(async () => {
+      if (detectando || video.readyState < 2) return;
+      detectando = true;
+      const vw = video.videoWidth, vh = video.videoHeight;
+      const x = vw * 0.2, y = vh * 0.3, w = vw * 0.6, h = vh * 0.4;
+      canvas.width = w; canvas.height = h;
+      ctx.drawImage(video, x, y, w, h, 0, 0, w, h);
+      canvas.toBlob(async blob => {
+        if (!blob) { detectando = false; return; }
+        try {
+          const fd = new FormData();
+          fd.append('imagen', blob, 'frame.jpg');
+          const resp = await fetch('/api/productos/detectar-codigo', { method: 'POST', credentials: 'include', body: fd });
+          const data = await resp.json();
+          if (data.ok && data.codigo) {
+            if (navigator.vibrate) navigator.vibrate(100);
+            cerrarEscanerVideo();
+            onCodigo(data.codigo);
+            return;
+          }
+        } catch(e) { console.error('[ZERO] Error frame:', e); }
+        detectando = false;
+      }, 'image/jpeg', 0.8);
+    }, 800);
+
+  }).catch(err => {
+    console.error('[ZERO] Sin cámara:', err);
+    modal.remove();
+    delete window.cerrarEscanerVideo;
+    abrirEscanerArchivo(onCodigo);
   });
 }
 
-async function detectarCodigoEnImagen(file) {
-  if ('BarcodeDetector' in window) {
-    try {
-      const det = new BarcodeDetector({formats:['ean_13','ean_8','code_128','code_39','upc_a','upc_e']});
-      const img = await createImageBitmap(file);
-      const res = await det.detect(img);
-      if (res.length) return res[0].rawValue;
-    } catch(e) {}
-  }
-  await _cargarZXingEscaner();
-  if (!window.ZXing) return null;
-  return new Promise(resolve => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      try {
-        const d = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-        const lum = new ZXing.RGBLuminanceSource(d.data, canvas.width, canvas.height);
-        const bin = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
-        const res = new ZXing.MultiFormatReader().decode(bin);
-        resolve(res ? res.getText() : null);
-      } catch(e) { resolve(null); }
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-    img.src = url;
-  });
-}
-
-function abrirEscanerInv() {
+function abrirEscanerArchivo(onCodigo) {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.capture = 'environment';
-  input.onchange = async e => {
-    const file = e.target.files && e.target.files[0];
+  if (/iPhone|iPad|Android/i.test(navigator.userAgent)) input.capture = 'environment';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+  input.addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    document.body.removeChild(input);
     if (!file) return;
-    document.getElementById('escanerOverlayInv').style.display = 'flex';
-    const codigo = await detectarCodigoEnImagen(file).catch(() => null);
-    document.getElementById('escanerOverlayInv').style.display = 'none';
-    if (codigo) {
-      buscarPorCodigoBarras(codigo);
-    } else {
-      alert('No se detectó código. Intenta de nuevo.');
+    showToast('🔍 Analizando...', 'ok');
+    try {
+      const fd = new FormData();
+      fd.append('imagen', file);
+      const resp = await fetch('/api/productos/detectar-codigo', { method: 'POST', credentials: 'include', body: fd });
+      const data = await resp.json();
+      if (data.ok && data.codigo) {
+        onCodigo(data.codigo);
+      } else {
+        showToast('No detectado — ingresa el código', 'error');
+        document.getElementById('searchProd')?.focus();
+      }
+    } catch(e) {
+      showToast('Error al procesar imagen', 'error');
     }
-  };
+  });
   input.click();
+}
+
+function abrirEscanerInv() {
+  const esMobil = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  if (esMobil) {
+    abrirEscanerVideo(codigo => buscarPorCodigoBarras(codigo));
+  } else {
+    abrirEscanerArchivo(codigo => buscarPorCodigoBarras(codigo));
+  }
 }
 
 // ── Cálculos financieros ──────────────────────────────────────────────
@@ -906,58 +944,155 @@ async function detectarConZXing(file) {
   }
 }
 
-function escanearNuevoProducto() {
-  console.log('[ZERO] Abriendo selector...');
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = 'image/*';
-  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) input.capture = 'environment';
-  input.style.display = 'none';
-  document.body.appendChild(input);
+async function escanearProductoConIA() {
+  showToast('📷 Paso 1: Apunta al código de barras', 'ok');
 
-  input.addEventListener('change', async e => {
-    console.log('[ZERO] Archivo seleccionado:', e.target.files?.length);
-    const file = e.target.files?.[0];
-    document.body.removeChild(input);
-    if (!file) {
-      console.warn('[ZERO] No se seleccionó archivo');
-      return;
-    }
-    console.log('[ZERO] Procesando imagen:', file.name, file.size, 'bytes');
-    mostrarToast('🔍 Analizando código...');
-    try {
-      console.log('[ZERO] Enviando al servidor...');
-      const formData = new FormData();
-      formData.append('imagen', file);
-      const resp = await fetch('/api/productos/detectar-codigo', {
-        method: 'POST',
-        credentials: 'include',
-        body: formData,
-      });
-      console.log('[ZERO] Respuesta servidor:', resp.status);
-      const data = await resp.json();
-      console.log('[ZERO] Data:', data);
-      if (data.ok && data.codigo) {
-        document.getElementById('prodBarras').value = data.codigo;
-        mostrarToast('✅ Código: ' + data.codigo);
-        const checkResp = await fetch('/api/productos/barras/' + encodeURIComponent(data.codigo), {credentials:'include'});
-        if (checkResp.ok) {
-          const prod = await checkResp.json();
-          if (prod && prod.id) mostrarToast('⚠️ Ya existe: ' + prod.nombre);
-        }
-      } else {
-        mostrarToast('⚠️ No detectado — ingresa el código manualmente');
-        const campo = document.getElementById('prodBarras');
-        if (campo) { campo.focus(); campo.select(); }
-      }
-    } catch(err) {
-      console.error('[ZERO] Error fetch:', err);
-      mostrarToast('Error al procesar la imagen');
+  const codigo = await new Promise(resolve => {
+    const esMobil = /iPhone|iPad|Android/i.test(navigator.userAgent);
+    if (esMobil) {
+      abrirEscanerVideo(c => resolve(c));
+    } else {
+      abrirEscanerArchivo(c => resolve(c));
     }
   });
 
-  input.click();
-  console.log('[ZERO] File picker abierto');
+  if (!codigo) return;
+  showToast('✅ Código: ' + codigo, 'ok');
+
+  try {
+    const resp = await fetch('/api/productos/barras/' + encodeURIComponent(codigo), { credentials: 'include' });
+    if (resp.ok) {
+      const prod = await resp.json();
+      if (prod?.id) {
+        showToast('⚠️ Ya existe: ' + prod.nombre, 'error');
+        editarProd(prod.id);
+        return;
+      }
+    }
+  } catch(e) {}
+
+  _mostrarToastPersistente('📷 Paso 2: Fotografía el frente del producto');
+
+  const fotoProducto = await new Promise(resolve => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    if (/iPhone|iPad|Android/i.test(navigator.userAgent)) input.capture = 'environment';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    input.addEventListener('change', e => {
+      document.body.removeChild(input);
+      resolve(e.target.files?.[0] || null);
+    });
+    input.click();
+  });
+
+  if (!fotoProducto) {
+    abrirModalNuevoProducto(codigo);
+    return;
+  }
+
+  showToast('🤖 IA analizando el producto...', 'ok');
+
+  try {
+    const fd = new FormData();
+    fd.append('imagen', fotoProducto);
+    fd.append('codigo_barras', codigo);
+    const resp = await fetch('/api/inventario/leer-producto-ia', { method: 'POST', credentials: 'include', body: fd });
+    const data = await resp.json();
+    abrirModalNuevoProducto(codigo, data.ok ? (data.producto || {}) : {});
+  } catch(e) {
+    abrirModalNuevoProducto(codigo);
+  }
+}
+
+function _mostrarToastPersistente(msg) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = 'show';
+  clearTimeout(_mostrarToastPersistente._t);
+  _mostrarToastPersistente._t = setTimeout(() => { t.className = ''; }, 15000);
+}
+
+function abrirModalNuevoProducto(codigo, datos = {}) {
+  document.getElementById('modalNuevoProd')?.remove();
+  const modal = document.createElement('div');
+  modal.id = 'modalNuevoProd';
+  modal.dataset.codigo = codigo;
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;overflow-y:auto;padding:20px;';
+  const iaInfo = datos.nombre ? `
+    <div style="background:#0f2d1a;border:1px solid #22c55e;border-radius:8px;padding:10px;margin-bottom:14px;font-size:12px;color:#86efac">
+      ✨ IA detectó: ${escH(datos.nombre)}${datos.marca ? ' · ' + escH(datos.marca) : ''}${datos.contenido ? ' · ' + escH(datos.contenido) : ''}
+      <br><span style="opacity:.7">Revisa que sea correcto antes de guardar.</span>
+    </div>` : '';
+  modal.innerHTML = `
+    <div style="background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;width:100%;max-width:380px">
+      <h3 style="color:white;margin:0 0 4px;font-size:18px">📦 Nuevo producto</h3>
+      <p style="color:#6366f1;font-size:13px;margin:0 0 16px">${escH(codigo)}${datos.nombre ? ' · Leído por IA ✨' : ''}</p>
+      ${iaInfo}
+      <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px">Nombre *</label>
+      <input id="npNombre" value="${escH(datos.nombre||'')}" placeholder="Nombre del producto"
+        style="width:100%;padding:10px;background:#374151;border:1px solid ${datos.nombre?'#22c55e':'#4b5563'};border-radius:8px;color:white;font-size:15px;margin-bottom:12px;box-sizing:border-box;outline:none">
+      <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px">Precio de venta *</label>
+      <input id="npPrecio" type="number" value="${datos.precio||''}" placeholder="Ej: 1890" inputmode="numeric"
+        style="width:100%;padding:10px;background:#374151;border:1px solid #4b5563;border-radius:8px;color:white;font-size:18px;font-weight:bold;margin-bottom:12px;box-sizing:border-box;outline:none">
+      <details style="margin-bottom:16px">
+        <summary style="color:#6366f1;cursor:pointer;font-size:13px">+ Más datos (opcional)</summary>
+        <div style="padding-top:12px;display:flex;flex-direction:column;gap:8px">
+          <input id="npMarca" value="${escH(datos.marca||'')}" placeholder="Marca"
+            style="width:100%;padding:8px;background:#374151;border:1px solid #4b5563;border-radius:8px;color:white;font-size:14px;box-sizing:border-box;outline:none">
+          <input id="npCosto" type="number" placeholder="Precio de costo"
+            style="width:100%;padding:8px;background:#374151;border:1px solid #4b5563;border-radius:8px;color:white;font-size:14px;box-sizing:border-box;outline:none">
+          <input id="npStock" type="number" value="0" placeholder="Stock inicial"
+            style="width:100%;padding:8px;background:#374151;border:1px solid #4b5563;border-radius:8px;color:white;font-size:14px;box-sizing:border-box;outline:none">
+        </div>
+      </details>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('modalNuevoProd').remove()"
+          style="flex:1;padding:12px;background:#374151;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px">Cancelar</button>
+        <button onclick="guardarProductoNuevo()"
+          style="flex:2;padding:12px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:15px">✅ Guardar</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  setTimeout(() => {
+    if (!datos.nombre) document.getElementById('npNombre')?.focus();
+    else document.getElementById('npPrecio')?.focus();
+  }, 80);
+}
+
+async function guardarProductoNuevo() {
+  const modal = document.getElementById('modalNuevoProd');
+  const codigo = modal?.dataset.codigo || null;
+  const nombre = document.getElementById('npNombre')?.value.trim();
+  const precio = parseInt(document.getElementById('npPrecio')?.value) || 0;
+  if (!nombre) { showToast('El nombre es requerido', 'error'); document.getElementById('npNombre')?.focus(); return; }
+  const data = {
+    nombre,
+    precio,
+    precio_costo: parseInt(document.getElementById('npCosto')?.value) || 0,
+    stock:        parseInt(document.getElementById('npStock')?.value) || 0,
+    codigo_barras: codigo || null,
+  };
+  try {
+    const r = await fetch('/api/productos', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (r.ok) {
+      modal?.remove();
+      showToast('✅ Producto guardado', 'ok');
+      cargarProductos();
+    } else {
+      const e = await r.json();
+      showToast('Error: ' + (e.error || 'No se pudo guardar'), 'error');
+    }
+  } catch(e) {
+    showToast('Error al guardar', 'error');
+  }
 }
 
 // ── Lector de facturas ────────────────────────────────────────────────

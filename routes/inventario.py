@@ -408,3 +408,75 @@ def importar_factura():
             "actualizados": actualizados,
             "sin_precio": sin_precio,
         })
+
+
+@inventario_bp.route("/leer-producto-ia", methods=["POST"])
+def leer_producto_ia():
+    uid = _auth()
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+
+    file = request.files.get("imagen")
+    if not file:
+        return jsonify({"error": "Imagen requerida"}), 400
+
+    codigo_barras = request.form.get("codigo_barras", "")
+
+    try:
+        import anthropic as _anthropic
+    except ImportError:
+        return jsonify({"error": "Librería anthropic no instalada"}), 500
+
+    try:
+        import base64, json
+
+        data = file.read()
+        content_type = (file.content_type or "").lower()
+        media_type = content_type if content_type.startswith("image/") else "image/jpeg"
+        b64 = base64.standard_b64encode(data).decode("utf-8")
+
+        PROMPT = (
+            "Eres un asistente que lee etiquetas de productos de supermercado chilenos.\n"
+            "Extrae la información visible en la imagen y responde SOLO con un JSON válido, "
+            "sin texto adicional ni markdown:\n"
+            "{\n"
+            '  "nombre": "nombre completo del producto",\n'
+            '  "marca": "marca si es visible o null",\n'
+            '  "contenido": "cantidad y unidad ej: 1.5L, 400g o null",\n'
+            '  "categoria_sugerida": "Bebidas|Lácteos|Snacks|Cereales|Pastas|Pan|Conservas|Limpieza|Otros",\n'
+            '  "descripcion": "descripción breve o null"\n'
+            "}\n"
+            "Si no puedes leer algún campo usa null. "
+            "Responde SOLO el JSON."
+        )
+
+        client = _anthropic.Anthropic()
+        msg = client.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=512,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}},
+                    {"type": "text", "text": PROMPT},
+                ],
+            }],
+        )
+
+        text = msg.content[0].text.strip()
+        if text.startswith("```"):
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else parts[0]
+            if text.startswith("json"):
+                text = text[4:]
+
+        producto = json.loads(text.strip())
+        if codigo_barras:
+            producto["codigo_barras"] = codigo_barras
+
+        logger.info(f"leer_producto_ia: detectado '{producto.get('nombre')}' para {codigo_barras}")
+        return jsonify({"ok": True, "producto": producto})
+
+    except Exception as e:
+        logger.error(f"leer_producto_ia: {e}")
+        return jsonify({"ok": False, "error": str(e)}), 500
