@@ -365,9 +365,9 @@ def actualizar(pid):
     data = request.get_json(silent=True) or {}
     campos = {}
     permitidos = ("nombre", "descripcion", "precio", "precio_costo",
-                  "stock_minimo", "codigo_barras", "categoria_id",
+                  "stock", "stock_minimo", "codigo_barras", "categoria_id",
                   "imagen_url", "activo", "es_granel", "unidad_medida", "precio_por",
-                  "modo_stock", "hora_reset_stock", "sku")
+                  "modo_stock", "hora_reset_stock", "sku", "pendiente_verificar")
     for campo in permitidos:
         if campo in data:
             campos[campo] = data[campo]
