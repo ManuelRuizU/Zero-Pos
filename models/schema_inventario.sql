@@ -66,6 +66,33 @@ CREATE TABLE IF NOT EXISTS facturas_proveedor (
     creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Compras (facturas importadas con IA)
+CREATE TABLE IF NOT EXISTS compras (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    proveedor_id INTEGER REFERENCES proveedores(id),
+    folio        TEXT,
+    fecha        DATE,
+    total        INTEGER NOT NULL DEFAULT 0,
+    usuario_id   INTEGER REFERENCES usuarios(id),
+    creado_en    DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_compras_proveedor ON compras(proveedor_id);
+CREATE INDEX IF NOT EXISTS idx_compras_fecha ON compras(creado_en);
+
+-- Ítems de compras
+CREATE TABLE IF NOT EXISTS compra_items (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    compra_id       INTEGER NOT NULL REFERENCES compras(id) ON DELETE CASCADE,
+    producto_id     INTEGER REFERENCES productos(id),
+    nombre_original TEXT NOT NULL,
+    cantidad        INTEGER NOT NULL DEFAULT 1,
+    precio_unitario INTEGER NOT NULL,
+    subtotal        INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_compra_items_compra ON compra_items(compra_id);
+
 -- Alertas de stock
 CREATE TABLE IF NOT EXISTS alertas_stock (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
