@@ -688,7 +688,7 @@ async function cargarProductos() {
   categorias = [{ id: null, nombre: 'Todos' },
     ...Array.from(catSet.entries()).map(([id, nombre]) => ({ id, nombre }))];
   renderCats();
-  if (!('BarcodeDetector' in window)) setTimeout(() => _cargarZXing().catch(() => {}), 0);
+  if (!('BarcodeDetector' in window)) setTimeout(() => cargarZXing().catch(() => {}), 0);
 }
 
 function renderCats() {
@@ -816,49 +816,99 @@ function _escanerOverlay(msg) {
   if (msg) { document.getElementById('escanerOverlayMsg').textContent = msg; el.style.display = 'flex'; }
   else el.style.display = 'none';
 }
-async function _cargarZXing() {
-  if (_zxingLoaded) return;
-  if (_zxingPromise) return _zxingPromise;
-  _zxingPromise = new Promise((res, rej) => {
+function cargarZXing() {
+  if (typeof ZXing !== 'undefined') return Promise.resolve();
+  if (cargarZXing._promise) return cargarZXing._promise;
+  cargarZXing._promise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js';
-    s.onload = () => { _zxingLoaded = true; res(); };
-    s.onerror = rej;
+    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
+    s.onload = () => { console.log('[ZERO] ZXing cargado OK'); setTimeout(resolve, 100); };
+    s.onerror = e => { console.error('[ZERO] ZXing falló al cargar:', e); reject(e); };
     document.head.appendChild(s);
   });
-  return _zxingPromise;
+  return cargarZXing._promise;
+}
+async function detectarConZXing(file) {
+  try {
+    await cargarZXing();
+    if (typeof ZXing === 'undefined') return null;
+    return new Promise(resolve => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          const ratio = Math.min(MAX / w, MAX / h);
+          w = Math.floor(w * ratio); h = Math.floor(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        console.log('[ZERO] Canvas ZXing:', w, 'x', h);
+        try {
+          const d = ctx.getImageData(0, 0, w, h);
+          const lum = new ZXing.RGBLuminanceSource(d.data, w, h);
+          const bin = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+          const r = new ZXing.MultiFormatReader().decode(bin);
+          URL.revokeObjectURL(url);
+          console.log('[ZERO] ZXing encontró:', r.getText());
+          resolve(r.getText());
+        } catch (e) {
+          try {
+            const cx = Math.floor(w * 0.1), cy = Math.floor(h * 0.1);
+            const cw = Math.floor(w * 0.8), ch = Math.floor(h * 0.8);
+            const d2 = ctx.getImageData(cx, cy, cw, ch);
+            const lum2 = new ZXing.RGBLuminanceSource(d2.data, cw, ch);
+            const bin2 = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum2));
+            const r2 = new ZXing.MultiFormatReader().decode(bin2);
+            URL.revokeObjectURL(url);
+            console.log('[ZERO] ZXing centro:', r2.getText());
+            resolve(r2.getText());
+          } catch (e2) {
+            URL.revokeObjectURL(url);
+            console.warn('[ZERO] ZXing no detectó código');
+            resolve(null);
+          }
+        }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  } catch (e) {
+    console.error('[ZERO] Error ZXing:', e);
+    return null;
+  }
 }
 async function detectarCodigoEnImagen(file) {
+  console.log('[ZERO] Iniciando detección...');
+  console.log('[ZERO] Archivo:', file.name, file.type, file.size, 'bytes');
+  console.log('[ZERO] BarcodeDetector disponible:', 'BarcodeDetector' in window);
+  console.log('[ZERO] ZXing disponible:', typeof ZXing !== 'undefined');
+
   if ('BarcodeDetector' in window) {
     try {
-      const det = new BarcodeDetector({ formats: ['ean_13','ean_8','code_128','code_39','upc_a','upc_e','qr_code'] });
+      const detector = new BarcodeDetector({
+        formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'],
+      });
       const img = await createImageBitmap(file);
-      const res = await det.detect(img);
-      if (res.length) return res[0].rawValue;
-    } catch (e) { console.warn('[ZERO] BarcodeDetector:', e.message); }
+      console.log('[ZERO] Imagen creada:', img.width, 'x', img.height);
+      const resultados = await detector.detect(img);
+      console.log('[ZERO] BarcodeDetector resultados:', resultados.length);
+      if (resultados.length > 0) {
+        console.log('[ZERO] Código encontrado:', resultados[0].rawValue);
+        return resultados[0].rawValue;
+      }
+    } catch (e) {
+      console.error('[ZERO] BarcodeDetector error:', e);
+    }
   }
-  await _cargarZXing();
-  if (!window.ZXing) return null;
-  return new Promise(resolve => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      URL.revokeObjectURL(url);
-      try {
-        const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const lum = new ZXing.RGBLuminanceSource(d.data, canvas.width, canvas.height);
-        const bin = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
-        const r = new ZXing.MultiFormatReader().decode(bin);
-        resolve(r ? r.getText() : null);
-      } catch (e) { resolve(null); }
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-    img.src = url;
-  });
+
+  console.warn('[ZERO] Intentando ZXing...');
+  const codigo = await detectarConZXing(file);
+  if (!codigo) console.warn('[ZERO] No se detectó ningún código');
+  return codigo;
 }
 function abrirEscaner(onDetectado) {
   const input = document.createElement('input');
