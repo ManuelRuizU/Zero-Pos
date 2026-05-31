@@ -369,8 +369,8 @@ def crear():
                (nombre, descripcion, precio, precio_costo, stock, stock_minimo,
                 codigo_barras, categoria_id, imagen_url, activo,
                 es_granel, unidad_medida, precio_por, modo_stock, hora_reset_stock,
-                pendiente_verificar)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                pendiente_verificar, tiene_impuesto_adicional, tasa_impuesto_adicional)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 nombre,
                 data.get("descripcion"),
@@ -388,6 +388,8 @@ def crear():
                 modo_stock,
                 data.get("hora_reset_stock", "06:00"),
                 pendiente_verificar,
+                int(bool(data.get("tiene_impuesto_adicional", 0))),
+                float(data.get("tasa_impuesto_adicional", 0)),
             )
         )
         pid = cur.lastrowid
@@ -414,7 +416,8 @@ def actualizar(pid):
     permitidos = ("nombre", "descripcion", "precio", "precio_costo",
                   "stock", "stock_minimo", "codigo_barras", "categoria_id",
                   "imagen_url", "activo", "es_granel", "unidad_medida", "precio_por",
-                  "modo_stock", "hora_reset_stock", "sku", "pendiente_verificar")
+                  "modo_stock", "hora_reset_stock", "sku",
+                  "pendiente_verificar", "tiene_impuesto_adicional", "tasa_impuesto_adicional")
     for campo in permitidos:
         if campo in data:
             campos[campo] = data[campo]
