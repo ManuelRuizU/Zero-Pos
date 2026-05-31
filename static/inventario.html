@@ -80,6 +80,31 @@ select option{background:#13131a;}
   border-radius:8px;padding:7px 12px;font-size:12px;cursor:pointer;transition:all .15s;}
 .modo-stock-btn:hover{border-color:var(--accent);color:var(--text);}
 .modo-stock-btn.active{background:rgba(99,102,241,0.2);border-color:var(--accent);color:var(--accent2);}
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  padding:12px 22px;border-radius:12px;font-size:13px;font-weight:600;
+  background:#1e1e2e;border:1px solid var(--border);color:var(--text);
+  transition:transform .3s ease;z-index:999;pointer-events:none;white-space:nowrap;}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.ok{background:rgba(34,197,94,0.15);border-color:var(--success);color:var(--success);}
+#toast.error{background:rgba(239,68,68,0.15);border-color:var(--danger);color:var(--danger);}
+/* Spinner */
+#spinnerOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(8px);
+  z-index:200;display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+#spinnerOverlay.active{display:flex;}
+.spinner{width:48px;height:48px;border:4px solid rgba(99,102,241,0.25);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Factura modal */
+.factura-prods{max-height:320px;overflow-y:auto;margin-top:4px;}
+.factura-prod-row{display:grid;grid-template-columns:18px 1fr 110px 54px 80px auto;
+  gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.factura-prod-row:last-child{border:none;}
+.finput{background:var(--surface);border:1px solid var(--border);border-radius:6px;
+  padding:4px 7px;color:var(--text);font-size:12px;width:100%;}
+.finput:focus{border-color:var(--accent);outline:none;}
+.badge-nuevo{background:rgba(99,102,241,0.15);color:var(--accent2);padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap;}
+.badge-existe{background:rgba(34,197,94,0.15);color:var(--success);padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap;}
 </style>
 </head>
 <body>
@@ -89,6 +114,7 @@ select option{background:#13131a;}
     <button class="nav-btn active" onclick="showTab('productos',this)">📦 Productos</button>
     <button class="nav-btn" onclick="showTab('proveedores',this)">🏭 Proveedores</button>
     <button class="nav-btn" onclick="showTab('alertas',this)">⚠️ Alertas</button>
+    <button class="nav-btn" onclick="leerFactura()">📄 Leer factura</button>
     <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
   </div>
 </div>
@@ -245,6 +271,52 @@ select option{background:#13131a;}
   <div class="modal-btns">
     <button class="btn" style="flex:1" onclick="cerrarModalProduccion()">Cancelar</button>
     <button class="btn primary" style="flex:2" onclick="guardarProduccion()">Guardar producción</button>
+  </div>
+</div>
+</div>
+
+<!-- Spinner overlay -->
+<div id="spinnerOverlay">
+  <div class="spinner"></div>
+  <div style="color:var(--text-dim);font-size:13px">Analizando factura con IA…</div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Modal revisión factura -->
+<div class="modal-overlay" id="modalFactura">
+<div class="modal" style="max-width:660px">
+  <div class="modal-title">📄 Revisión de factura</div>
+
+  <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:14px;margin-bottom:16px">
+    <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Proveedor</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group" style="margin:0"><label>Nombre</label><input class="finput" id="facNombre" type="text" style="width:100%"></div>
+      <div class="form-group" style="margin:0"><label>RUT</label><input class="finput" id="facRut" type="text" style="width:100%"></div>
+      <div class="form-group" style="margin:0"><label>Vendedor</label><input class="finput" id="facVendedor" type="text" style="width:100%"></div>
+      <div class="form-group" style="margin:0"><label>Teléfono vendedor</label><input class="finput" id="facTelefono" type="text" style="width:100%"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="form-group" style="margin:0"><label>Folio / Nº factura</label><input class="finput" id="facFolio" type="text" style="width:100%"></div>
+      <div class="form-group" style="margin:0"><label>Fecha</label><input class="finput" id="facFecha" type="date" style="width:100%"></div>
+    </div>
+  </div>
+
+  <div style="font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Productos detectados</div>
+  <div style="display:grid;grid-template-columns:18px 1fr 110px 54px 80px auto;gap:8px;font-size:10px;color:var(--text-dim);font-weight:600;padding:0 2px 6px;border-bottom:1px solid var(--border)">
+    <span></span><span>Nombre</span><span>Cód. barras</span><span>Cant.</span><span>P.Unit.</span><span></span>
+  </div>
+  <div class="factura-prods" id="facProductos"></div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+    <div style="font-size:15px;font-weight:700">Total: <span id="facTotal" style="color:var(--accent2)">$0</span></div>
+    <div style="font-size:12px;color:var(--text-dim)" id="facResumen"></div>
+  </div>
+
+  <div class="modal-btns" style="margin-top:14px">
+    <button class="btn" style="flex:1" onclick="cerrarModalFactura()">Cancelar</button>
+    <button class="btn primary" style="flex:2" onclick="importarFactura()">✓ Confirmar todo</button>
   </div>
 </div>
 </div>
@@ -508,11 +580,138 @@ async function marcarLeida(id) {
   cargarAlertas();
 }
 
+// ── Lector de facturas ────────────────────────────────────────────────
+const escH = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+let _facturaData = null;
+
+function showToast(msg, tipo='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${tipo}`;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { t.className = ''; }, 3200);
+}
+
+function leerFactura() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*,application/pdf';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('spinnerOverlay').classList.add('active');
+    try {
+      const fd = new FormData();
+      fd.append('factura', file);
+      const r = await fetch('/api/inventario/leer-factura', {
+        method: 'POST', credentials: 'include', body: fd,
+      });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error || 'Error al analizar la factura');
+      mostrarModalFactura(d.datos);
+    } catch (e) {
+      showToast('Error: ' + e.message, 'error');
+    } finally {
+      document.getElementById('spinnerOverlay').classList.remove('active');
+    }
+  };
+  input.click();
+}
+
+function mostrarModalFactura(datos) {
+  _facturaData = datos;
+  const p = datos.proveedor || {};
+  document.getElementById('facNombre').value   = p.nombre || '';
+  document.getElementById('facRut').value      = p.rut || '';
+  document.getElementById('facVendedor').value = p.vendedor_nombre || '';
+  document.getElementById('facTelefono').value = p.vendedor_telefono || '';
+  document.getElementById('facFolio').value    = datos.folio || '';
+  document.getElementById('facFecha').value    = datos.fecha || '';
+  document.getElementById('facTotal').textContent = fmt(datos.total || 0);
+
+  const prods = datos.productos || [];
+  const nuevos = prods.filter(x => !x.existe).length;
+  const exist  = prods.filter(x => x.existe).length;
+  document.getElementById('facResumen').textContent =
+    `${nuevos} nuevo${nuevos !== 1 ? 's' : ''} · ${exist} existente${exist !== 1 ? 's' : ''}`;
+
+  document.getElementById('facProductos').innerHTML = prods.map((prod, i) => `
+    <div class="factura-prod-row">
+      <input type="checkbox" id="fchk${i}" checked style="cursor:pointer;accent-color:var(--accent)">
+      <input class="finput" id="fnombre${i}" value="${escH(prod.nombre)}" style="min-width:0">
+      <input class="finput" id="fbarras${i}" value="${escH(prod.codigo_barras)}" placeholder="—">
+      <input class="finput" id="fcant${i}"   type="number" value="${prod.cantidad||1}" min="1">
+      <input class="finput" id="fpunit${i}"  type="number" value="${prod.precio_unitario||0}" min="0">
+      <span class="${prod.existe ? 'badge-existe' : 'badge-nuevo'}">${prod.existe ? '✅ Existe' : '✨ Nuevo'}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('modalFactura').classList.add('active');
+}
+
+function cerrarModalFactura() {
+  document.getElementById('modalFactura').classList.remove('active');
+  _facturaData = null;
+}
+
+async function importarFactura() {
+  if (!_facturaData) return;
+  const prods = _facturaData.productos || [];
+  const selectedProds = [];
+  prods.forEach((prod, i) => {
+    if (!document.getElementById(`fchk${i}`)?.checked) return;
+    const barras = (document.getElementById(`fbarras${i}`)?.value || '').trim();
+    selectedProds.push({
+      nombre:          document.getElementById(`fnombre${i}`)?.value || prod.nombre,
+      codigo_barras:   barras || null,
+      cantidad:        parseInt(document.getElementById(`fcant${i}`)?.value)  || 1,
+      precio_unitario: parseInt(document.getElementById(`fpunit${i}`)?.value) || 0,
+    });
+  });
+
+  if (!selectedProds.length) { showToast('Selecciona al menos un producto', 'error'); return; }
+
+  const payload = {
+    proveedor: {
+      nombre:             document.getElementById('facNombre').value.trim(),
+      rut:                document.getElementById('facRut').value.trim(),
+      vendedor_nombre:    document.getElementById('facVendedor').value.trim(),
+      vendedor_telefono:  document.getElementById('facTelefono').value.trim(),
+    },
+    folio:    document.getElementById('facFolio').value.trim(),
+    fecha:    document.getElementById('facFecha').value,
+    total:    _facturaData.total || 0,
+    productos: selectedProds,
+  };
+
+  try {
+    const r = await fetch('/api/inventario/importar-factura', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Error al importar');
+    cerrarModalFactura();
+    cargarProductos();
+    showToast(`✓ ${d.creados} nuevo${d.creados!==1?'s':''} · ${d.actualizados} actualizado${d.actualizados!==1?'s':''}`, 'ok');
+    if (d.sin_precio?.length) {
+      setTimeout(() =>
+        showToast(`⚠️ ${d.sin_precio.length} producto${d.sin_precio.length!==1?'s':''} sin precio de venta`, 'error'),
+        3500
+      );
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  }
+}
+
 document.addEventListener('keydown', e => {
   if (e.key==='Escape') {
     cerrarModalProd();
     cerrarModalProv();
     cerrarModalProduccion();
+    cerrarModalFactura();
   }
 });
 

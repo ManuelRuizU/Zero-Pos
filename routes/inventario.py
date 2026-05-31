@@ -176,3 +176,235 @@ def movimientos_producto(producto_id):
             (producto_id,)
         ).fetchall()
         return jsonify([dict(r) for r in rows])
+
+
+# ── Lector de facturas con Claude Vision ─────────────────────────────────────
+
+@inventario_bp.route("/leer-factura", methods=["POST"])
+def leer_factura():
+    uid = _auth()
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+
+    file = request.files.get("factura")
+    if not file:
+        return jsonify({"error": "Archivo requerido"}), 400
+
+    try:
+        import anthropic as _anthropic
+    except ImportError:
+        return jsonify({"error": "Librería anthropic no instalada. Ejecuta: pip install anthropic"}), 500
+
+    try:
+        import base64
+        import io
+        import json
+
+        data = file.read()
+        content_type = (file.content_type or "").lower()
+
+        if "pdf" in content_type:
+            try:
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(data)) as pdf:
+                    if not pdf.pages:
+                        return jsonify({"error": "PDF vacío"}), 400
+                    img_obj = pdf.pages[0].to_image(resolution=150)
+                    buf = io.BytesIO()
+                    img_obj.original.save(buf, format="PNG")
+                    data = buf.getvalue()
+                    media_type = "image/png"
+            except Exception as e:
+                return jsonify({"error": f"No se pudo convertir PDF: {e}"}), 400
+        else:
+            media_type = content_type if content_type.startswith("image/") else "image/jpeg"
+
+        b64 = base64.standard_b64encode(data).decode("utf-8")
+
+        PROMPT = (
+            "Eres un asistente especializado en leer facturas comerciales chilenas.\n"
+            "Extrae la información de la imagen y responde ÚNICAMENTE con un JSON válido con esta estructura:\n\n"
+            "{\n"
+            '  "proveedor": {\n'
+            '    "nombre": "empresa vendedora",\n'
+            '    "rut": "RUT formato XX.XXX.XXX-X o null",\n'
+            '    "vendedor_nombre": "nombre del vendedor si aparece o null",\n'
+            '    "vendedor_telefono": "teléfono de contacto si aparece o null"\n'
+            "  },\n"
+            '  "folio": "número de factura o null",\n'
+            '  "fecha": "YYYY-MM-DD o null",\n'
+            '  "total": 12345,\n'
+            '  "productos": [\n'
+            "    {\n"
+            '      "nombre": "descripción del producto",\n'
+            '      "codigo_barras": "código EAN/UPC si aparece o null",\n'
+            '      "cantidad": 1,\n'
+            '      "precio_unitario": 1000,\n'
+            '      "subtotal": 1000\n'
+            "    }\n"
+            "  ]\n"
+            "}\n\n"
+            "Reglas: total, precio_unitario y subtotal como enteros CLP sin decimales. "
+            "Si un campo no aparece en la factura usa null. "
+            "Responde SOLO el JSON, sin texto adicional, sin markdown."
+        )
+
+        client = _anthropic.Anthropic()
+        msg = client.messages.create(
+            model="claude-opus-4-5",
+            max_tokens=2048,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {"type": "base64", "media_type": media_type, "data": b64},
+                    },
+                    {"type": "text", "text": PROMPT},
+                ],
+            }],
+        )
+
+        text = msg.content[0].text.strip()
+        if text.startswith("```"):
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else parts[0]
+            if text.startswith("json"):
+                text = text[4:]
+        datos = json.loads(text.strip())
+
+        with db_session() as conn:
+            for prod in datos.get("productos", []):
+                barras = (prod.get("codigo_barras") or "").strip()
+                if barras:
+                    row = conn.execute(
+                        "SELECT id FROM productos WHERE codigo_barras=? AND activo=1", (barras,)
+                    ).fetchone()
+                    prod["existe"] = bool(row)
+                    prod["producto_id"] = row["id"] if row else None
+                else:
+                    prod["existe"] = False
+                    prod["producto_id"] = None
+
+        return jsonify({"ok": True, "datos": datos})
+
+    except Exception as e:
+        logger.error(f"leer_factura: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@inventario_bp.route("/importar-factura", methods=["POST"])
+def importar_factura():
+    uid = _auth()
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+
+    data = request.get_json(silent=True) or {}
+    prov_data = data.get("proveedor", {})
+    productos = data.get("productos", [])
+    folio = data.get("folio")
+    fecha = data.get("fecha")
+    total = int(data.get("total") or 0)
+
+    if not productos:
+        return jsonify({"error": "Sin productos"}), 400
+
+    with db_session() as conn:
+        # Upsert proveedor
+        proveedor_id = None
+        rut = (prov_data.get("rut") or "").strip()
+        nombre_prov = (prov_data.get("nombre") or "").strip()
+
+        if rut:
+            row = conn.execute("SELECT id FROM proveedores WHERE rut=?", (rut,)).fetchone()
+            if row:
+                proveedor_id = row["id"]
+                if nombre_prov:
+                    conn.execute("UPDATE proveedores SET nombre=?, activo=1 WHERE id=?",
+                                 (nombre_prov, proveedor_id))
+            else:
+                cur = conn.execute(
+                    "INSERT INTO proveedores (nombre, rut, contacto, telefono) VALUES (?,?,?,?)",
+                    (nombre_prov or "Sin nombre", rut,
+                     prov_data.get("vendedor_nombre"), prov_data.get("vendedor_telefono"))
+                )
+                proveedor_id = cur.lastrowid
+        elif nombre_prov:
+            row = conn.execute("SELECT id FROM proveedores WHERE nombre=?", (nombre_prov,)).fetchone()
+            if row:
+                proveedor_id = row["id"]
+            else:
+                cur = conn.execute(
+                    "INSERT INTO proveedores (nombre, rut, contacto, telefono) VALUES (?,?,?,?)",
+                    (nombre_prov, None,
+                     prov_data.get("vendedor_nombre"), prov_data.get("vendedor_telefono"))
+                )
+                proveedor_id = cur.lastrowid
+
+        cur = conn.execute(
+            "INSERT INTO compras (proveedor_id, folio, fecha, total, usuario_id) VALUES (?,?,?,?,?)",
+            (proveedor_id, folio, fecha, total, uid)
+        )
+        compra_id = cur.lastrowid
+
+        creados = 0
+        actualizados = 0
+        sin_precio = []
+
+        for prod in productos:
+            nombre = (prod.get("nombre") or "").strip()
+            barras = (prod.get("codigo_barras") or "").strip() or None
+            cantidad = int(prod.get("cantidad") or 1)
+            precio_unit = int(prod.get("precio_unitario") or 0)
+            subtotal = int(prod.get("subtotal") or cantidad * precio_unit)
+
+            producto_id = None
+
+            if barras:
+                row = conn.execute(
+                    "SELECT id, precio FROM productos WHERE codigo_barras=?", (barras,)
+                ).fetchone()
+                if row:
+                    producto_id = row["id"]
+                    conn.execute(
+                        "UPDATE productos SET precio_costo=?, stock=stock+?, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+                        (precio_unit, cantidad, producto_id)
+                    )
+                    actualizados += 1
+                    if not row["precio"]:
+                        sin_precio.append(nombre)
+                else:
+                    cur2 = conn.execute(
+                        """INSERT INTO productos
+                           (nombre, codigo_barras, precio_costo, precio, stock, activo, pendiente_verificar, modo_stock)
+                           VALUES (?,?,?,0,?,0,1,'normal')""",
+                        (nombre, barras, precio_unit, cantidad)
+                    )
+                    producto_id = cur2.lastrowid
+                    sin_precio.append(nombre)
+                    creados += 1
+            else:
+                cur2 = conn.execute(
+                    """INSERT INTO productos
+                       (nombre, precio_costo, precio, stock, activo, pendiente_verificar, modo_stock)
+                       VALUES (?,?,0,?,0,1,'normal')""",
+                    (nombre, precio_unit, cantidad)
+                )
+                producto_id = cur2.lastrowid
+                sin_precio.append(nombre)
+                creados += 1
+
+            conn.execute(
+                """INSERT INTO compra_items
+                   (compra_id, producto_id, nombre_original, cantidad, precio_unitario, subtotal)
+                   VALUES (?,?,?,?,?,?)""",
+                (compra_id, producto_id, nombre, cantidad, precio_unit, subtotal)
+            )
+
+        return jsonify({
+            "ok": True,
+            "compra_id": compra_id,
+            "creados": creados,
+            "actualizados": actualizados,
+            "sin_precio": sin_precio,
+        })
