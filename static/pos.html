@@ -2887,33 +2887,25 @@ async function detectarConZXing(file) {
 }
 
 async function detectarCodigoEnImagen(file) {
-  console.log('[ZERO] Iniciando detección...');
-  console.log('[ZERO] Archivo:', file.name, file.type, file.size, 'bytes');
-  console.log('[ZERO] BarcodeDetector disponible:', 'BarcodeDetector' in window);
-  console.log('[ZERO] ZXing disponible:', typeof ZXing !== 'undefined');
-
-  if ('BarcodeDetector' in window) {
-    try {
-      const detector = new BarcodeDetector({
-        formats: ['ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'qr_code'],
-      });
-      const img = await createImageBitmap(file);
-      console.log('[ZERO] Imagen creada:', img.width, 'x', img.height);
-      const resultados = await detector.detect(img);
-      console.log('[ZERO] BarcodeDetector resultados:', resultados.length);
-      if (resultados.length > 0) {
-        console.log('[ZERO] Código encontrado:', resultados[0].rawValue);
-        return resultados[0].rawValue;
-      }
-    } catch (e) {
-      console.error('[ZERO] BarcodeDetector error:', e);
+  try {
+    const fd = new FormData();
+    fd.append('imagen', file);
+    const resp = await fetch('/api/productos/detectar-codigo', {
+      method: 'POST',
+      credentials: 'include',
+      body: fd,
+    });
+    const data = await resp.json();
+    if (data.ok && data.codigo) {
+      console.log('[ZERO] Código detectado en servidor:', data.codigo, '(' + data.tipo + ')');
+      return data.codigo;
     }
+    console.warn('[ZERO] No se detectó código:', data.mensaje || data.error);
+    return null;
+  } catch (e) {
+    console.error('[ZERO] Error enviando imagen al servidor:', e);
+    return null;
   }
-
-  console.warn('[ZERO] Intentando ZXing...');
-  const codigo = await detectarConZXing(file);
-  if (!codigo) console.warn('[ZERO] No se detectó ningún código');
-  return codigo;
 }
 
 function abrirEscaner() {
@@ -2926,7 +2918,7 @@ function abrirEscaner() {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
-    _escanerOverlay('Analizando imagen...');
+    _escanerOverlay('📷 Analizando imagen...');
     const inicio = performance.now();
     try {
       const codigo = await detectarCodigoEnImagen(file);
@@ -2935,11 +2927,12 @@ function abrirEscaner() {
         const ms = (performance.now() - inicio).toFixed(0);
         console.log(`[ZERO] Código detectado en ${ms}ms: ${codigo}`);
         if (navigator.vibrate) navigator.vibrate(50);
-        showToast('✓ ' + codigo, 'success');
+        showToast('✅ ' + codigo, 'success');
         procesarCodigo(codigo);
       } else {
-        showToast('No se detectó código. Intenta de nuevo.', 'error');
-        document.getElementById('searchInput').focus();
+        showToast('No se detectó código', 'error');
+        const manual = prompt('No se detectó el código automáticamente.\nIngresa el código manualmente:');
+        if (manual && manual.trim()) procesarCodigo(manual.trim());
       }
     } catch(err) {
       _escanerOverlay(null);

@@ -185,6 +185,49 @@ def obtener(pid):
         return jsonify(dict(prod))
 
 
+@productos_bp.route("/detectar-codigo", methods=["POST"])
+def detectar_codigo():
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+
+    archivo = request.files.get("imagen")
+    if not archivo:
+        return jsonify({"error": "Imagen requerida"}), 400
+
+    try:
+        from PIL import Image
+        from pyzbar import pyzbar as _pyzbar
+        import io
+
+        img_bytes = archivo.read()
+        img = Image.open(io.BytesIO(img_bytes))
+        if img.mode not in ("RGB", "L"):
+            img = img.convert("RGB")
+
+        codigos = _pyzbar.decode(img)
+
+        if not codigos:
+            w, h = img.size
+            centro = img.crop((int(w * 0.1), int(h * 0.1), int(w * 0.9), int(h * 0.9)))
+            codigos = _pyzbar.decode(centro)
+
+        if not codigos:
+            img_small = img.resize((800, 600), Image.LANCZOS)
+            codigos = _pyzbar.decode(img_small)
+
+        if codigos:
+            codigo = codigos[0].data.decode("utf-8")
+            tipo = codigos[0].type
+            logger.info(f"Código detectado: {codigo} ({tipo})")
+            return jsonify({"ok": True, "codigo": codigo, "tipo": tipo})
+
+        return jsonify({"ok": False, "codigo": None, "mensaje": "No se detectó ningún código"})
+
+    except Exception as e:
+        logger.error(f"Error detectando código: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @productos_bp.route("/barras/<codigo>", methods=["GET"])
 def por_barras(codigo):
     """Busca en DB local. Para lookup completo usar /barras/<codigo>/lookup."""
