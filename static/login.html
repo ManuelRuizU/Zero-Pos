@@ -274,9 +274,8 @@ async function submitPin() {
       window.location.href = destino;
     } else if (data.upgrade) {
       setError('');
-      const msg = data.mensaje || 'Límite de cajeros alcanzado.';
       document.getElementById('err').innerHTML =
-        `<span style="color:#f59e0b">${msg}</span>`;
+        `<span style="color:#f59e0b">Límite de cajeros alcanzado.<br>Pide al administrador que cierre una sesión activa.</span>`;
       pin = '';
       updateDisplay();
     } else {

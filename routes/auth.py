@@ -67,34 +67,38 @@ def login():
 
         for u in candidatos:
             try:
-                if bcrypt.checkpw(pin.encode(), u["pin_hash"].encode()):
-                    # Verificar límite de cajeros (excepto admin)
-                    if u["rol"] != "admin":
-                        max_cfg = conn.execute(
-                            "SELECT valor FROM config WHERE clave='max_cajeros'"
-                        ).fetchone()
-                        max_cajeros = int(max_cfg["valor"]) if max_cfg else 2
-                        activas = _contar_sesiones_activas()
-                        if activas >= max_cajeros:
-                            logger.warning(f"Límite cajeros alcanzado ({activas}/{max_cajeros})")
-                            return jsonify({
-                                "error": "Límite de cajeros alcanzado",
-                                "mensaje": f"Ya hay {max_cajeros} cajeros activos. Upgrade para más.",
-                                "upgrade": True,
-                            }), 403
+                if not bcrypt.checkpw(pin.encode(), u["pin_hash"].encode()):
+                    continue
 
-                    session["usuario_id"]     = u["id"]
-                    session["usuario_nombre"] = u["nombre"]
-                    session["usuario_rol"]    = u["rol"]
-                    logger.info(f"Login exitoso: {u['nombre']} (rol={u['rol']})")
-                    return jsonify({
-                        "ok": True,
-                        "usuario": {
-                            "id":     u["id"],
-                            "nombre": u["nombre"],
-                            "rol":    u["rol"],
-                        }
-                    })
+                # Admin siempre puede entrar — límite solo aplica a cajero/cocina
+                if u["rol"] != "admin":
+                    max_cfg = conn.execute(
+                        "SELECT valor FROM config WHERE clave='max_cajeros'"
+                    ).fetchone()
+                    max_cajeros = int(max_cfg["valor"]) if max_cfg else 2
+                    activas = _contar_sesiones_activas()
+                    if activas >= max_cajeros:
+                        logger.warning(
+                            f"Límite cajeros alcanzado ({activas}/{max_cajeros}), "
+                            f"usuario={u['nombre']} rol={u['rol']}"
+                        )
+                        return jsonify({
+                            "error": "Límite de cajeros alcanzado",
+                            "upgrade": True,
+                        }), 403
+
+                session["usuario_id"]     = u["id"]
+                session["usuario_nombre"] = u["nombre"]
+                session["usuario_rol"]    = u["rol"]
+                logger.info(f"Login exitoso: {u['nombre']} (rol={u['rol']})")
+                return jsonify({
+                    "ok": True,
+                    "usuario": {
+                        "id":     u["id"],
+                        "nombre": u["nombre"],
+                        "rol":    u["rol"],
+                    }
+                })
             except Exception:
                 continue
 
