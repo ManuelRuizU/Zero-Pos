@@ -675,6 +675,7 @@ async function detectarConZXing(file) {
 
 async function detectarCodigoEnImagen(file) {
   try {
+    mostrarToast('🔍 Analizando código...');
     const fd = new FormData();
     fd.append('imagen', file);
     const resp = await fetch('/api/productos/detectar-codigo', {
@@ -699,11 +700,10 @@ function escanearNuevoProducto() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.capture = 'environment';
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) input.capture = 'environment';
   input.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    mostrarToast('📷 Analizando imagen...');
     const codigo = await detectarCodigoEnImagen(file);
     if (codigo) {
       document.getElementById('prodBarras').value = codigo;
@@ -716,12 +716,9 @@ function escanearNuevoProducto() {
         }
       }
     } else {
-      showToast('No se detectó código', 'error');
-      const manual = prompt('No se detectó el código automáticamente.\nIngresa el código manualmente:');
-      if (manual && manual.trim()) {
-        document.getElementById('prodBarras').value = manual.trim();
-        mostrarToast('✓ Código: ' + manual.trim());
-      }
+      mostrarToast('No se detectó código — ingresa manualmente');
+      const campo = document.getElementById('prodBarras');
+      if (campo) { campo.focus(); campo.select(); }
     }
   };
   input.click();

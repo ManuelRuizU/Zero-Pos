@@ -2888,6 +2888,7 @@ async function detectarConZXing(file) {
 
 async function detectarCodigoEnImagen(file) {
   try {
+    showToast('🔍 Analizando código...', 'info');
     const fd = new FormData();
     fd.append('imagen', file);
     const resp = await fetch('/api/productos/detectar-codigo', {
@@ -2912,7 +2913,7 @@ function abrirEscaner() {
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
-  input.capture = 'environment';  // cámara trasera en móvil
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) input.capture = 'environment';
 
   input.onchange = async e => {
     const file = e.target.files && e.target.files[0];
@@ -2930,9 +2931,9 @@ function abrirEscaner() {
         showToast('✅ ' + codigo, 'success');
         procesarCodigo(codigo);
       } else {
-        showToast('No se detectó código', 'error');
-        const manual = prompt('No se detectó el código automáticamente.\nIngresa el código manualmente:');
-        if (manual && manual.trim()) procesarCodigo(manual.trim());
+        showToast('No se detectó código — ingresa el código manualmente', 'error');
+        const campo = document.getElementById('searchInput');
+        if (campo) { campo.focus(); campo.select(); }
       }
     } catch(err) {
       _escanerOverlay(null);

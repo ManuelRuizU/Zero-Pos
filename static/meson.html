@@ -883,6 +883,7 @@ async function detectarConZXing(file) {
 }
 async function detectarCodigoEnImagen(file) {
   try {
+    showToast('🔍 Analizando código...', 'info');
     const fd = new FormData();
     fd.append('imagen', file);
     const resp = await fetch('/api/productos/detectar-codigo', {
@@ -904,7 +905,8 @@ async function detectarCodigoEnImagen(file) {
 }
 function abrirEscaner(onDetectado) {
   const input = document.createElement('input');
-  input.type = 'file'; input.accept = 'image/*'; input.capture = 'environment';
+  input.type = 'file'; input.accept = 'image/*';
+  if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) input.capture = 'environment';
   input.onchange = async e => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -916,9 +918,9 @@ function abrirEscaner(onDetectado) {
         if (navigator.vibrate) navigator.vibrate(50);
         onDetectado(codigo);
       } else {
-        showToast('No se detectó código', 'error');
-        const manual = prompt('No se detectó el código automáticamente.\nIngresa el código manualmente:');
-        if (manual && manual.trim()) onDetectado(manual.trim());
+        showToast('No se detectó código — ingresa manualmente', 'error');
+        const campo = document.getElementById('searchProd');
+        if (campo) { campo.focus(); campo.select(); }
       }
     } catch (err) { _escanerOverlay(null); showToast('Error al procesar imagen', 'error'); }
   };

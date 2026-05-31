@@ -215,6 +215,10 @@ def detectar_codigo():
             img_small = img.resize((800, 600), Image.LANCZOS)
             codigos = _pyzbar.decode(img_small)
 
+        if not codigos:
+            gris = img.convert("L")
+            codigos = _pyzbar.decode(gris)
+
         if codigos:
             codigo = codigos[0].data.decode("utf-8")
             tipo = codigos[0].type
