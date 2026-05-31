@@ -2886,63 +2886,60 @@ async function detectarConZXing(file) {
   }
 }
 
-async function detectarCodigoEnImagen(file) {
-  try {
-    showToast('🔍 Analizando código...', 'info');
-    const fd = new FormData();
-    fd.append('imagen', file);
-    const resp = await fetch('/api/productos/detectar-codigo', {
-      method: 'POST',
-      credentials: 'include',
-      body: fd,
-    });
-    const data = await resp.json();
-    if (data.ok && data.codigo) {
-      console.log('[ZERO] Código detectado en servidor:', data.codigo, '(' + data.tipo + ')');
-      return data.codigo;
-    }
-    console.warn('[ZERO] No se detectó código:', data.mensaje || data.error);
-    return null;
-  } catch (e) {
-    console.error('[ZERO] Error enviando imagen al servidor:', e);
-    return null;
-  }
-}
-
 function abrirEscaner() {
+  console.log('[ZERO] Abriendo selector de imagen...');
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
   if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) input.capture = 'environment';
+  input.style.display = 'none';
+  document.body.appendChild(input);
 
-  input.onchange = async e => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
+  input.addEventListener('change', async e => {
+    console.log('[ZERO] Archivo seleccionado:', e.target.files?.length);
+    const file = e.target.files?.[0];
+    document.body.removeChild(input);
+    if (!file) {
+      console.warn('[ZERO] No se seleccionó archivo');
+      return;
+    }
+    console.log('[ZERO] Procesando imagen:', file.name, file.size, 'bytes');
     _escanerOverlay('📷 Analizando imagen...');
+    showToast('🔍 Analizando código...', 'info');
     const inicio = performance.now();
     try {
-      const codigo = await detectarCodigoEnImagen(file);
+      console.log('[ZERO] Enviando al servidor...');
+      const formData = new FormData();
+      formData.append('imagen', file);
+      const resp = await fetch('/api/productos/detectar-codigo', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      console.log('[ZERO] Respuesta servidor:', resp.status);
+      const data = await resp.json();
+      console.log('[ZERO] Data:', data);
       _escanerOverlay(null);
-      if (codigo) {
+      if (data.ok && data.codigo) {
         const ms = (performance.now() - inicio).toFixed(0);
-        console.log(`[ZERO] Código detectado en ${ms}ms: ${codigo}`);
+        console.log(`[ZERO] Código detectado en ${ms}ms: ${data.codigo}`);
         if (navigator.vibrate) navigator.vibrate(50);
-        showToast('✅ ' + codigo, 'success');
-        procesarCodigo(codigo);
+        showToast('✅ ' + data.codigo, 'success');
+        procesarCodigo(data.codigo);
       } else {
-        showToast('No se detectó código — ingresa el código manualmente', 'error');
+        showToast('⚠️ No detectado — ingresa el código manualmente', 'error');
         const campo = document.getElementById('searchInput');
         if (campo) { campo.focus(); campo.select(); }
       }
     } catch(err) {
       _escanerOverlay(null);
-      console.error('[ZERO] Error procesando imagen:', err);
+      console.error('[ZERO] Error fetch:', err);
       showToast('Error al procesar imagen: ' + err.message, 'error');
     }
-  };
+  });
 
   input.click();
+  console.log('[ZERO] File picker abierto');
 }
 
 function abrirScanner() { abrirEscaner(); }

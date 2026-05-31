@@ -673,55 +673,58 @@ async function detectarConZXing(file) {
   }
 }
 
-async function detectarCodigoEnImagen(file) {
-  try {
-    mostrarToast('🔍 Analizando código...');
-    const fd = new FormData();
-    fd.append('imagen', file);
-    const resp = await fetch('/api/productos/detectar-codigo', {
-      method: 'POST',
-      credentials: 'include',
-      body: fd,
-    });
-    const data = await resp.json();
-    if (data.ok && data.codigo) {
-      console.log('[ZERO] Código detectado en servidor:', data.codigo, '(' + data.tipo + ')');
-      return data.codigo;
-    }
-    console.warn('[ZERO] No se detectó código:', data.mensaje || data.error);
-    return null;
-  } catch (e) {
-    console.error('[ZERO] Error enviando imagen al servidor:', e);
-    return null;
-  }
-}
-
 function escanearNuevoProducto() {
+  console.log('[ZERO] Abriendo selector...');
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/*';
   if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) input.capture = 'environment';
-  input.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const codigo = await detectarCodigoEnImagen(file);
-    if (codigo) {
-      document.getElementById('prodBarras').value = codigo;
-      mostrarToast('✅ Código: ' + codigo);
-      const resp = await fetch('/api/productos/barras/' + encodeURIComponent(codigo), {credentials:'include'});
-      if (resp.ok) {
-        const prod = await resp.json();
-        if (prod && prod.id) {
-          showToast('⚠️ Ya existe: ' + prod.nombre, 'error');
-        }
-      }
-    } else {
-      mostrarToast('No se detectó código — ingresa manualmente');
-      const campo = document.getElementById('prodBarras');
-      if (campo) { campo.focus(); campo.select(); }
+  input.style.display = 'none';
+  document.body.appendChild(input);
+
+  input.addEventListener('change', async e => {
+    console.log('[ZERO] Archivo seleccionado:', e.target.files?.length);
+    const file = e.target.files?.[0];
+    document.body.removeChild(input);
+    if (!file) {
+      console.warn('[ZERO] No se seleccionó archivo');
+      return;
     }
-  };
+    console.log('[ZERO] Procesando imagen:', file.name, file.size, 'bytes');
+    mostrarToast('🔍 Analizando código...');
+    try {
+      console.log('[ZERO] Enviando al servidor...');
+      const formData = new FormData();
+      formData.append('imagen', file);
+      const resp = await fetch('/api/productos/detectar-codigo', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      console.log('[ZERO] Respuesta servidor:', resp.status);
+      const data = await resp.json();
+      console.log('[ZERO] Data:', data);
+      if (data.ok && data.codigo) {
+        document.getElementById('prodBarras').value = data.codigo;
+        mostrarToast('✅ Código: ' + data.codigo);
+        const checkResp = await fetch('/api/productos/barras/' + encodeURIComponent(data.codigo), {credentials:'include'});
+        if (checkResp.ok) {
+          const prod = await checkResp.json();
+          if (prod && prod.id) mostrarToast('⚠️ Ya existe: ' + prod.nombre);
+        }
+      } else {
+        mostrarToast('⚠️ No detectado — ingresa el código manualmente');
+        const campo = document.getElementById('prodBarras');
+        if (campo) { campo.focus(); campo.select(); }
+      }
+    } catch(err) {
+      console.error('[ZERO] Error fetch:', err);
+      mostrarToast('Error al procesar la imagen');
+    }
+  });
+
   input.click();
+  console.log('[ZERO] File picker abierto');
 }
 
 // ── Lector de facturas ────────────────────────────────────────────────
