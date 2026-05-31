@@ -217,6 +217,10 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE ventas ADD COLUMN pedido_id INTEGER REFERENCES pedidos(id)")
     if "pendiente_verificar" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN pendiente_verificar INTEGER NOT NULL DEFAULT 0")
+    if "tiene_impuesto_adicional" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN tiene_impuesto_adicional INTEGER NOT NULL DEFAULT 0")
+    if "tasa_impuesto_adicional" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN tasa_impuesto_adicional REAL NOT NULL DEFAULT 0")
     if "sku" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN sku TEXT")
         import unicodedata as _ud
