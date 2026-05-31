@@ -80,6 +80,806 @@
     "fuente": "curado"
   },
   {
+    "codigo_barras": "7802100002747",
+    "nombre": "Cerveza Royal Guard (CCU)",
+    "marca": "",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/210/000/2747/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802100020024",
+    "nombre": "Escudo",
+    "marca": "",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/210/002/0024/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804615340017",
+    "nombre": "Stout",
+    "marca": "Kross",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "33 cl",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/461/534/0017/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7809634100024",
+    "nombre": "Cerveza Lager",
+    "marca": "Austral",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "330",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/963/410/0024/front_es.11.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801608002143",
+    "nombre": "Bockchocolate naranja",
+    "marca": "Volcanes del Sur",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/160/800/2143/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802107000562",
+    "nombre": "Torobayo",
+    "marca": "Kuntsmann",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "470cc",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/210/700/0562/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610001196",
+    "nombre": "Coca-Cola",
+    "marca": "Coca-Cola",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "350 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/000/1196/front_es.21.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802800579518",
+    "nombre": "Bebida instantánea en polvo sabor naranja",
+    "marca": "Zuko",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "20g/1L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/280/057/9518/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802950002126",
+    "nombre": "Cafe Nescafe Tradicion 170 GRS Polvo",
+    "marca": "Nestlé",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "170g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/000/2126/front_es.7.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610000571",
+    "nombre": "Coca-Cola Sabor Original",
+    "marca": "Coca-Cola",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "591 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/000/0571/front_es.18.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610350355",
+    "nombre": "Coca-Cola Zero Azúcar",
+    "marca": "Coca-Cola",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "350 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/035/0355/front_en.20.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802800500413",
+    "nombre": "Monterrey Clásico",
+    "marca": "Monterrey",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "170 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/280/050/0413/front_es.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620853396",
+    "nombre": "nectar de fruta natural naranja light",
+    "marca": "CCU",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1500",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/085/3396/front_es.32.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620001841",
+    "nombre": "watt's",
+    "marca": "Watt's",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/000/1841/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900056070",
+    "nombre": "Leche de chocolate",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/005/6070/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7803908006173",
+    "nombre": "guallarauco",
+    "marca": "guallarauco mango",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1 lt",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/390/800/6173/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900121013",
+    "nombre": "Mantequilla (Soprole)",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "250.0 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/012/1013/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804320303178",
+    "nombre": "Cabernet Sauvignon",
+    "marca": "Casillero del Diablo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "750 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/432/030/3178/front_es.37.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620009717",
+    "nombre": "Cachantun",
+    "marca": "Cachantun",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "600 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/000/9717/front_es.18.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802820550504",
+    "nombre": "NÉCTAR DE DURAZNO",
+    "marca": "del Valle",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/282/055/0504/front_es.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620330132",
+    "nombre": "Bebida lata 350ml Orange Crush",
+    "marca": "Atlantic Industries",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "350ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/033/0132/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620008338",
+    "nombre": "PIÑA Agua con Jugo de Fruta Natural",
+    "marca": "mas",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1.6 L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/000/8338/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610305287",
+    "nombre": "coca cola zero",
+    "marca": "",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/030/5287/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620006891",
+    "nombre": "Pepsi Zero Azúcar",
+    "marca": "Pepsi",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "3 litros",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/000/6891/front_es.28.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802810006752",
+    "nombre": "Naranja",
+    "marca": "Watts",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/281/000/6752/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900230227",
+    "nombre": "Yoghito Frutilla Soprole",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "120 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/023/0227/front_es.14.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620006655",
+    "nombre": "+mas pera",
+    "marca": "mas",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/000/6655/front_fr.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610323236",
+    "nombre": "Coca cola",
+    "marca": "Coca cola",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "3L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/032/3236/front_en.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804659650066",
+    "nombre": "not milk",
+    "marca": "NotCo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1 L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/465/965/0066/front_es.39.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620006624",
+    "nombre": "agua con jugo natural de fruta natural SIN GAS",
+    "marca": "+mas",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1600 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/000/6624/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802800576456",
+    "nombre": "Livean",
+    "marca": "Livean",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/280/057/6456/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804659650998",
+    "nombre": "Not Milk Zero Sugar - NotCo - NotCo - NotCo - NotCo - NotCo",
+    "marca": "NotCo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1 L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/465/965/0998/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900003371",
+    "nombre": "Kefir Berries",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/3371/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900001520",
+    "nombre": "Leche semidescremada con cacao",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1520/front_es.30.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802810006592",
+    "nombre": "Manzana",
+    "marca": "Watts",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/281/000/6592/front_es.15.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802800544332",
+    "nombre": "néctar livian manzana",
+    "marca": "Livean",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/280/054/4332/front_es.33.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802810053107",
+    "nombre": "jugo fresco Nara 1L",
+    "marca": "Watt's",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/281/005/3107/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610591994",
+    "nombre": "Sprite",
+    "marca": "Sprite",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "591 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/059/1994/front_es.7.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802955001087",
+    "nombre": "Yogurt Batido Semidescremado",
+    "marca": "Calán de Danone",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "110 gr",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/500/1087/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804671930306",
+    "nombre": "Vilay coco",
+    "marca": "Vilay",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/467/193/0306/front_fr.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804637360918",
+    "nombre": "Pure science",
+    "marca": "",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/463/736/0918/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802810006325",
+    "nombre": "DURAZNO",
+    "marca": "Watts",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/281/000/6325/front_es.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802800576692",
+    "nombre": "pera agua",
+    "marca": "livean",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "7g rinde 1L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/280/057/6692/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620852580",
+    "nombre": "Kem",
+    "marca": "Kem",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "350 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/085/2580/front_es.11.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802910002241",
+    "nombre": "Leche en Polvo Enteta",
+    "marca": "Calo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "850g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/000/2241/front_es.19.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620008505",
+    "nombre": "Bilz y Pap Pop Edición Limitada Pop Candy",
+    "marca": "Bilz y Pap",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "500ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/000/8505/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900004309",
+    "nombre": "Leche en polvo",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "800g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/4309/front_es.12.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620011628",
+    "nombre": "Néctar de fruta sabor damasco",
+    "marca": "Watts",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1.5L.",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/001/1628/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801620011604",
+    "nombre": "Néctar de naranja",
+    "marca": "Watts",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/162/001/1604/front_es.30.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7803908004469",
+    "nombre": "guallarauco agua mango maracuya",
+    "marca": "Guallarauco",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/390/800/4469/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610305560",
+    "nombre": "Coca Cola sin azucar",
+    "marca": "Coca-Cola",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "3000 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/030/5560/front_fr.30.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610001974",
+    "nombre": "Coca-Cola 1 Litro",
+    "marca": "Coca-Cola",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1 l",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/000/1974/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801875052056",
+    "nombre": "te",
+    "marca": "mildred",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "2g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/187/505/2056/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900230258",
+    "nombre": "YOGHITO",
+    "marca": "Soprole Yoghito",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "100",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/023/0258/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801875001580",
+    "nombre": "Herbal Infusion Ginger Lemon",
+    "marca": "Supremo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1.1 oz (30 g)",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/187/500/1580/front_en.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900029388",
+    "nombre": "Purita mamá",
+    "marca": "purita",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "500 gramos",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/002/9388/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7807910031901",
+    "nombre": "good drink",
+    "marca": "cuisine y co",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1 l",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/791/003/1901/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900056025",
+    "nombre": "Leche soprole frutilla",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/005/6025/front_es.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610223284",
+    "nombre": "bebida",
+    "marca": "Sprinte",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "2 litros",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/022/3284/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801875061010",
+    "nombre": "Hierbas surtidas supremo",
+    "marca": "Supremo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/187/506/1010/front_es.7.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802820441512",
+    "nombre": "Benedictino",
+    "marca": "CocaCola",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1500 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/282/044/1512/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802820250268",
+    "nombre": "Kapo Sabor Frambuesa",
+    "marca": "Coca-Cola",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/282/025/0268/front_es.16.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575220479",
+    "nombre": "BERRIES",
+    "marca": "Vivo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "190ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/522/0479/front_es.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802820700633",
+    "nombre": "0% SIN AZÚCAR AÑADIDA Néctar de Naranja",
+    "marca": "del Valle",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1.5L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/282/070/0633/front_es.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802910300200",
+    "nombre": "Yogu Yogu",
+    "marca": "watts",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "200",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/030/0200/front_es.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575226334",
+    "nombre": "Vivo nectar durazno",
+    "marca": "Vivo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1lt",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/522/6334/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900230241",
+    "nombre": "Yoghito Damasco Soprole",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "120g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/023/0241/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802950002133",
+    "nombre": "Nescafe tradicion",
+    "marca": "Nescafé",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/000/2133/front_en.7.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802200263031",
+    "nombre": "100% Jugo De Manzana",
+    "marca": "Vivo",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "190 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/220/026/3031/front_es.23.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7807900000795",
+    "nombre": "Café Instantáneo",
+    "marca": "Líder Selección",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "170 gr",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/790/000/0795/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802920010618",
+    "nombre": "Yoghurt COLUN Kefir Sabor Natural endulzado",
+    "marca": "COLUN",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "120g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/001/0618/front_es.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900003357",
+    "nombre": "Kéfir Sabor Natural",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1 L",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/3357/front_en.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802800576715",
+    "nombre": "Livean sabor Mango",
+    "marca": "Livean",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "7 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/280/057/6715/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900170059",
+    "nombre": "Leche cultivada vainilla",
+    "marca": "",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610223192",
+    "nombre": "Sprite Zero Azúcar",
+    "marca": "Sprite",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/022/3192/front_es.17.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802920010625",
+    "nombre": "Kefir",
+    "marca": "Colun",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "120g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/001/0625/front_es.7.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801610002858",
+    "nombre": "FANTA",
+    "marca": "Fanta",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "350 ml",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/161/000/2858/front_es.11.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802900004798",
+    "nombre": "Kefir Batido Sabor Berries",
+    "marca": "Soprole",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/4798/front_es.21.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801420002031",
+    "nombre": "Bebida de arroz",
+    "marca": "Tucapel",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "1 litro",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/142/000/2031/front_es.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7807910031932",
+    "nombre": "Good Drink! Almendra sabor chocolate!",
+    "marca": "Cuisine & Co.",
+    "categoria": "Bebidas",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/791/003/1932/front_en.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
     "codigo_barras": "7802095180123",
     "nombre": "BURRITOS Y WRAPS XL Tortillas Mexicanas",
     "marca": "Pancho Villa",
@@ -1670,836 +2470,6 @@
     "fuente": "openfoodfacts"
   },
   {
-    "codigo_barras": "7802920777542",
-    "nombre": "Leche Entera",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 l",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/077/7542/front_es.23.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920000930",
-    "nombre": "Mi YOGHURT BATIDO SABOR FRUTILLA",
-    "marca": "COLUN",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "125g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/0930/front_es.21.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001308",
-    "nombre": "Leche Natural Entera",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1308/front_es.8.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920203300",
-    "nombre": "Mantequilla (Colun)",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "250.0 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/020/3300/front_es.13.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920777214",
-    "nombre": "Mi Leche Semidescremada Chocolate",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "200 ml",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/077/7214/front_en.32.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900105013",
-    "nombre": "Crema de leche espesa",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "200 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/010/5013/front_es.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001407",
-    "nombre": "Protein",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "155 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1407/front_es.39.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7808709501995",
-    "nombre": "Surlat Sin Lactosa Balance Perfecto Rica & Liviana 0% Grasa Descremada",
-    "marca": "Surlat",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 litro",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/870/950/1995/front_en.17.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802930005352",
-    "nombre": "Yogurt Griego Protein Natural",
-    "marca": "QUILLAYES",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "800 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/293/000/5352/front_es.28.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920423814",
-    "nombre": "Queso fino rallado Reggianito",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "80 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/042/3814/front_es.6.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900056070",
-    "nombre": "Leche de chocolate",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "200 ml",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/005/6070/front_es.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900121013",
-    "nombre": "Mantequilla (Soprole)",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "250.0 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/012/1013/front_es.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001292",
-    "nombre": "LECHE NATURAL SEMIDESCREMADA",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 LITRO",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1292/front_en.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910083509",
-    "nombre": "Leche Natural Descremada",
-    "marca": "Lonco Leche",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 litro",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/008/3509/front_es.30.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802930004911",
-    "nombre": "Queso Vegano Gauda",
-    "marca": "Quillayes",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "200 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/293/000/4911/front_es.23.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900004521",
-    "nombre": "Yoghurt Natural",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/4521/front_en.9.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920001326",
-    "nombre": "Mantequilla Untable con Sal",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "200 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/1326/front_es.8.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802955007799",
-    "nombre": "yogur griego 150",
-    "marca": "DANONE OIKOS no endulzado",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "150 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/500/7799/front_es.39.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900130114",
-    "nombre": "Yoghurt Natural Soprole",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "155 gr",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/013/0114/front_es.25.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900230227",
-    "nombre": "Yoghito Frutilla Soprole",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "120 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/023/0227/front_es.14.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920009070",
-    "nombre": "yogurt natural  colun",
-    "marca": "colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "120g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/9070/front_es.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900002381",
-    "nombre": "Protein Milk",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/2381/front_en.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900003371",
-    "nombre": "Kefir Berries",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1L",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/3371/front_es.6.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001520",
-    "nombre": "Leche semidescremada con cacao",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1520/front_es.30.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900003975",
-    "nombre": "Leche con Avena",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "200ml",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/3975/front_es.18.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900234225",
-    "nombre": "BATIDO Sabor Frutilla",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/023/4225/front_es.13.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920010946",
-    "nombre": "yogur sabor frutilla fundo los alerces",
-    "marca": "FUNDO LOS ALERCES",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/001/0946/front_es.18.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920007120",
-    "nombre": "Leche semidescremada con chocolate",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 lt",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/7120/front_fr.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001360",
-    "nombre": "Salchicha venesa traficional",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "80g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1360/front_en.13.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920801087",
-    "nombre": "Mi Leche Chocolat",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/080/1087/front_en.11.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920202105",
-    "nombre": "Mantequilla",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "125",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/020/2105/front_es.23.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920009322",
-    "nombre": "leche",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 l",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/9322/front_es.14.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910004177",
-    "nombre": "Crema sín Lactosa",
-    "marca": "LONCO LECHE",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "100 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/000/4177/front_es.18.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802930004713",
-    "nombre": "Queso Chacra",
-    "marca": "Quillayes",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "400g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/293/000/4713/front_en.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802955010355",
-    "nombre": "Yogurt arándano",
-    "marca": "Danone",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/501/0355/front_en.8.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802955001087",
-    "nombre": "Yogurt Batido Semidescremado",
-    "marca": "Calán de Danone",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "110 gr",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/500/1087/front_es.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001193",
-    "nombre": "Mantecoso Quilque",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "500 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1193/front_fr.30.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920009384",
-    "nombre": "Yoghurt Protein Plus! sabor Frutilla Plátano",
-    "marca": "COLÚN",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "150g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/9384/front_en.8.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001414",
-    "nombre": "Yoghurt proteico Batido Natural Endulzado",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "155 gr",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1414/front_en.19.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900097011",
-    "nombre": "Crema Chantilly",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "250 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/009/7011/front_es.7.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001339",
-    "nombre": "Queso laminado mantecoso quilque",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "15 láminas 250g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1339/front_es.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900000363",
-    "nombre": "Yogurth Gold",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "165 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/0363/front_fr.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900002220",
-    "nombre": "Yoghurt 1+1",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "155 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/2220/front_es.76.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920011035",
-    "nombre": "Yoghurt Origen Chirimoya",
-    "marca": "COLUN",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "120 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/001/1035/front_es.15.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920005836",
-    "nombre": "QUESO FUNDIDO LAMINADO SABOR CHEDDAR",
-    "marca": "FUNDO LOS ALERCES",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/5836/front_es.7.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900003968",
-    "nombre": "Leche Semidescremada con Avena",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 l",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/3968/front_es.8.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910002241",
-    "nombre": "Leche en Polvo Enteta",
-    "marca": "Calo",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "850g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/000/2241/front_es.19.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802955011260",
-    "nombre": "OIKOS yogur griego",
-    "marca": "Danone",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "142g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/501/1260/front_es.18.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920011073",
-    "nombre": "Kefir",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/001/1073/front_es.17.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900004309",
-    "nombre": "Leche en polvo",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "800g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/4309/front_es.12.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802930000142",
-    "nombre": "7802930000142",
-    "marca": "",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "250",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/293/000/0142/front_es.9.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900230258",
-    "nombre": "YOGHITO",
-    "marca": "Soprole Yoghito",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "100",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/023/0258/front_en.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910007123",
-    "nombre": "Leche Protein Extra Proteina Sabor Chocolate",
-    "marca": "LONCO LECHE",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1l",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/000/7123/front_es.26.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920009391",
-    "nombre": "Yogurt protein plus!",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "150g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/9391/front_es.13.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900029388",
-    "nombre": "Purita mamá",
-    "marca": "purita",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "500 gramos",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/002/9388/front_es.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802955010850",
-    "nombre": "Oikos sabor frutilla",
-    "marca": "DANONE OIKOS",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/501/0850/front_fr.30.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900056025",
-    "nombre": "Leche soprole frutilla",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "200 ml",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/005/6025/front_es.9.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900401016",
-    "nombre": "Manjarate Original",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "80 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/040/1016/front_en.8.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920008370",
-    "nombre": "QUESO FRESCO",
-    "marca": "COLUN",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "450g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/8370/front_es.17.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7804613390298",
-    "nombre": "Queso parmesano rallado",
-    "marca": "La Vaquita De Codigua",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/461/339/0298/front_es.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920000985",
-    "nombre": "yogurt",
-    "marca": "Colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "125g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/0985/front_en.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802955008697",
-    "nombre": "Oikos colchon de frutas",
-    "marca": "Danone",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "150 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/500/8697/front_es.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900002305",
-    "nombre": "protein+ Trozos de Fruta Mango y Maracuyá",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/2305/front_es.26.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900048013",
-    "nombre": "Leche Descremada Zero Lacto",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 litro",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/004/8013/front_es.17.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910300200",
-    "nombre": "Yogu Yogu",
-    "marca": "watts",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "200",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/030/0200/front_es.8.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900230241",
-    "nombre": "Yoghito Damasco Soprole",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "120g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/023/0241/front_es.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920465104",
-    "nombre": "Queso crema",
-    "marca": "Colún",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "100.0 g",
-    "imagen_url": "",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920116013",
-    "nombre": "queso rallado parmesano",
-    "marca": "colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "40g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/011/6013/front_es.12.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802930001279",
-    "nombre": "Quesillo",
-    "marca": "Quillayes",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "150 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/293/000/1279/front_es.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910000223",
-    "nombre": "Leche Natural Sin Lactosa",
-    "marca": "Lanco leche",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1000 ml",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/000/0223/front_es.23.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920005164",
-    "nombre": "Leche Cultivada",
-    "marca": "COLUN",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "180 ml",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/5164/front_es.12.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920010618",
-    "nombre": "Yoghurt COLUN Kefir Sabor Natural endulzado",
-    "marca": "COLUN",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "120g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/001/0618/front_es.8.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920006499",
-    "nombre": "Queso crema Tomate orégano",
-    "marca": "colun",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "100g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/000/6499/front_es.17.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900003791",
-    "nombre": "Leche protein nitro",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/3791/front_en.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910005051",
-    "nombre": "Queso Mantecoso",
-    "marca": "Las Parcelas De Valdivia",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900003357",
-    "nombre": "Kéfir Sabor Natural",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "1 L",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/3357/front_en.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920010731",
-    "nombre": "Yoghurt Light Endulzado Naturalmente",
-    "marca": "Colún",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/001/0731/front_es.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910006324",
-    "nombre": "Mezcla de mantequilla y aceite de canola",
-    "marca": "",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/000/6324/front_fr.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910007338",
-    "nombre": "Protein Extra Vanilla",
-    "marca": "Loncoleche",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "140g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/000/7338/front_en.26.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802920010663",
-    "nombre": "Yoghurt Batido Sin Azúcar Añadida Sabor Frutilla",
-    "marca": "Colun Light",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "120 g",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/292/001/0663/front_es.17.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900170059",
-    "nombre": "Leche cultivada vainilla",
-    "marca": "",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802900001421",
-    "nombre": "Leche protein",
-    "marca": "Soprole",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/290/000/1421/front_fr.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7802910007505",
-    "nombre": "Yogurt Protein Trozos Mango Maracuyá",
-    "marca": "Lonco Leche",
-    "categoria": "Lácteos",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/291/000/7505/front_es.3.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
     "codigo_barras": "7804144000451",
     "nombre": "huevos lider",
     "marca": "lider",
@@ -2507,6 +2477,286 @@
     "precio_sugerido": 0,
     "unidad": "",
     "imagen_url": "https://images.openfoodfacts.org/images/products/780/414/400/0451/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802950006612",
+    "nombre": "Sopa Sabor Pollo Fideos",
+    "marca": "Maggi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "70 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/000/6612/front_es.59.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575015662",
+    "nombre": "Lasagna Precocida",
+    "marca": "carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "330 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/501/5662/front_es.5.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575034038",
+    "nombre": "pasta mix",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/503/4038/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802500000145",
+    "nombre": "Integral Rigati",
+    "marca": "Pasta de Mamá",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "500g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/250/000/0145/front_es.32.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802500008011",
+    "nombre": "Caballitos",
+    "marca": "Talliani",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/250/000/8011/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802500001050",
+    "nombre": "Quífaros",
+    "marca": "Lucchetti",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/250/000/1050/front_es.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7803111001903",
+    "nombre": "Tallarines 77",
+    "marca": "Lider",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/311/100/1903/front_en.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804520990406",
+    "nombre": "Spaghetti",
+    "marca": "Di Nizzio",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/452/099/0406/front_es.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575047069",
+    "nombre": "Ravioli Ricotta y Espinaca",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/504/7069/front_es.5.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575007261",
+    "nombre": "Lasaña Tradicional",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g / 14.11 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/500/7261/front_es.17.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575015303",
+    "nombre": "Pasta mix corbatas tricolor",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/501/5303/front_fr.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575004635",
+    "nombre": "Tallarines 87",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g / 14.11 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/500/4635/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575134523",
+    "nombre": "Pasta multicereal",
+    "marca": "Vivo",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "250g",
+    "imagen_url": "",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575031051",
+    "nombre": "Fusilli Tricolor",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/503/1051/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802500221663",
+    "nombre": "Lasaña Precocida",
+    "marca": "Lucchetti",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "360 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/250/022/1663/front_es.37.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802500222189",
+    "nombre": "Spaghetti integral",
+    "marca": "Lucchetti",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/250/022/2189/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575015570",
+    "nombre": "para UNO Espirales Bolognesa",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "70 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/501/5570/front_en.5.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575015617",
+    "nombre": "Fusilli Integral",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/501/5617/front_es.12.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7807910041337",
+    "nombre": "Spaghetti 100% trigo duro",
+    "marca": "Cuisine&Co",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/791/004/1337/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575001030",
+    "nombre": "Cabellos de Angel",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575006455",
+    "nombre": "Mariposas",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "250 g",
+    "imagen_url": "",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575011336",
+    "nombre": "Fideos Quifaros (Carozzi)",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400.0 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/501/1336/front_es.5.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575204110",
+    "nombre": "Fettuccine",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "400 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/520/4110/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802500008080",
+    "nombre": "Rigati",
+    "marca": "Talliani",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "500g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/250/000/8080/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804651860593",
+    "nombre": "Espirales de Lentejas Rojas",
+    "marca": "manare",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "250 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/465/186/0593/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804618070430",
+    "nombre": "Rigatoni",
+    "marca": "",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802500184579",
+    "nombre": "Fideos Tres Vegetales espirales",
+    "marca": "Lucchetti",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/250/018/4579/front_fr.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802575015679",
+    "nombre": "Spaghetti 5 Proteína",
+    "marca": "Carozzi",
+    "categoria": "Pastas y Arroz",
+    "precio_sugerido": 0,
+    "unidad": "350 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/257/501/5679/front_en.8.400.jpg",
     "fuente": "openfoodfacts"
   },
   {
@@ -2550,53 +2800,523 @@
     "fuente": "openfoodfacts"
   },
   {
-    "codigo_barras": "7804320303178",
-    "nombre": "Cabernet Sauvignon",
-    "marca": "Casillero del Diablo",
-    "categoria": "Bebidas",
+    "codigo_barras": "7802200129863",
+    "nombre": "Loop",
+    "marca": "Ambrosoli",
+    "categoria": "Snacks",
     "precio_sugerido": 0,
-    "unidad": "750 ml",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/432/030/3178/front_es.37.400.jpg",
+    "unidad": "90 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/220/012/9863/front_es.3.400.jpg",
     "fuente": "openfoodfacts"
   },
   {
-    "codigo_barras": "7804320568300",
-    "nombre": "Clos del Pirque",
-    "marca": "Concha y Toro",
-    "categoria": "Bebidas",
+    "codigo_barras": "7802230086648",
+    "nombre": "Soda Clásica",
+    "marca": "McKAY",
+    "categoria": "Snacks",
     "precio_sugerido": 0,
-    "unidad": "1 L",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/432/056/8300/front_es.6.400.jpg",
+    "unidad": "180g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/223/008/6648/front_en.37.400.jpg",
     "fuente": "openfoodfacts"
   },
   {
-    "codigo_barras": "7804300133238",
-    "nombre": "Vino blanco",
-    "marca": "",
-    "categoria": "Bebidas",
+    "codigo_barras": "7803520140026",
+    "nombre": "Froota Frutilla",
+    "marca": "ecovida",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "150g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/352/014/0026/front_es.24.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215505287",
+    "nombre": "Chocolate",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "140 g / 4.9 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/5287/front_es.22.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215504594",
+    "nombre": "nik sabor chirimoya alegre",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "71 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/4594/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215101489",
+    "nombre": "Cacao 72% Naranja",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "80g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/510/1489/front_es.22.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804673910078",
+    "nombre": "Wild Protein Sabor Chocolate",
+    "marca": "Wild",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "5 barras",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/467/391/0078/front_en.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215303401",
+    "nombre": "Chocman",
+    "marca": "Carozzi",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "33 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/530/3401/front_es.35.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802225689847",
+    "nombre": "Salvado Linaza",
+    "marca": "Salz",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "519g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/222/568/9847/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804673910030",
+    "nombre": "Protein Chocolate - Maní",
+    "marca": "Vital",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "45 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/467/391/0030/front_es.84.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804673910023",
+    "nombre": "PROTEIN",
+    "marca": "WILD",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "45 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/467/391/0023/front_en.39.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215303241",
+    "nombre": "Gran Cereal Cacao",
+    "marca": "Carozzi",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "135 g / 4.8 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/530/3241/front_es.29.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802230086952",
+    "nombre": "Galletas Tritón Vainilla",
+    "marca": "McKay",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "126 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/223/008/6952/front_es.20.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215511011",
+    "nombre": "Galletita Crackelet Paquete 85 GR",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "80",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/551/1011/front_es.21.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215502514",
+    "nombre": "DINDON",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "115 g / 4.1 oz (9 galletas)",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/2514/front_es.32.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802225640770",
+    "nombre": "bon o bon cookie's",
+    "marca": "Arcor",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "95 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/222/564/0770/front_es.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215104855",
+    "nombre": "Costa Rama Chocolate de Leche",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "115 g / 4.06 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/510/4855/front_es.12.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804673910276",
+    "nombre": "Coco + Chocolate",
+    "marca": "WILD +FIT",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "35 gr",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/467/391/0276/front_en.7.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804000001691",
+    "nombre": "Enlinea Barras de Cereal Sin Azúcar Añadida",
+    "marca": "Enlinea",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "90g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/400/000/1691/front_es.7.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802230070012",
+    "nombre": "Trencito Chocolate de Leche",
+    "marca": "Nestlé",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "80g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/223/007/0012/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215501623",
+    "nombre": "Wheat Bran Crackers",
+    "marca": "Vivo",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "585g (20.6oz)",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/1623/front_en.5.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215512360",
+    "nombre": "FRAC Bi Cappuccino",
+    "marca": "Carozzi",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "3.9 oz / 110 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/551/2360/front_es.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802225640558",
+    "nombre": "RIGOCHOC",
+    "marca": "ARCOR",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "113 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/222/564/0558/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215502262",
+    "nombre": "TUAREG Coco",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "120 g / 4.2 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/2262/front_es.17.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215505294",
+    "nombre": "Mantequilla",
+    "marca": "Carozzi",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "140 g / 4.9 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/5294/front_en.12.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215508523",
+    "nombre": "Donuts Chocolate",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "100 g / 3.5 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/8523/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7803525000356",
+    "nombre": "Braunichoc",
+    "marca": "NutraBien!",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "35g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/352/500/0356/front_en.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802000005831",
+    "nombre": "Galletón Tipo Casero Chips Sabor Chocolate",
+    "marca": "Quaker",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "40 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/200/000/5831/front_es.13.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802225260657",
+    "nombre": "Turrón de Maní",
+    "marca": "Dos en Uno",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "45 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/222/526/0657/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804660620010",
+    "nombre": "Popcorn Oliva Sal de Mar",
+    "marca": "Puripop",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "15g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/466/062/0010/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802950088823",
+    "nombre": "Kuky",
+    "marca": "McKay",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "40g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/295/008/8823/front_es.9.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802408000919",
+    "nombre": "Kilatte",
+    "marca": "Fruna",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "22 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/240/800/0919/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215503429",
+    "nombre": "mini Costa Palmeritas",
+    "marca": "carozzi",
+    "categoria": "Snacks",
     "precio_sugerido": 0,
     "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/780/430/013/3238/front_en.4.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "20097196",
-    "nombre": "Chardonnay",
-    "marca": "",
-    "categoria": "Bebidas",
-    "precio_sugerido": 0,
-    "unidad": "",
-    "imagen_url": "https://images.openfoodfacts.org/images/products/000/002/009/7196/front_en.11.400.jpg",
-    "fuente": "openfoodfacts"
-  },
-  {
-    "codigo_barras": "7804300131708",
-    "nombre": "Vino tinto merlot (Gato)",
-    "marca": "",
-    "categoria": "Bebidas",
-    "precio_sugerido": 0,
-    "unidad": "700.0 ml",
     "imagen_url": "",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7801420001775",
+    "nombre": "Galletas De Arroz Clásicas",
+    "marca": "Tucapel",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/142/000/1775/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804673910245",
+    "nombre": "Protein Sabor Caramelo",
+    "marca": "Wild",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "45g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/467/391/0245/front_es.10.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804650970248",
+    "nombre": "Granjeritas",
+    "marca": "Smiley Kids",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "150 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/465/097/0248/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802000018169",
+    "nombre": "QUAKER BARRAS COLACIÓN",
+    "marca": "QUAKER",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "18 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/200/001/8169/front_es.7.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802225689519",
+    "nombre": "Agua ligth",
+    "marca": "Selz",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "600g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/222/568/9519/front_en.44.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7803520003109",
+    "nombre": "Cookies zero azúcar",
+    "marca": "Ecovida",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "450g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/352/000/3109/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804627172774",
+    "nombre": "Chips Manzana, Arándano, Frutilla",
+    "marca": "Tribu",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "20 gramos",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/462/717/2774/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7807910046530",
+    "nombre": "Oh! Bleas",
+    "marca": "Cuisine & Co",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "140 gramos, 12 obleas",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/791/004/6530/front_es.3.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7803525000769",
+    "nombre": "Galleta Chocochips",
+    "marca": "Nutra Bien",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "75 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/352/500/0769/front_es.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215505140",
+    "nombre": "Costa Choco Chips",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "125 g / 4.4 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/5140/front_es.23.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215508547",
+    "nombre": "Donuts naranja",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/8547/front_en.8.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802200132696",
+    "nombre": "Mentitas",
+    "marca": "Ambrosoli",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "25 g / 0.88 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/220/013/2696/front_es.15.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215303036",
+    "nombre": "DOBLON",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "16 g / 0.5 oz",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/530/3036/front_en.11.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802225683050",
+    "nombre": "SELZ",
+    "marca": "SELZ",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "100 g aprox",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/222/568/3050/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215511615",
+    "nombre": "Galleta Soda",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "54 gr",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/551/1615/front_es.6.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802230070227",
+    "nombre": "SAHNE-NUSS Chocolate de Leche con Almendras Enteras",
+    "marca": "Nestlé",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "250g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/223/007/0227/front_es.32.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7802215501531",
+    "nombre": "Crackelet",
+    "marca": "Costa",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "70g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/221/550/1531/front_fr.4.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804646450099",
+    "nombre": "Galletitas de arroz integral con cobertura sabor a chocolate semiamargo y naranja",
+    "marca": "Mizos",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "25 gr",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/464/645/0099/front_en.15.400.jpg",
+    "fuente": "openfoodfacts"
+  },
+  {
+    "codigo_barras": "7804630010308",
+    "nombre": "Tika crackers artesanales",
+    "marca": "tika Artesan Foods",
+    "categoria": "Snacks",
+    "precio_sugerido": 0,
+    "unidad": "140 g",
+    "imagen_url": "https://images.openfoodfacts.org/images/products/780/463/001/0308/front_es.14.400.jpg",
     "fuente": "openfoodfacts"
   }
 ]

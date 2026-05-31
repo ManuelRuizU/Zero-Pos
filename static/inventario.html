@@ -105,7 +105,7 @@ select option{background:#13131a;}
     </div>
     <div class="table-card">
       <table>
-        <thead><tr><th>Nombre</th><th>Precio</th><th>Costo</th><th>Margen</th><th>Stock</th><th>Mín.</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>SKU</th><th>Precio</th><th>Costo</th><th>Margen</th><th>Stock</th><th>Mín.</th><th>Acciones</th></tr></thead>
         <tbody id="tablaProds"></tbody>
       </table>
     </div>
@@ -143,6 +143,7 @@ select option{background:#13131a;}
   <div class="modal-title" id="modalProdTitle">Nuevo producto</div>
   <input type="hidden" id="prodId">
   <div class="form-group"><label>Nombre *</label><input id="prodNombre" type="text" required></div>
+  <div class="form-group"><label>SKU</label><input id="prodSKU" type="text" placeholder="Se genera automáticamente"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
     <div class="form-group"><label>Precio venta</label><input id="prodPrecio" type="number" min="0" value="0"></div>
     <div class="form-group"><label>Precio costo</label><input id="prodCosto" type="number" min="0" value="0"></div>
@@ -277,12 +278,13 @@ async function cargarProductos() {
   let url = `/api/productos?activos=1${q?'&q='+encodeURIComponent(q):''}${soloStockBajo?'&alerta_stock=1':''}`;
   const prods = await fetch(url,{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
   const tbody = document.getElementById('tablaProds');
-  if (!prods.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:20px">Sin productos</td></tr>'; return; }
+  if (!prods.length) { tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:20px">Sin productos</td></tr>'; return; }
   tbody.innerHTML = prods.map(p => {
     const margen = p.precio > 0 ? Math.round((p.precio-p.precio_costo)*100/p.precio) : 0;
     const bajoCls = p.stock<=p.stock_minimo ? 'stock-bajo' : 'stock-ok';
     return `<tr>
       <td><strong>${p.nombre}</strong>${p.codigo_barras?`<br><small style="color:var(--text-dim)">${p.codigo_barras}</small>`:''}</td>
+      <td><small style="color:var(--text-dim);font-family:monospace">${p.sku||'—'}</small></td>
       <td>${fmt(p.precio)}</td>
       <td>${fmt(p.precio_costo||0)}</td>
       <td>${margen}%</td>
@@ -291,6 +293,7 @@ async function cargarProductos() {
       <td>
         <button class="btn" style="padding:4px 10px;font-size:12px" onclick="editarProd(${p.id})">Editar</button>
         <button class="btn" style="padding:4px 10px;font-size:12px" onclick="ajustarStock(${p.id},'${p.nombre}',${p.stock})">Stock</button>
+        <button class="btn danger" style="padding:4px 10px;font-size:12px" onclick="eliminarProd(${p.id},'${p.nombre.replace(/'/g,"\\'")}')">✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -331,7 +334,7 @@ async function cargarAlertas() {
 function abrirModalProd() {
   document.getElementById('prodId').value='';
   document.getElementById('modalProdTitle').textContent='Nuevo producto';
-  ['prodNombre','prodBarras'].forEach(id=>document.getElementById(id).value='');
+  ['prodNombre','prodBarras','prodSKU'].forEach(id=>document.getElementById(id).value='');
   ['prodPrecio','prodCosto'].forEach(id=>document.getElementById(id).value='0');
   document.getElementById('prodStock').value='0';
   document.getElementById('prodStockMin').value='5';
@@ -350,6 +353,7 @@ async function editarProd(id) {
   document.getElementById('prodId').value=p.id;
   document.getElementById('modalProdTitle').textContent='Editar producto';
   document.getElementById('prodNombre').value=p.nombre;
+  document.getElementById('prodSKU').value=p.sku||'';
   document.getElementById('prodPrecio').value=p.precio;
   document.getElementById('prodCosto').value=p.precio_costo||0;
   document.getElementById('prodStockMin').value=p.stock_minimo;
@@ -368,6 +372,7 @@ async function editarProd(id) {
 
 async function guardarProd() {
   const id = document.getElementById('prodId').value;
+  const skuVal = document.getElementById('prodSKU').value.trim();
   const data = {
     nombre: document.getElementById('prodNombre').value.trim(),
     precio: parseFloat(document.getElementById('prodPrecio').value)||0,
@@ -381,6 +386,7 @@ async function guardarProd() {
     unidad_medida: document.getElementById('prodUnidadMedida').value,
     modo_stock: document.querySelector('.modo-stock-btn.active')?.dataset.modo || 'normal',
     hora_reset_stock: document.getElementById('prodHoraReset').value || '06:00',
+    ...(skuVal ? {sku: skuVal} : {}),
   };
   if (!data.nombre) { alert('El nombre es requerido'); return; }
   const url = id ? `/api/productos/${id}` : '/api/productos';
@@ -436,6 +442,13 @@ async function guardarProduccion() {
 function cerrarModalProduccion() { document.getElementById('modalProduccion').classList.remove('active'); }
 
 function cerrarModalProd() { document.getElementById('modalProd').classList.remove('active'); }
+
+async function eliminarProd(id, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}"? El producto quedará inactivo.`)) return;
+  const r = await fetch(`/api/productos/${id}`, {method:'DELETE', credentials:'include'});
+  if (r.ok) cargarProductos();
+  else { const e = await r.json(); alert(e.error || 'Error al eliminar'); }
+}
 
 async function ajustarStock(id, nombre, stockActual) {
   const val = prompt(`Stock actual de "${nombre}": ${stockActual}\nNuevo stock:`);

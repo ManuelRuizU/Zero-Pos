@@ -217,6 +217,17 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE ventas ADD COLUMN pedido_id INTEGER REFERENCES pedidos(id)")
     if "pendiente_verificar" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN pendiente_verificar INTEGER NOT NULL DEFAULT 0")
+    if "sku" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN sku TEXT")
+        import unicodedata as _ud
+        def _mk_sku(cat, pid):
+            clean = "".join(c for c in _ud.normalize("NFKD", (cat or "").upper()) if c.isascii() and c.isalpha())
+            return f"{clean[:3] or 'PRD'}-{pid:05d}"
+        rows = conn.execute(
+            "SELECT p.id, COALESCE(c.nombre,'') as cn FROM productos p LEFT JOIN categorias c ON p.categoria_id=c.id"
+        ).fetchall()
+        for r in rows:
+            conn.execute("UPDATE productos SET sku=? WHERE id=?", (_mk_sku(r["cn"], r["id"]), r["id"]))
 
     cols_pedidos = {r[1] for r in conn.execute("PRAGMA table_info(pedidos)").fetchall()}
     if "receptor_nombre" not in cols_pedidos:
