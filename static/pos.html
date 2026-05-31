@@ -628,6 +628,7 @@ body {
 <div class="topbar">
   <div class="logo">ZERO<span>POS</span></div>
   <button class="btn-top" onclick="location.href='admin.html'" title="Admin">📊 <span class="btn-admin-label">Admin</span></button>
+  <button class="btn-top" onclick="location.href='inventario.html'" title="Inventario">📦</button>
   <button class="btn-top" onclick="location.href='pedidos.html'" title="Pedidos">🛵</button>
   <button class="btn-top" id="btnColaEspera" onclick="toggleColaEspera()" title="Cola de espera" style="display:none;position:relative">
     🔔 <span id="colaCount" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:none;align-items:center;justify-content:center;font-weight:700"></span>
@@ -958,6 +959,21 @@ body {
   </div>
 </div>
 
+<!-- Modal precio rápido para productos sin precio -->
+<div class="modal-overlay" id="modalPrecioRapido">
+  <div class="modal" style="max-width:340px;text-align:center;">
+    <div class="modal-title" id="modalPrecioTitle" style="font-size:16px;margin-bottom:6px;"></div>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">Este producto no tiene precio asignado. ¿Cuánto cuesta?</p>
+    <input id="precioRapidoInput" type="number" min="0" inputmode="numeric"
+      placeholder="$0" style="font-size:24px;font-weight:700;text-align:center;letter-spacing:1px;"
+      onkeydown="if(event.key==='Enter')confirmarPrecioRapido()">
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn-cancelar" style="flex:1" onclick="cerrarPrecioRapido()">Cancelar</button>
+      <button class="btn-confirmar" style="flex:2" onclick="confirmarPrecioRapido()">Agregar →</button>
+    </div>
+  </div>
+</div>
+
 <!-- Overlay de procesamiento de imagen del escáner -->
 <div id="escanerOverlay" style="display:none">
   <div id="escanerOverlayBox">
@@ -977,6 +993,22 @@ let cfgApp = {};  // config del negocio cargada al inicio
 let categoriaActual = '';
 let subcatActual = '';
 let catIconoMap = {};
+const ICONOS_CATEGORIA = {
+  'Bebidas':           '🥤',
+  'Lácteos':           '🥛',
+  'Lácteos y Huevos':  '🥚',
+  'Snacks':            '🍿',
+  'Cereales':          '🌾',
+  'Pastas y Arroz':    '🍝',
+  'Pan y Panadería':   '🥖',
+  'Conservas':         '🥫',
+  'Condimentos':       '🧂',
+  'Limpieza e Higiene':'🧼',
+  'Aceites':           '🫙',
+  'Abarrotes':         '🛒',
+  'Otros':             '📦',
+};
+
 let productoMap = {};
 let todosProductos = [];    // always the full unfiltered list, for voice search
 let todosProductosMap = {}; // id → product, from todosProductos
@@ -986,10 +1018,12 @@ const scanTiempos = [];
 let metodoPago = 'efectivo';
 let total = 0;
 
-// Smart emoji: category icon → name-based keyword → fallback
+// Smart emoji: category icon → category name map → name-based keyword → fallback
 function getProductEmoji(prod) {
   const catIco = catIconoMap[prod.categoria_id];
   if (catIco && catIco !== '📦') return catIco;
+  const catNombreIco = ICONOS_CATEGORIA[prod.categoria_nombre];
+  if (catNombreIco && catNombreIco !== '📦') return catNombreIco;
   const n = (prod.nombre || '').toLowerCase();
   // Bebidas con gas / soft drinks
   if (/coca[\s-]?cola|coca/.test(n)) return '🥤';
@@ -1609,8 +1643,14 @@ async function init() {
   }
 
   cfgApp = await fetch('/api/config', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
+  await window.ZERO?._initPromise;
+  const deliveryActivo = cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true;
   const btnPedidos = document.querySelector('[onclick*="pedidos.html"]');
-  if (btnPedidos) btnPedidos.style.display = (cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true) ? '' : 'none';
+  if (btnPedidos) {
+    // Store: show only if delivery module explicitly enabled
+    // Food/Resto/Service: always show (delivery is native)
+    btnPedidos.style.display = (!window.ZERO?.isStore() || deliveryActivo) ? '' : 'none';
+  }
 
   // Mostrar botón cola si es minimarket (sin módulo mesas ni delivery)
   document.getElementById('btnColaEspera').style.display = '';
@@ -1839,8 +1879,42 @@ function filtrar() {
   filtrar._t = setTimeout(cargarProductos, 250);
 }
 
+// ── Precio rápido para productos sin precio ──────────────────
+let _prodPrecioRapido = null;
+
+function abrirModalPrecio(prod) {
+  _prodPrecioRapido = prod;
+  document.getElementById('modalPrecioTitle').textContent = prod.nombre;
+  document.getElementById('precioRapidoInput').value = '';
+  document.getElementById('modalPrecioRapido').classList.add('active');
+  setTimeout(() => document.getElementById('precioRapidoInput').focus(), 80);
+}
+
+function cerrarPrecioRapido() {
+  _prodPrecioRapido = null;
+  document.getElementById('modalPrecioRapido').classList.remove('active');
+}
+
+async function confirmarPrecioRapido() {
+  const precio = parseInt(document.getElementById('precioRapidoInput').value) || 0;
+  if (precio <= 0) { showToast('Ingresa un precio mayor a 0', 'error'); return; }
+  const prod = _prodPrecioRapido;
+  cerrarPrecioRapido();
+  // Save price persistently
+  await fetch(`/api/productos/${prod.id}`, {
+    method: 'PUT', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({precio}),
+  }).catch(() => {});
+  // Update local product object so cart shows correct price
+  prod.precio = precio;
+  if (indiceId.has(prod.id)) indiceId.get(prod.id).precio = precio;
+  agregarAlCarrito(prod);
+}
+
 // ── Carrito ───────────────────────────────────────────────────
 function agregarAlCarrito(prod) {
+  if (!prod.precio || prod.precio === 0) { abrirModalPrecio(prod); return; }
   const idx = carrito.findIndex(i => i.producto_id === prod.id && !i.variante_id);
   const modoStock = prod.modo_stock || 'normal';
   if (idx >= 0) {
@@ -2993,7 +3067,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    cerrarCobro(); cerrarVariantes(); cerrarVentaRapida();
+    cerrarCobro(); cerrarVariantes(); cerrarVentaRapida(); cerrarPrecioRapido();
   }
 });
 
@@ -3121,6 +3195,7 @@ function iniciarPollCola() {
   }, 5000);
 }
 </script>
+<script src="/static/js/zero-config.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

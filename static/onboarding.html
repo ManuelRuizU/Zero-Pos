@@ -14,8 +14,8 @@
 :root{
   --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
   --border:rgba(255,255,255,0.1);--accent:#6366f1;--accent2:#818cf8;
-  --text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--radius:16px;
-  --blur:blur(20px);
+  --text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--danger:#ef4444;
+  --radius:16px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
@@ -27,107 +27,148 @@ body{
     radial-gradient(ellipse 40% 40% at 80% 80%,rgba(99,102,241,0.08) 0%,transparent 60%);
   padding:24px;
 }
-
-.container{
-  width:100%;max-width:760px;
-  animation:fadeIn .4s ease;
-}
+.container{width:100%;max-width:720px;animation:fadeIn .4s ease;}
 @keyframes fadeIn{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
 
-.header{text-align:center;margin-bottom:48px;}
-.logo{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:12px;}
+.header{text-align:center;margin-bottom:40px;}
+.logo{font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:10px;}
 .logo span{color:var(--accent);}
 .tagline{color:var(--text-dim);font-size:15px;}
-.step-title{font-size:24px;font-weight:700;margin-bottom:8px;}
-.step-sub{color:var(--text-dim);font-size:14px;}
 
-/* Tipo selector */
+.step-title{font-size:22px;font-weight:700;margin-bottom:6px;}
+.step-sub{color:var(--text-dim);font-size:14px;margin-bottom:24px;}
+
+/* Progress */
+.progress-bar{height:4px;background:var(--surface2);border-radius:2px;margin-bottom:36px;overflow:hidden;}
+.progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .5s ease;}
+
+/* Tipo selector — 4 cards */
 .tipos-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
-  gap:14px;margin-bottom:32px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));
+  gap:12px;margin-bottom:28px;
 }
 .tipo-card{
   background:var(--surface);border:2px solid var(--border);
-  border-radius:var(--radius);padding:24px 16px;
-  cursor:pointer;transition:all .2s;text-align:center;
-  user-select:none;
+  border-radius:var(--radius);padding:22px 14px;
+  cursor:pointer;transition:all .2s;text-align:center;user-select:none;
 }
-.tipo-card:hover{
-  background:var(--surface2);
-  border-color:rgba(99,102,241,0.5);
-  transform:translateY(-3px);
-}
-.tipo-card.selected{
-  background:rgba(99,102,241,0.15);
-  border-color:var(--accent);
-}
-.tipo-icon{font-size:40px;margin-bottom:10px;display:block;}
+.tipo-card:hover{background:var(--surface2);border-color:rgba(99,102,241,0.5);transform:translateY(-2px);}
+.tipo-card.selected{background:rgba(99,102,241,0.15);border-color:var(--accent);}
+.tipo-icon{font-size:38px;margin-bottom:8px;display:block;}
 .tipo-nombre{font-size:14px;font-weight:600;}
+.tipo-desc{font-size:11px;color:var(--text-dim);margin-top:5px;line-height:1.4;}
 
-/* Progress */
-.progress-bar{
-  height:4px;background:var(--surface2);border-radius:2px;
-  margin-bottom:40px;overflow:hidden;
+/* Formulario */
+.form-group{margin-bottom:16px;}
+.form-group label{
+  display:block;font-size:13px;color:var(--text-dim);margin-bottom:6px;
 }
-.progress-fill{
-  height:100%;background:var(--accent);border-radius:2px;
-  transition:width .5s ease;
+.form-group label .optional{color:var(--text-dim);font-size:12px;font-weight:400;}
+.form-group input,
+.form-group select{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;color:var(--text);font-size:15px;
+  font-family:inherit;outline:none;transition:border-color .15s;
+  appearance:none;-webkit-appearance:none;
+}
+.form-group input:focus,
+.form-group select:focus{border-color:var(--accent);}
+.form-group input::placeholder{color:var(--text-dim);}
+.form-group select option{background:#1a1a2e;color:var(--text);}
+.select-wrap{position:relative;}
+.select-wrap::after{
+  content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  color:var(--text-dim);pointer-events:none;font-size:14px;
+}
+/* Validación inline */
+.campo-error{border-color:var(--danger) !important;}
+.error-msg{font-size:12px;color:var(--danger);margin-top:5px;min-height:18px;}
+
+/* Nota subtipo */
+.subtipo-note{
+  font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5;
+  padding:8px 12px;background:var(--surface);border-radius:8px;border-left:3px solid rgba(99,102,241,0.4);
 }
 
-/* Paso 2 - confirmación */
-.resumen-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius);padding:24px;margin-bottom:24px;
+/* Aviso info */
+.aviso-info{
+  background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);
+  border-radius:10px;padding:12px 16px;font-size:13px;
+  color:var(--text-dim);line-height:1.6;margin-bottom:20px;
 }
-.resumen-titulo{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
-.resumen-lista{display:flex;flex-direction:column;gap:8px;}
-.resumen-item{
-  display:flex;align-items:center;gap:10px;
-  font-size:13px;color:var(--text-dim);
+
+/* SII toggle */
+.sii-opcion{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 20px;
+  background:var(--surface);border:2px solid var(--border);
+  border-radius:12px;cursor:pointer;margin-bottom:10px;
+  transition:all .2s;font-size:15px;user-select:none;
 }
-.resumen-item::before{content:'✓';color:var(--success);font-weight:700;}
+.sii-opcion:hover{background:var(--surface2);border-color:rgba(99,102,241,0.4);}
+.sii-opcion.selected{background:rgba(99,102,241,0.12);border-color:var(--accent);}
+.sii-radio{
+  width:20px;height:20px;flex-shrink:0;
+  border:2px solid var(--text-dim);border-radius:50%;
+  transition:all .2s;position:relative;
+}
+.sii-opcion.selected .sii-radio{
+  border-color:var(--accent);background:var(--accent);
+  box-shadow:0 0 0 3px rgba(99,102,241,0.2);
+}
+.sii-opcion.selected .sii-radio::after{
+  content:'';position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  width:7px;height:7px;background:#fff;border-radius:50%;
+}
+.sii-campos{margin-top:20px;}
 
 /* Acciones */
-.acciones{display:flex;gap:12px;}
+.acciones{display:flex;gap:12px;margin-top:24px;}
 .btn-back{
   background:var(--surface);border:1px solid var(--border);color:var(--text);
   border-radius:12px;padding:14px 24px;cursor:pointer;font-size:14px;
-  transition:all .15s;
+  transition:all .15s;white-space:nowrap;
 }
 .btn-back:hover{background:var(--surface2);}
 .btn-primary{
   flex:1;background:var(--accent);border:none;color:#fff;
   border-radius:12px;padding:14px 24px;font-size:15px;font-weight:700;
-  cursor:pointer;transition:all .2s;
-  box-shadow:0 4px 20px rgba(99,102,241,0.4);
+  cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(99,102,241,0.4);
 }
-.btn-primary:hover{filter:brightness(1.12);}
-.btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-primary:hover{filter:brightness(1.1);}
+.btn-primary:disabled{opacity:.45;cursor:not-allowed;}
 
 /* Loading */
-.loading{
-  text-align:center;padding:40px;
-  display:none;
-}
+.loading{text-align:center;padding:48px;display:none;}
 .spinner{
   width:48px;height:48px;border:3px solid var(--border);
   border-top-color:var(--accent);border-radius:50%;
-  animation:spin 0.8s linear infinite;margin:0 auto 20px;
+  animation:spin .8s linear infinite;margin:0 auto 20px;
 }
 @keyframes spin{to{transform:rotate(360deg);}}
 .loading-msg{color:var(--text-dim);font-size:14px;}
 
 /* Éxito */
 .exito{text-align:center;padding:40px;display:none;}
-.exito-icon{font-size:72px;margin-bottom:16px;}
+.exito-icon{font-size:68px;margin-bottom:14px;}
 .exito-titulo{font-size:22px;font-weight:700;margin-bottom:8px;}
-.exito-sub{color:var(--text-dim);font-size:14px;margin-bottom:32px;}
+.exito-sub{color:var(--text-dim);font-size:14px;margin-bottom:28px;}
 
-.badge{
-  display:inline-block;background:rgba(99,102,241,0.15);
-  border:1px solid rgba(99,102,241,0.3);color:var(--accent2);
-  border-radius:99px;padding:3px 10px;font-size:12px;
+/* Modal error */
+.modal-error-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+  z-index:100;align-items:center;justify-content:center;padding:24px;
+}
+.modal-error-box{
+  background:#1a1a2e;border:1px solid rgba(239,68,68,.4);
+  border-radius:var(--radius);padding:28px;max-width:400px;width:100%;text-align:center;
+}
+.modal-error-box h3{font-size:18px;margin-bottom:10px;}
+.modal-error-box p{color:var(--text-dim);font-size:14px;margin-bottom:20px;line-height:1.5;}
+.btn-cerrar-error{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:10px;padding:10px 24px;cursor:pointer;font-size:14px;font-family:inherit;
 }
 </style>
 </head>
@@ -143,34 +184,153 @@ body{
     <div class="progress-fill" id="progressFill" style="width:25%"></div>
   </div>
 
-  <!-- Paso 1: Elegir tipo -->
+  <!-- ═══ PASO 1: Tipo de producto ZERO ═══ -->
   <div id="paso1">
     <div class="step-title">¿Qué tipo de negocio tienes?</div>
-    <div class="step-sub" style="margin-bottom:28px;">
-      Cargamos categorías y productos base para que puedas vender de inmediato.
+    <div class="step-sub">
+      Elige tu producto ZERO para personalizar la experiencia de venta.
     </div>
-    <div class="tipos-grid" id="tiposGrid"></div>
+    <div class="tipos-grid">
+      <div class="tipo-card" data-zero="store" onclick="seleccionarZero(this,'store')">
+        <span class="tipo-icon">🏪</span>
+        <div class="tipo-nombre">ZERO STORE</div>
+        <div class="tipo-desc">Tienda, almacén,<br>minimarket, farmacia,<br>ferretería, panadería</div>
+      </div>
+      <div class="tipo-card" data-zero="food" onclick="seleccionarZero(this,'food')">
+        <span class="tipo-icon">🍕</span>
+        <div class="tipo-nombre">ZERO FOOD</div>
+        <div class="tipo-desc">Food truck, dark kitchen,<br>sushi, pizzería, delivery</div>
+      </div>
+      <div class="tipo-card" data-zero="resto" onclick="seleccionarZero(this,'resto')">
+        <span class="tipo-icon">🍽️</span>
+        <div class="tipo-nombre">ZERO RESTO</div>
+        <div class="tipo-desc">Restaurante con salón,<br>café, bar con mesas</div>
+      </div>
+      <div class="tipo-card" data-zero="service" onclick="seleccionarZero(this,'service')">
+        <span class="tipo-icon">✂️</span>
+        <div class="tipo-nombre">ZERO SERVICE</div>
+        <div class="tipo-desc">Peluquería, barbería,<br>servicios con agenda</div>
+      </div>
+    </div>
     <div class="acciones">
-      <button class="btn-primary" id="btnSiguiente" disabled onclick="irPaso2()">
+      <button class="btn-primary" id="btnContinuar1" disabled onclick="irPaso2()">
         Continuar →
       </button>
     </div>
   </div>
 
-  <!-- Paso 2: Confirmar -->
+  <!-- ═══ PASO 2: Datos del negocio ═══ -->
   <div id="paso2" style="display:none">
-    <div class="step-title">Configuración lista</div>
-    <div class="step-sub" style="margin-bottom:24px;">
-      Vamos a cargar lo siguiente para tu negocio:
+    <div class="step-title">Datos de tu negocio</div>
+    <div class="step-sub">Esta información aparece en tus tickets y recibos.</div>
+
+    <div class="form-group">
+      <label>Nombre del negocio *</label>
+      <input id="nombreNegocio" type="text" placeholder="Ej: Almacén La Esquina"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="nombreNegocioError"></div>
     </div>
-    <div class="resumen-card">
-      <div class="resumen-titulo"><span id="resumenIcon">🏪</span> <span id="resumenTipo"></span></div>
-      <div class="resumen-lista" id="resumenLista"></div>
+    <div class="form-group">
+      <label>Dirección *</label>
+      <input id="dirNegocio" type="text" placeholder="Calle Principal 123"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="dirNegocioError"></div>
     </div>
+    <div class="form-group">
+      <label>Teléfono *</label>
+      <input id="telNegocio" type="tel" placeholder="+56 9 1234 5678"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="telNegocioError"></div>
+    </div>
+    <div class="form-group">
+      <label>
+        ¿Qué tipo de negocio tienes?
+        <span class="optional"> (opcional)</span>
+      </label>
+      <div class="select-wrap">
+        <select id="subtipoNegocio"></select>
+      </div>
+      <div class="subtipo-note">
+        Esta información nos ayuda a mejorar ZERO POS. No afecta el funcionamiento.
+      </div>
+    </div>
+
     <div class="acciones">
-      <button class="btn-back" onclick="irPaso1()">← Cambiar</button>
-      <button class="btn-primary" onclick="confirmar()">
-        ✓ Cargar y comenzar
+      <button class="btn-back" onclick="volverPaso1()">← Atrás</button>
+      <button class="btn-primary" onclick="irPaso3()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- ═══ PASO 3: Datos del responsable ═══ -->
+  <div id="paso3" style="display:none">
+    <div class="step-title">Datos del responsable</div>
+    <div class="step-sub">¿Quién administra este punto de venta?</div>
+
+    <div class="aviso-info">
+      Estos datos son para soporte técnico y recuperación de acceso.<br>
+      No se comparten con terceros.
+    </div>
+
+    <div class="form-group">
+      <label>Nombre completo *</label>
+      <input id="responsableNombre" type="text" placeholder="Ej: María González"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="responsableNombreError"></div>
+    </div>
+    <div class="form-group">
+      <label>Teléfono *</label>
+      <input id="responsableTel" type="tel" placeholder="+56 9 1234 5678"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="responsableTelError"></div>
+    </div>
+    <div class="form-group">
+      <label>Email *</label>
+      <input id="responsableEmail" type="email" placeholder="correo@ejemplo.com"
+             oninput="limpiarError(this)">
+      <div class="error-msg" id="responsableEmailError"></div>
+    </div>
+
+    <div class="acciones">
+      <button class="btn-back" onclick="volverPaso2()">← Atrás</button>
+      <button class="btn-primary" onclick="irPaso4()">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- ═══ PASO 4: SII + Carga ═══ -->
+  <div id="paso4" style="display:none">
+    <div class="step-title">¿Emites boleta electrónica?</div>
+    <div class="step-sub">
+      Puedes configurar la integración con el SII más tarde en Ajustes.
+    </div>
+
+    <div id="opNoSII" class="sii-opcion selected" onclick="selSII('no')">
+      <div class="sii-radio"></div>
+      <span>No por ahora — empezar a vender</span>
+    </div>
+    <div id="opSiSII" class="sii-opcion" onclick="selSII('si')">
+      <div class="sii-radio"></div>
+      <span>Sí — quiero emitir boletas electrónicas</span>
+    </div>
+
+    <div class="sii-campos" id="siiCampos" style="display:none">
+      <div class="form-group">
+        <label>RUT del negocio</label>
+        <input id="rutNegocio" type="text" placeholder="12.345.678-9">
+      </div>
+      <div class="form-group">
+        <label>Razón social</label>
+        <input id="razonSocial" type="text" placeholder="Nombre legal del negocio">
+      </div>
+      <div class="form-group">
+        <label>Giro</label>
+        <input id="giroNegocio" type="text" placeholder="Ej: Comercio al por menor">
+      </div>
+    </div>
+
+    <div class="acciones">
+      <button class="btn-back" onclick="volverPaso3()">← Atrás</button>
+      <button class="btn-primary" id="btnEmpezar" onclick="confirmar()">
+        ¡Empezar a vender!
       </button>
     </div>
   </div>
@@ -178,7 +338,7 @@ body{
   <!-- Loading -->
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <div class="loading-msg">Cargando productos...</div>
+    <div class="loading-msg" id="loadingMsg">Cargando tus productos...</div>
   </div>
 
   <!-- Éxito -->
@@ -193,103 +353,256 @@ body{
   </div>
 </div>
 
+<!-- Modal error -->
+<div class="modal-error-overlay" id="modalError">
+  <div class="modal-error-box">
+    <h3>⚠️ Error</h3>
+    <p id="errorMsg">Ha ocurrido un error.</p>
+    <button class="btn-cerrar-error" onclick="cerrarError()">Aceptar</button>
+  </div>
+</div>
+
 <script>
-let tipoSeleccionado = null;
-let tiposData = [];
+let zeroTipoSeleccionado = null;
+let siiSeleccionado      = 'no';
 
-async function init() {
-  // Verificar auth
-  const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
-  if (!me || me.error) { location.href = 'login.html'; return; }
+const SUBTIPOS = {
+  store: [
+    {value:'almacen',    label:'Almacén / Minimarket'},
+    {value:'botilleria', label:'Botillería'},
+    {value:'panaderia',  label:'Panadería / Pastelería'},
+    {value:'ropa',       label:'Tienda de ropa'},
+    {value:'farmacia',   label:'Farmacia'},
+    {value:'ferreteria', label:'Ferretería'},
+    {value:'kiosco',     label:'Kiosco'},
+    {value:'otro_store', label:'Otro'},
+  ],
+  food: [
+    {value:'food_truck',   label:'Food Truck'},
+    {value:'sushi',        label:'Sushi / Delivery'},
+    {value:'pizzeria',     label:'Pizzería'},
+    {value:'dark_kitchen', label:'Dark Kitchen'},
+    {value:'hamburguesas', label:'Hamburguesas'},
+    {value:'otro_food',    label:'Otro'},
+  ],
+  resto: [
+    {value:'restaurante', label:'Restaurante'},
+    {value:'cafe_salon',  label:'Café con salón'},
+    {value:'bar',         label:'Bar / Pub'},
+    {value:'otro_resto',  label:'Otro'},
+  ],
+  service: [
+    {value:'peluqueria',   label:'Peluquería'},
+    {value:'barberia',     label:'Barbería'},
+    {value:'nail',         label:'Nail Art / Spa'},
+    {value:'veterinaria',  label:'Veterinaria'},
+    {value:'otro_service', label:'Otro'},
+  ],
+};
 
-  // Verificar si ya está configurado
-  const estado = await fetch('/api/onboarding/estado', {credentials:'include'}).then(r => r.json()).catch(() => ({}));
-  if (estado.completado) {
-    location.href = 'pos.html';
-    return;
-  }
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-  // Cargar tipos
-  tiposData = await fetch('/api/onboarding/tipos', {credentials:'include'}).then(r => r.json()).catch(() => []);
-  renderTipos();
+function $(id)      { return document.getElementById(id); }
+function _show(id)  { $(id).style.display = 'block'; }
+function _hide(id)  { $(id).style.display = 'none'; }
+function _prog(pct) { $('progressFill').style.width = pct; }
+
+function mostrarError(msg) {
+  $('errorMsg').textContent = msg;
+  $('modalError').style.display = 'flex';
+}
+function cerrarError() { $('modalError').style.display = 'none'; }
+
+function limpiarError(input) {
+  input.classList.remove('campo-error');
+  const err = document.getElementById(input.id + 'Error');
+  if (err) err.textContent = '';
 }
 
-function renderTipos() {
-  const grid = document.getElementById('tiposGrid');
-  grid.innerHTML = '';
-  tiposData.forEach(t => {
-    const card = document.createElement('div');
-    card.className = 'tipo-card';
-    card.dataset.id = t.id;
-    card.innerHTML = `<span class="tipo-icon">${t.icono}</span><div class="tipo-nombre">${t.nombre}</div>`;
-    card.onclick = () => seleccionarTipo(card, t);
-    grid.appendChild(card);
+function _setErr(id, msg) {
+  const el = $(id);
+  el.classList.add('campo-error');
+  const err = $(id + 'Error');
+  if (err) err.textContent = msg;
+}
+
+function _validar(campos) {
+  let ok = true;
+  let primero = null;
+  campos.forEach(({id, msg}) => {
+    const val = $(id).value.trim();
+    if (!val) {
+      _setErr(id, msg);
+      ok = false;
+      if (!primero) primero = $(id);
+    }
+  });
+  if (primero) primero.focus();
+  return ok;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+async function init() {
+  const me = await fetch('/api/auth/me', {credentials:'include'})
+    .then(r => r.json()).catch(() => null);
+  if (!me || me.error) { location.href = 'login.html'; return; }
+
+  const forzar = new URLSearchParams(window.location.search).get('forzar');
+  if (!forzar) {
+    const estado = await fetch('/api/onboarding/estado', {credentials:'include'})
+      .then(r => r.json()).catch(() => ({}));
+    if (estado.completado) { location.href = 'pos.html'; return; }
+  }
+}
+
+// ── Paso 1 ───────────────────────────────────────────────────────────────────
+
+function seleccionarZero(card, tipo) {
+  document.querySelectorAll('[data-zero]').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  zeroTipoSeleccionado = tipo;
+  $('btnContinuar1').disabled = false;
+  _poblarSubtipos(tipo);
+  console.log('[ZERO] Tipo seleccionado:', tipo);
+}
+
+function _poblarSubtipos(tipo) {
+  const sel = $('subtipoNegocio');
+  sel.innerHTML = '<option value="">Selecciona (opcional)</option>';
+  (SUBTIPOS[tipo] || []).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.value;
+    opt.textContent = s.label;
+    sel.appendChild(opt);
   });
 }
 
-function seleccionarTipo(card, tipo) {
-  document.querySelectorAll('.tipo-card').forEach(c => c.classList.remove('selected'));
-  card.classList.add('selected');
-  tipoSeleccionado = tipo;
-  document.getElementById('btnSiguiente').disabled = false;
-}
-
 function irPaso2() {
-  if (!tipoSeleccionado) return;
-  document.getElementById('paso1').style.display = 'none';
-  document.getElementById('paso2').style.display = 'block';
-  document.getElementById('progressFill').style.width = '66%';
-
-  document.getElementById('resumenIcon').textContent = tipoSeleccionado.icono;
-  document.getElementById('resumenTipo').textContent = tipoSeleccionado.nombre;
-
-  const lista = document.getElementById('resumenLista');
-  lista.innerHTML = `
-    <div class="resumen-item">Categorías y subcategorías específicas del rubro</div>
-    <div class="resumen-item">Productos más comunes con precios de referencia en CLP</div>
-    <div class="resumen-item">Variantes de tamaño/presentación configuradas</div>
-    <div class="resumen-item">Stock inicial estimado</div>
-    <div class="resumen-item">Puedes editar precios, stock y agregar más productos después</div>
-  `;
+  if (!zeroTipoSeleccionado) return;
+  _hide('paso1'); _show('paso2'); _prog('50%');
 }
 
-function irPaso1() {
-  document.getElementById('paso2').style.display = 'none';
-  document.getElementById('paso1').style.display = 'block';
-  document.getElementById('progressFill').style.width = '25%';
+function volverPaso1() {
+  _hide('paso2'); _show('paso1'); _prog('25%');
+}
+
+// ── Paso 2 ───────────────────────────────────────────────────────────────────
+
+function irPaso3() {
+  const ok = _validar([
+    {id: 'nombreNegocio', msg: 'El nombre del negocio es obligatorio'},
+    {id: 'dirNegocio',    msg: 'La dirección es obligatoria'},
+    {id: 'telNegocio',    msg: 'El teléfono es obligatorio'},
+  ]);
+  if (!ok) return;
+  console.log('[ZERO] Negocio:', $('nombreNegocio').value.trim(),
+              '| Subtipo:', $('subtipoNegocio').value || '(ninguno)');
+  _hide('paso2'); _show('paso3'); _prog('75%');
+}
+
+function volverPaso2() {
+  _hide('paso3'); _show('paso2'); _prog('50%');
+}
+
+// ── Paso 3 ───────────────────────────────────────────────────────────────────
+
+function irPaso4() {
+  const ok = _validar([
+    {id: 'responsableNombre', msg: 'El nombre es obligatorio'},
+    {id: 'responsableTel',    msg: 'El teléfono es obligatorio'},
+    {id: 'responsableEmail',  msg: 'El email es obligatorio'},
+  ]);
+  if (!ok) return;
+  _hide('paso3'); _show('paso4'); _prog('100%');
+}
+
+function volverPaso3() {
+  _hide('paso4'); _show('paso3'); _prog('75%');
+}
+
+// ── Paso 4 ───────────────────────────────────────────────────────────────────
+
+function selSII(val) {
+  siiSeleccionado = val;
+  $('opNoSII').classList.toggle('selected', val === 'no');
+  $('opSiSII').classList.toggle('selected', val === 'si');
+  $('siiCampos').style.display = val === 'si' ? 'block' : 'none';
 }
 
 async function confirmar() {
-  if (!tipoSeleccionado) return;
+  $('btnEmpezar').disabled = true;
 
-  document.getElementById('paso2').style.display = 'none';
-  document.getElementById('loading').style.display = 'block';
-  document.getElementById('progressFill').style.width = '85%';
+  const nombre    = $('nombreNegocio').value.trim();
+  const dir       = $('dirNegocio').value.trim();
+  const tel       = $('telNegocio').value.trim();
+  const subtipo   = $('subtipoNegocio').value;
+  const respNom   = $('responsableNombre').value.trim();
+  const respTel   = $('responsableTel').value.trim();
+  const respEmail = $('responsableEmail').value.trim();
+
+  const configPayload = {
+    nombre_negocio:      nombre,
+    direccion_negocio:   dir,
+    telefono_negocio:    tel,
+    responsable_nombre:  respNom,
+    responsable_telefono: respTel,
+    responsable_email:   respEmail,
+    sii_activo:          siiSeleccionado === 'si' ? '1' : '0',
+    tipo_negocio:        zeroTipoSeleccionado,
+  };
+  if (subtipo) configPayload.subtipo_negocio = subtipo;
+
+  if (siiSeleccionado === 'si') {
+    const rut   = $('rutNegocio').value.trim();
+    const razon = $('razonSocial').value.trim();
+    const giro  = $('giroNegocio').value.trim();
+    if (rut)   configPayload.rut_negocio  = rut;
+    if (razon) configPayload.razon_social = razon;
+    if (giro)  configPayload.giro         = giro;
+  }
+
+  console.log('[ZERO] Guardando config…', {tipo: zeroTipoSeleccionado, subtipo});
+
+  _hide('paso4'); _show('loading');
+  $('loadingMsg').textContent = 'Cargando tus productos...';
 
   try {
-    const r = await fetch('/api/onboarding/setup', {
-      method: 'POST',
-      credentials: 'include',
+    // 1. Guardar configuración
+    const rCfg = await fetch('/api/config', {
+      method: 'POST', credentials: 'include',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({tipo: tipoSeleccionado.id}),
+      body: JSON.stringify(configPayload),
     });
-    const data = await r.json();
+    if (!rCfg.ok) {
+      const err = await rCfg.json().catch(() => ({}));
+      throw new Error(err.error || 'Error al guardar configuración');
+    }
 
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('progressFill').style.width = '100%';
+    // 2. Cargar productos
+    const rComp = await fetch('/api/onboarding/completar', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tipo: zeroTipoSeleccionado, subtipo}),
+    });
+    const data = await rComp.json();
+
+    _hide('loading');
 
     if (data.ok) {
-      document.getElementById('exito').style.display = 'block';
-      document.getElementById('exitoMsg').textContent =
-        `Se cargaron ${data.productos_cargados} productos para tu ${tipoSeleccionado.nombre}. ¡A vender!`;
+      _show('exito');
+      $('exitoMsg').textContent =
+        `Se cargaron ${data.productos_cargados} productos. ¡A vender!`;
     } else {
-      alert('Error: ' + (data.error || 'Error desconocido'));
-      irPaso2();
+      mostrarError('Error: ' + (data.error || 'Error desconocido'));
+      _show('paso4');
+      $('btnEmpezar').disabled = false;
     }
   } catch(e) {
-    document.getElementById('loading').style.display = 'none';
-    alert('Error de conexión');
-    irPaso2();
+    _hide('loading');
+    mostrarError(e.message || 'Error de conexión. Verifica que el servidor esté activo.');
+    _show('paso4');
+    $('btnEmpezar').disabled = false;
   }
 }
 

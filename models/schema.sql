@@ -94,6 +94,7 @@ CREATE TABLE IF NOT EXISTS productos (
                      CHECK(modo_stock IN ('normal', 'produccion', 'sin_stock')),
     hora_reset_stock TEXT NOT NULL DEFAULT '06:00',
     activo           INTEGER NOT NULL DEFAULT 1,
+    sku              TEXT,
     imagen_url      TEXT,
     creado_en       DATETIME DEFAULT CURRENT_TIMESTAMP,
     actualizado_en  DATETIME DEFAULT CURRENT_TIMESTAMP

@@ -217,6 +217,17 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE ventas ADD COLUMN pedido_id INTEGER REFERENCES pedidos(id)")
     if "pendiente_verificar" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN pendiente_verificar INTEGER NOT NULL DEFAULT 0")
+    if "sku" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN sku TEXT")
+        import unicodedata as _ud
+        def _mk_sku(cat, pid):
+            clean = "".join(c for c in _ud.normalize("NFKD", (cat or "").upper()) if c.isascii() and c.isalpha())
+            return f"{clean[:3] or 'PRD'}-{pid:05d}"
+        rows = conn.execute(
+            "SELECT p.id, COALESCE(c.nombre,'') as cn FROM productos p LEFT JOIN categorias c ON p.categoria_id=c.id"
+        ).fetchall()
+        for r in rows:
+            conn.execute("UPDATE productos SET sku=? WHERE id=?", (_mk_sku(r["cn"], r["id"]), r["id"]))
 
     cols_pedidos = {r[1] for r in conn.execute("PRAGMA table_info(pedidos)").fetchall()}
     if "receptor_nombre" not in cols_pedidos:
@@ -296,7 +307,10 @@ def _seed_defaults(conn: sqlite3.Connection):
     # Nuevos campos de ticket — INSERT OR IGNORE para DBs existentes
     for _clave in ("whatsapp_negocio", "direccion_negocio", "telefono_negocio",
                    "impresora_cocina_ip", "impresora_cocina_tipo", "impresora_cocina_puerto",
-                   "comuna_negocio",
+                   "comuna_negocio", "subtipo_negocio",
+                   "nombre_responsable", "email_negocio", "sii_activo",
+                   "responsable_nombre", "responsable_telefono", "responsable_email",
+                   "razon_social", "giro",
                    "delivery_tarifa_tipo", "delivery_precio_fijo",
                    "delivery_precio_km1", "delivery_precio_km3",
                    "delivery_precio_km5", "delivery_precio_mas5",
@@ -305,6 +319,9 @@ def _seed_defaults(conn: sqlite3.Connection):
             "INSERT OR IGNORE INTO config (clave, valor) VALUES (?, ?)",
             (_clave, "")
         )
+    conn.execute(
+        "INSERT OR IGNORE INTO config (clave, valor) VALUES ('tipo_negocio', 'store')"
+    )
 
     import bcrypt
     pin_default = b"1234"

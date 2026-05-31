@@ -25,6 +25,17 @@ CLAVES_PERMITIDAS = {
     "delivery_precio_km5",
     "delivery_precio_mas5",
     "delivery_texto",
+    "subtipo_negocio",
+    "telefono_negocio",
+    "direccion_negocio",
+    "nombre_responsable",
+    "email_negocio",
+    "sii_activo",
+    "responsable_nombre",
+    "responsable_telefono",
+    "responsable_email",
+    "razon_social",
+    "giro",
 }
 
 

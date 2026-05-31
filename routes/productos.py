@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+import unicodedata
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -41,6 +42,14 @@ def cache_invalidate():
 
 def _require_auth():
     return session.get("usuario_id")
+
+
+def _generar_sku(cat_nombre: str, producto_id: int) -> str:
+    clean = "".join(
+        c for c in unicodedata.normalize("NFKD", (cat_nombre or "").upper())
+        if c.isascii() and c.isalpha()
+    )
+    return f"{clean[:3] or 'PRD'}-{producto_id:05d}"
 
 
 @productos_bp.route("", methods=["GET"])
@@ -334,11 +343,18 @@ def crear():
                 pendiente_verificar,
             )
         )
+        pid = cur.lastrowid
+        cat_row = conn.execute(
+            "SELECT COALESCE(c.nombre,'') as cn FROM productos p LEFT JOIN categorias c ON p.categoria_id=c.id WHERE p.id=?",
+            (pid,)
+        ).fetchone()
+        sku = _generar_sku(cat_row["cn"] if cat_row else "", pid)
+        conn.execute("UPDATE productos SET sku=? WHERE id=?", (sku, pid))
         if int(data.get("stock", 0)) > 0:
-            _registrar_movimiento(conn, cur.lastrowid, "entrada",
+            _registrar_movimiento(conn, pid, "entrada",
                                   int(data.get("stock", 0)), "stock_inicial",
                                   session.get("usuario_id"))
-        return jsonify({"ok": True, "id": cur.lastrowid}), 201
+        return jsonify({"ok": True, "id": pid, "sku": sku}), 201
 
 
 @productos_bp.route("/<int:pid>", methods=["PUT"])
@@ -351,7 +367,7 @@ def actualizar(pid):
     permitidos = ("nombre", "descripcion", "precio", "precio_costo",
                   "stock_minimo", "codigo_barras", "categoria_id",
                   "imagen_url", "activo", "es_granel", "unidad_medida", "precio_por",
-                  "modo_stock", "hora_reset_stock")
+                  "modo_stock", "hora_reset_stock", "sku")
     for campo in permitidos:
         if campo in data:
             campos[campo] = data[campo]
