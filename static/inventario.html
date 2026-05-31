@@ -338,6 +338,23 @@ async function init() {
   categorias = await fetch('/api/productos/categorias',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
   const sel = document.getElementById('prodCategoria');
   categorias.forEach(c => sel.insertAdjacentHTML('beforeend',`<option value="${c.id}">${c.nombre}</option>`));
+
+  document.getElementById('searchProd').addEventListener('keydown', async e => {
+    if (e.key !== 'Enter') return;
+    const valor = e.target.value.trim();
+    if (!valor) return;
+    if (/^\d{8,14}$/.test(valor)) {
+      try {
+        const resp = await fetch('/api/productos/barras/' + encodeURIComponent(valor), {credentials:'include'});
+        if (resp.ok) {
+          const prod = await resp.json();
+          if (prod && prod.id) { e.target.value = ''; editarProd(prod.id); return; }
+        }
+      } catch (err) {}
+      showToast('Producto no encontrado: ' + valor, 'error');
+    }
+  });
+
   cargarProductos();
 }
 
