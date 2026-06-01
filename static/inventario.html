@@ -75,6 +75,11 @@ h2{font-size:22px;font-weight:700;margin-bottom:20px;}
 .flujo-input.ia-filled{border-color:#22c55e;}
 .flujo-label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;}
 .flujo-field{margin-bottom:14px;}
+.marca-dropdown{position:absolute;top:calc(100% + 2px);left:0;right:0;background:#1a1a2e;border:1px solid var(--border);border-radius:8px;z-index:200;max-height:180px;overflow-y:auto;box-shadow:0 6px 16px rgba(0,0,0,.5)}
+.marca-opt{padding:10px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid rgba(255,255,255,.05)}
+.marca-opt:last-child{border-bottom:none}
+.marca-opt:hover{background:rgba(99,102,241,.2)}
+.marca-opt.create{color:#818cf8;font-weight:600}
 .ia-badge{display:inline-block;font-size:10px;color:#22c55e;margin-left:4px;vertical-align:middle;}
 .foto-preview-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .foto-thumb{width:88px;height:88px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.15);}
@@ -263,6 +268,15 @@ select option{background:#13131a;}
 
   <div class="form-group"><label>Nombre *</label><input id="prodNombre" type="text" required></div>
   <div class="form-group"><label>SKU</label><input id="prodSKU" type="text" placeholder="Se genera automáticamente"></div>
+
+  <div class="form-group" style="position:relative">
+    <label>Marca</label>
+    <input id="prodMarcaInput" type="text" placeholder="Buscar o crear marca..." autocomplete="off"
+      oninput="buscarMarcas('prodMarcaInput','prodMarcaId','marcaDropdownProd')"
+      onfocus="buscarMarcas('prodMarcaInput','prodMarcaId','marcaDropdownProd')">
+    <input type="hidden" id="prodMarcaId">
+    <div id="marcaDropdownProd" class="marca-dropdown" style="display:none"></div>
+  </div>
 
   <!-- Sección financiera -->
   <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px;margin-bottom:14px">
@@ -465,7 +479,7 @@ select option{background:#13131a;}
 <!-- Modal revisión factura -->
 <div class="modal-overlay" id="modalFactura">
 <div class="modal" style="max-width:660px">
-  <div class="modal-title">📄 Revisión de factura</div>
+  <div class="modal-title">📄 Revisión de factura <span id="facFuente" style="font-size:11px;font-weight:400;color:var(--text-dim)"></span></div>
 
   <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:14px;margin-bottom:16px">
     <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Proveedor</div>
@@ -635,7 +649,7 @@ async function cargarProductos() {
     const nombreSafe = p.nombre.replace(/'/g,"\\'");
     return `<tr>
       <td><small style="font-family:monospace;color:var(--text-dim)">${p.sku||'—'}</small></td>
-      <td><strong>${p.nombre}</strong>${p.codigo_barras?`<br><small style="color:var(--text-dim);font-size:11px">${p.codigo_barras}</small>`:''}</td>
+      <td><strong>${p.nombre}</strong>${p.marca_nombre?`<br><small style="color:#818cf8;font-size:11px">${p.marca_nombre}</small>`:''}${p.codigo_barras?`<br><small style="color:var(--text-dim);font-size:11px">${p.codigo_barras}</small>`:''}</td>
       <td><small style="color:var(--text-dim)">${p.categoria_nombre||'—'}</small></td>
       <td>${fmt(costo)}</td>
       <td>${fmt(p.precio)}</td>
@@ -819,6 +833,57 @@ function toggleImpAdic() {
   calcularFinanciero();
 }
 
+// ── Marcas autocomplete ───────────────────────────────────────────────
+let _marcaTimer = null;
+async function buscarMarcas(inputId, hiddenId, dropId) {
+  const input = document.getElementById(inputId);
+  const drop  = document.getElementById(dropId);
+  if (!input || !drop) return;
+  const q = input.value.trim();
+  document.getElementById(hiddenId).value = '';
+  clearTimeout(_marcaTimer);
+  _marcaTimer = setTimeout(async () => {
+    const rows = await fetch(`/api/productos/marcas?q=${encodeURIComponent(q)}`, {credentials:'include'})
+      .then(r => r.json()).catch(() => []);
+    const exact = rows.find(m => m.nombre.toLowerCase() === q.toLowerCase());
+    let html = rows.map(m =>
+      `<div class="marca-opt" onclick="seleccionarMarca('${escH(m.nombre)}',${m.id},'${inputId}','${hiddenId}','${dropId}')">${escH(m.nombre)}</div>`
+    ).join('');
+    if (q && !exact) {
+      html += `<div class="marca-opt create" onclick="crearYSeleccionarMarca('${escH(q)}','${inputId}','${hiddenId}','${dropId}')">+ Crear "${escH(q)}"</div>`;
+    }
+    drop.innerHTML = html || (q ? `<div class="marca-opt" style="color:var(--text-dim)">Sin resultados</div>` : '');
+    drop.style.display = html ? '' : 'none';
+  }, 200);
+}
+
+function seleccionarMarca(nombre, id, inputId, hiddenId, dropId) {
+  document.getElementById(inputId).value  = nombre;
+  document.getElementById(hiddenId).value = id;
+  document.getElementById(dropId).style.display = 'none';
+}
+
+async function crearYSeleccionarMarca(nombre, inputId, hiddenId, dropId) {
+  const r = await fetch('/api/productos/marcas', {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({nombre}),
+  });
+  const d = await r.json();
+  if (d.ok) {
+    seleccionarMarca(nombre, d.id, inputId, hiddenId, dropId);
+    showToast(`Marca "${nombre}" guardada`, 'ok');
+  } else {
+    showToast('Error al crear marca', 'error');
+  }
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.marca-dropdown') && !e.target.matches('[id^="prodMarcaInput"],[id^="iaMarcaInput"]')) {
+    document.querySelectorAll('.marca-dropdown').forEach(d => d.style.display = 'none');
+  }
+});
+
 // ── Departamento / categoría ──────────────────────────────────────────
 function filtrarCategoriasPorDepto() {
   const depto = document.getElementById('prodDepartamento').value;
@@ -835,8 +900,9 @@ function filtrarCategoriasPorDepto() {
 function abrirModalProd() {
   document.getElementById('prodId').value = '';
   document.getElementById('modalProdTitle').textContent = 'Nuevo producto';
-  ['prodNombre','prodBarras','prodSKU'].forEach(id => document.getElementById(id).value = '');
+  ['prodNombre','prodBarras','prodSKU','prodMarcaInput'].forEach(id => document.getElementById(id).value = '');
   ['prodPrecio','prodCosto'].forEach(id => document.getElementById(id).value = '0');
+  document.getElementById('prodMarcaId').value = '';
   document.getElementById('prodStock').value = '0';
   document.getElementById('prodStockMin').value = '5';
   document.getElementById('prodDepartamento').value = '';
@@ -881,6 +947,8 @@ async function editarProd(id) {
   document.getElementById('prodImpAdic').checked = impAdic;
   document.getElementById('impAdicOpts').style.display = impAdic ? '' : 'none';
   document.getElementById('prodTasaImp').value = p.tasa_impuesto_adicional || 20.5;
+  document.getElementById('prodMarcaInput').value = p.marca_nombre || '';
+  document.getElementById('prodMarcaId').value    = p.marca_id    || '';
   selModoStock(p.modo_stock || 'normal');
   calcularFinanciero();
   document.getElementById('modalProd').classList.add('active');
@@ -907,6 +975,7 @@ async function guardarProd() {
     tiene_impuesto_adicional: document.getElementById('prodImpAdic').checked ? 1 : 0,
     tasa_impuesto_adicional:  parseFloat(document.getElementById('prodTasaImp').value) || 0,
     ...(skuVal ? {sku: skuVal} : {}),
+    ...(document.getElementById('prodMarcaId').value ? {marca_id: parseInt(document.getElementById('prodMarcaId').value)} : {}),
   };
   const url = id ? `/api/productos/${id}` : '/api/productos';
   const r = await fetch(url, {
@@ -1141,9 +1210,11 @@ function avanzarPaso(n) {
     estadoNuevoProd._form = {
       nombre,
       precio,
-      costo:  parseInt(document.getElementById('iaCosto')?.value) || 0,
-      stock:  parseInt(document.getElementById('iaStock')?.value) || 0,
-      catId:  document.getElementById('iaCatId')?.value || '',
+      costo:      parseInt(document.getElementById('iaCosto')?.value) || 0,
+      stock:      parseInt(document.getElementById('iaStock')?.value) || 0,
+      catId:      document.getElementById('iaCatId')?.value || '',
+      marcaId:    document.getElementById('iaMarcaId')?.value || '',
+      marcaNombre: document.getElementById('iaMarcaInput')?.value.trim() || '',
     };
   }
   estadoNuevoProd.paso = n;
@@ -1330,12 +1401,18 @@ function _rpFormulario(c) {
       <input id="iaPrecio" type="number" class="flujo-input" value="${f.precio||''}" placeholder="Ej: 1890" inputmode="numeric" style="font-size:18px;font-weight:700">
     </div>
 
-    <div class="flujo-field">
+    <div class="flujo-field" style="position:relative">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <label class="flujo-label" style="margin:0">Marca</label>
         ${ia('marca')?'<span class="ia-badge">✅ IA</span>':''}
       </div>
-      <input id="iaMarca" class="flujo-input ${ia('marca')?'ia-filled':''}" value="${escH(val('marca'))}" placeholder="Marca">
+      <input id="iaMarcaInput" class="flujo-input ${ia('marca')?'ia-filled':''}"
+        value="${escH(f.marcaNombre||d.marca||'')}" placeholder="Buscar o crear marca..."
+        autocomplete="off"
+        oninput="buscarMarcas('iaMarcaInput','iaMarcaId','marcaDropdownIA')"
+        onfocus="buscarMarcas('iaMarcaInput','iaMarcaId','marcaDropdownIA')">
+      <input type="hidden" id="iaMarcaId" value="${escH(f.marcaId||'')}">
+      <div id="marcaDropdownIA" class="marca-dropdown" style="display:none"></div>
     </div>
 
     <div class="flujo-field">
@@ -1454,7 +1531,8 @@ async function _guardarProductoFlujoIA() {
     precio_costo: fd.costo || 0,
     stock: fd.stock || 0,
     codigo_barras: estadoNuevoProd.codigoBarras || null,
-    ...(fd.catId ? { categoria_id: parseInt(fd.catId) } : {}),
+    ...(fd.catId   ? { categoria_id: parseInt(fd.catId) } : {}),
+    ...(fd.marcaId ? { marca_id: parseInt(fd.marcaId) }  : {}),
     ...(estadoNuevoProd.imagenUrl ? { imagen_url: estadoNuevoProd.imagenUrl } : {}),
   };
 
@@ -1594,7 +1672,7 @@ function leerFactura() {
       });
       const d = await r.json();
       if (!d.ok) throw new Error(d.error || 'Error al analizar la factura');
-      mostrarModalFactura(d.datos);
+      mostrarModalFactura(d.datos, d.fuente);
     } catch (e) {
       showToast('Error: ' + e.message, 'error');
     } finally {
@@ -1604,8 +1682,11 @@ function leerFactura() {
   input.click();
 }
 
-function mostrarModalFactura(datos) {
+function mostrarModalFactura(datos, fuente) {
   _facturaData = datos;
+  const fuentes = {tinyllama:'🦙 TinyLlama', heuristico:'📐 Regex', '':''};
+  const el = document.getElementById('facFuente');
+  if (el) el.textContent = fuentes[fuente] || fuente || '';
   const p = datos.proveedor || {};
   document.getElementById('facNombre').value   = p.nombre || '';
   document.getElementById('facRut').value      = p.rut || '';

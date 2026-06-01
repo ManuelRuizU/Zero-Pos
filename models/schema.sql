@@ -6,6 +6,15 @@ PRAGMA foreign_keys=ON;
 
 -- ── Nivel 0: tablas maestras sin dependencias ─────────────
 
+CREATE TABLE IF NOT EXISTS marcas (
+    id          INTEGER PRIMARY KEY,
+    nombre      TEXT NOT NULL UNIQUE,
+    fabricante  TEXT,
+    pais_origen TEXT DEFAULT 'Chile',
+    sitio_web   TEXT,
+    creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS config (
     id     INTEGER PRIMARY KEY AUTOINCREMENT,
     clave  TEXT NOT NULL UNIQUE,

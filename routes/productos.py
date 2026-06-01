@@ -72,8 +72,10 @@ def listar():
             return jsonify(cached)
 
     query = """
-        SELECT p.*, c.nombre as categoria_nombre
-        FROM productos p LEFT JOIN categorias c ON p.categoria_id=c.id
+        SELECT p.*, c.nombre as categoria_nombre, m.nombre as marca_nombre
+        FROM productos p
+        LEFT JOIN categorias c ON p.categoria_id=c.id
+        LEFT JOIN marcas m ON p.marca_id=m.id
         WHERE 1=1
     """
     params = []
@@ -176,8 +178,10 @@ def obtener(pid):
 
     with db_session() as conn:
         prod = conn.execute(
-            """SELECT p.*, c.nombre as categoria_nombre
-               FROM productos p LEFT JOIN categorias c ON p.categoria_id=c.id
+            """SELECT p.*, c.nombre as categoria_nombre, m.nombre as marca_nombre
+               FROM productos p
+               LEFT JOIN categorias c ON p.categoria_id=c.id
+               LEFT JOIN marcas m ON p.marca_id=m.id
                WHERE p.id=?""",
             (pid,)
         ).fetchone()
@@ -424,8 +428,9 @@ def crear():
                    (nombre, descripcion, precio, precio_costo, stock, stock_minimo,
                     codigo_barras, categoria_id, imagen_url, activo,
                     es_granel, unidad_medida, precio_por, modo_stock, hora_reset_stock,
-                    pendiente_verificar, tiene_impuesto_adicional, tasa_impuesto_adicional)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    pendiente_verificar, tiene_impuesto_adicional, tasa_impuesto_adicional,
+                    marca_id)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (
                     nombre,
                     data.get("descripcion"),
@@ -445,6 +450,7 @@ def crear():
                     pendiente_verificar,
                     int(bool(data.get("tiene_impuesto_adicional", 0))),
                     float(data.get("tasa_impuesto_adicional", 0)),
+                    data.get("marca_id") or None,
                 )
             )
         except _sqlite3.IntegrityError as ie:
@@ -480,7 +486,8 @@ def actualizar(pid):
                   "stock", "stock_minimo", "codigo_barras", "categoria_id",
                   "imagen_url", "activo", "es_granel", "unidad_medida", "precio_por",
                   "modo_stock", "hora_reset_stock", "sku",
-                  "pendiente_verificar", "tiene_impuesto_adicional", "tasa_impuesto_adicional")
+                  "pendiente_verificar", "tiene_impuesto_adicional", "tasa_impuesto_adicional",
+                  "marca_id")
     for campo in permitidos:
         if campo in data:
             campos[campo] = data[campo]
@@ -578,6 +585,44 @@ def aprobar_pendiente(pid):
 
 
 # ── Categorías ────────────────────────────────────────────────────────────────
+
+@productos_bp.route("/marcas", methods=["GET"])
+def listar_marcas():
+    q = request.args.get("q", "").strip()
+    with db_session() as conn:
+        if q:
+            rows = conn.execute(
+                "SELECT id, nombre, fabricante, pais_origen FROM marcas WHERE nombre LIKE ? ORDER BY nombre LIMIT 20",
+                (f"%{q}%",)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, nombre, fabricante, pais_origen FROM marcas ORDER BY nombre LIMIT 100"
+            ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@productos_bp.route("/marcas", methods=["POST"])
+def crear_marca():
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    nombre = str(data.get("nombre", "")).strip()
+    if not nombre:
+        return jsonify({"error": "Nombre requerido"}), 400
+    with db_session() as conn:
+        try:
+            cur = conn.execute(
+                "INSERT INTO marcas (nombre, fabricante, pais_origen, sitio_web) VALUES (?,?,?,?)",
+                (nombre, data.get("fabricante"), data.get("pais_origen", "Chile"), data.get("sitio_web"))
+            )
+            return jsonify({"ok": True, "id": cur.lastrowid, "nombre": nombre}), 201
+        except Exception:
+            existing = conn.execute("SELECT id, nombre FROM marcas WHERE nombre=?", (nombre,)).fetchone()
+            if existing:
+                return jsonify({"ok": True, "id": existing["id"], "nombre": existing["nombre"], "existente": True})
+            raise
+
 
 @productos_bp.route("/categorias", methods=["GET"])
 def listar_categorias():

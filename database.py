@@ -186,6 +186,16 @@ def _migrate_pedidos_estados(conn: sqlite3.Connection):
 
 def _migrate_columns(conn: sqlite3.Connection):
     """Agrega columnas e índices nuevos a tablas existentes sin romper instancias ya creadas."""
+    # Tabla marcas (nueva — segura si ya existe)
+    conn.execute("""CREATE TABLE IF NOT EXISTS marcas (
+        id          INTEGER PRIMARY KEY,
+        nombre      TEXT NOT NULL UNIQUE,
+        fabricante  TEXT,
+        pais_origen TEXT DEFAULT 'Chile',
+        sitio_web   TEXT,
+        creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+
     cols_productos   = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
     cols_vitems      = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
     cols_aprendizaje = {r[1] for r in conn.execute("PRAGMA table_info(voz_aprendizaje)").fetchall()}
@@ -221,6 +231,9 @@ def _migrate_columns(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE productos ADD COLUMN tiene_impuesto_adicional INTEGER NOT NULL DEFAULT 0")
     if "tasa_impuesto_adicional" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN tasa_impuesto_adicional REAL NOT NULL DEFAULT 0")
+    if "marca_id" not in cols_productos:
+        conn.execute("ALTER TABLE productos ADD COLUMN marca_id INTEGER REFERENCES marcas(id)")
+
     if "sku" not in cols_productos:
         conn.execute("ALTER TABLE productos ADD COLUMN sku TEXT")
         import unicodedata as _ud
