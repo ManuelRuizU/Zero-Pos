@@ -202,6 +202,11 @@ def detectar_codigo():
 
         img_bytes = archivo.read()
         img = Image.open(io.BytesIO(img_bytes))
+        try:
+            from PIL import ImageOps
+            img = ImageOps.exif_transpose(img)
+        except Exception:
+            pass
         if img.mode not in ("RGB", "L"):
             img = img.convert("RGB")
 

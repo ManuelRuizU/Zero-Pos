@@ -411,6 +411,15 @@ def importar_factura():
         })
 
 
+def _corregir_orientacion(img):
+    """Aplica la orientación EXIF. Los móviles guardan la rotación en metadatos."""
+    try:
+        from PIL import ImageOps
+        return ImageOps.exif_transpose(img)
+    except Exception:
+        return img
+
+
 def _guardar_imagen_producto(codigo_barras: str, imagen_bytes: bytes) -> str:
     """Optimiza y guarda la foto del producto. Retorna la URL relativa."""
     import os
@@ -421,7 +430,9 @@ def _guardar_imagen_producto(codigo_barras: str, imagen_bytes: bytes) -> str:
     directorio = os.path.join(BASE_DIR, "static", "productos_img")
     os.makedirs(directorio, exist_ok=True)
 
-    img = _PIL.open(_io.BytesIO(imagen_bytes)).convert("RGB")
+    img = _PIL.open(_io.BytesIO(imagen_bytes))
+    img = _corregir_orientacion(img)
+    img = img.convert("RGB")
     w, h = img.size
     lado = min(w, h)
     x, y = (w - lado) // 2, (h - lado) // 2
