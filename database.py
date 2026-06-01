@@ -353,11 +353,98 @@ def _seed_defaults(conn: sqlite3.Connection):
 
     _seed_montos_chilenos(conn)
 
-    # Siempre asegurar "Sin categoría" presente
-    conn.execute("""
-        INSERT OR IGNORE INTO categorias (nombre, departamento, icono)
-        VALUES ('Sin categoría', 'Otros', '📦')
-    """)
+    # Árbol completo de categorías — inspirado en Jumbo/Líder Chile
+    _cats = [
+        # Alimentación
+        ('Bebidas',               'Alimentación',               '🥤'),
+        ('Lácteos y Huevos',      'Alimentación',               '🥛'),
+        ('Snacks',                'Alimentación',               '🍿'),
+        ('Cereales',              'Alimentación',               '🌾'),
+        ('Pastas y Arroz',        'Alimentación',               '🍝'),
+        ('Pan y Panadería',       'Alimentación',               '🍞'),
+        ('Conservas',             'Alimentación',               '🥫'),
+        ('Condimentos',           'Alimentación',               '🧂'),
+        ('Abarrotes',             'Alimentación',               '🛒'),
+        ('Congelados',            'Alimentación',               '🧊'),
+        ('Carnes y Fiambres',     'Alimentación',               '🥩'),
+        ('Frutas y Verduras',     'Alimentación',               '🥦'),
+        ('Desayuno',              'Alimentación',               '🍳'),
+        # Bebidas con Alcohol
+        ('Cervezas',              'Bebidas con Alcohol',        '🍺'),
+        ('Vinos',                 'Bebidas con Alcohol',        '🍷'),
+        ('Licores',               'Bebidas con Alcohol',        '🥃'),
+        # Belleza y Cuidado Personal
+        ('Higiene Personal',      'Belleza y Cuidado Personal', '🧴'),
+        ('Cuidado Cabello',       'Belleza y Cuidado Personal', '💆'),
+        ('Afeitado y Depilación', 'Belleza y Cuidado Personal', '🪒'),
+        ('Cuidado Femenino',      'Belleza y Cuidado Personal', '🌸'),
+        ('Cosmética',             'Belleza y Cuidado Personal', '💄'),
+        ('Salud Básica',          'Belleza y Cuidado Personal', '💊'),
+        # Limpieza del Hogar
+        ('Detergentes',           'Limpieza del Hogar',         '🧺'),
+        ('Limpiadores',           'Limpieza del Hogar',         '🧹'),
+        ('Papel y Descartables',  'Limpieza del Hogar',         '🧻'),
+        ('Insecticidas',          'Limpieza del Hogar',         '🐛'),
+        # Mundo Bebé
+        ('Pañales y Toallitas',   'Mundo Bebé',                 '👶'),
+        ('Alimentación Infantil', 'Mundo Bebé',                 '🍼'),
+        # Mascotas
+        ('Alimentos Mascotas',    'Mascotas',                   '🐾'),
+        ('Accesorios Mascotas',   'Mascotas',                   '🦴'),
+        # Manualidades y Hogar
+        ('Costura y Tejido',      'Manualidades y Hogar',       '🧵'),
+        ('Papelería',             'Manualidades y Hogar',       '📝'),
+        ('Pilas y Velas',         'Manualidades y Hogar',       '🕯️'),
+        # Juguetes y Entretencion
+        ('Juguetes',              'Juguetes y Entretencion',    '🎮'),
+        # Ferretería Básica
+        ('Ferretería',            'Ferretería Básica',          '🔧'),
+        ('Electricidad',          'Ferretería Básica',          '💡'),
+        # Tabaco
+        ('Cigarrillos',           'Tabaco',                     '🚬'),
+        # Otros
+        ('Otros',                 'Otros',                      '📦'),
+        ('Venta Rápida',          'Otros',                      '⚡'),
+        ('Sin categoría',         'Otros',                      '📦'),
+    ]
+    for _nombre, _depto, _icono in _cats:
+        conn.execute(
+            "INSERT OR IGNORE INTO categorias (nombre, departamento, icono) VALUES (?,?,?)",
+            (_nombre, _depto, _icono)
+        )
+
+    # Actualizar departamentos de categorías existentes con nombre conocido
+    _depto_map = [
+        ('Alimentación', (
+            'Bebidas', 'Lácteos', 'Lácteos y Huevos', 'Snacks', 'Cereales',
+            'Pastas y Arroz', 'Pan y Panadería', 'Conservas', 'Condimentos',
+            'Abarrotes', 'Despensa', 'Congelados', 'Carnes y Fiambres',
+            'Frutas y Verduras', 'Desayuno',
+        )),
+        ('Bebidas con Alcohol', (
+            'Bebidas Alcohólicas', 'Vinos', 'Cervezas', 'Licores',
+        )),
+        ('Belleza y Cuidado Personal', (
+            'Higiene', 'Cuidado Personal', 'Farmacia',
+            'Higiene Personal', 'Cuidado Cabello',
+        )),
+        ('Limpieza del Hogar', (
+            'Limpieza', 'Limpieza e Higiene', 'Detergentes',
+            'Limpiadores', 'Papel y Descartables',
+        )),
+        ('Mascotas', (
+            'Mascotas', 'Alimentos Mascotas', 'Accesorios Mascotas',
+        )),
+        ('Otros', (
+            'Otros', 'Venta Rápida', 'Sin categoría',
+        )),
+    ]
+    for _depto, _nombres in _depto_map:
+        _ph = ','.join('?' * len(_nombres))
+        conn.execute(
+            f"UPDATE categorias SET departamento=? WHERE nombre IN ({_ph})",
+            (_depto, *_nombres)
+        )
 
 
 def _seed_montos_chilenos(conn: sqlite3.Connection):

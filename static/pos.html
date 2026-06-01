@@ -669,10 +669,6 @@ body {
     </div>
     <div class="deptos" id="deptos">
       <button class="depto-btn active" data-depto="" onclick="selDepto(this,'')">Todos</button>
-      <button class="depto-btn" data-depto="Alimentación" onclick="selDepto(this,'Alimentación')">🛒 Alimentos</button>
-      <button class="depto-btn" data-depto="Bebidas con Alcohol" onclick="selDepto(this,'Bebidas con Alcohol')">🍺 Alcohol</button>
-      <button class="depto-btn" data-depto="Cuidado Personal" onclick="selDepto(this,'Cuidado Personal')">🧴 Cuidado</button>
-      <button class="depto-btn" data-depto="Mascotas" onclick="selDepto(this,'Mascotas')">🐾 Mascotas</button>
     </div>
     <div class="categorias" id="categorias">
       <button class="cat-btn active" data-id="" onclick="selCat(this,'')">Todos</button>
@@ -1702,9 +1698,25 @@ async function verificarTurno(me) {
 let catDeptoMap = {};
 let deptoActual = '';
 
+const _DEPTO_META = {
+  'Alimentación':               { emoji: '🛒', label: 'Alimentos' },
+  'Bebidas con Alcohol':        { emoji: '🍺', label: 'Alcohol' },
+  'Belleza y Cuidado Personal': { emoji: '🧴', label: 'Cuidado' },
+  'Limpieza del Hogar':         { emoji: '🏠', label: 'Limpieza' },
+  'Mascotas':                   { emoji: '🐾', label: 'Mascotas' },
+  'Mundo Bebé':                 { emoji: '👶', label: 'Bebé' },
+  'Manualidades y Hogar':       { emoji: '🧵', label: 'Hogar' },
+  'Juguetes y Entretencion':    { emoji: '🎮', label: 'Juguetes' },
+  'Ferretería Básica':          { emoji: '🔧', label: 'Ferreter.' },
+  'Tabaco':                     { emoji: '🚬', label: 'Tabaco' },
+  'Otros':                      { emoji: '📦', label: 'Otros' },
+};
+
 async function cargarCategorias() {
   const data = await fetch('/api/productos/categorias', {credentials:'include'}).then(r => r.json()).catch(() => []);
   const div = document.getElementById('categorias');
+  const deptos = document.getElementById('deptos');
+  const seenDeptos = new Set();
   data.forEach(c => {
     catIconoMap[c.id] = c.icono || '📦';
     catDeptoMap[c.id] = c.departamento || 'Alimentación';
@@ -1714,6 +1726,17 @@ async function cargarCategorias() {
     btn.textContent = (c.icono || '') + ' ' + c.nombre;
     btn.onclick = () => selCat(btn, c.id);
     div.appendChild(btn);
+    const d = c.departamento || 'Alimentación';
+    if (!seenDeptos.has(d)) {
+      seenDeptos.add(d);
+      const meta = _DEPTO_META[d] || { emoji: '📦', label: d.substring(0, 8) };
+      const db = document.createElement('button');
+      db.className = 'depto-btn';
+      db.dataset.depto = d;
+      db.onclick = () => selDepto(db, d);
+      db.textContent = `${meta.emoji} ${meta.label}`;
+      deptos.appendChild(db);
+    }
   });
 }
 

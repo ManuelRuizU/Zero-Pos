@@ -208,8 +208,10 @@ select option{background:#13131a;}
           <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px">Departamento</label>
           <select id="catDeptoInput" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 14px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box">
             <option>Alimentación</option><option>Bebidas con Alcohol</option>
-            <option>Cuidado Personal</option><option>Limpieza del Hogar</option>
-            <option>Mascotas</option><option>Tabaco</option><option>Otros</option>
+            <option>Belleza y Cuidado Personal</option><option>Limpieza del Hogar</option>
+            <option>Mundo Bebé</option><option>Mascotas</option>
+            <option>Manualidades y Hogar</option><option>Juguetes y Entretencion</option>
+            <option>Ferretería Básica</option><option>Tabaco</option><option>Otros</option>
           </select>
         </div>
         <div>
@@ -303,9 +305,13 @@ select option{background:#13131a;}
       <option value="">Todos</option>
       <option>Alimentación</option>
       <option>Bebidas con Alcohol</option>
-      <option>Cuidado Personal</option>
+      <option>Belleza y Cuidado Personal</option>
       <option>Limpieza del Hogar</option>
+      <option>Mundo Bebé</option>
       <option>Mascotas</option>
+      <option>Manualidades y Hogar</option>
+      <option>Juguetes y Entretencion</option>
+      <option>Ferretería Básica</option>
       <option>Tabaco</option>
       <option>Otros</option>
     </select>
@@ -481,7 +487,7 @@ async function init() {
 function renderCatTab() {
   const div = document.getElementById('tablaCats');
   if (!div) return;
-  const DEPTOS = ['Alimentación','Bebidas con Alcohol','Cuidado Personal','Limpieza del Hogar','Mascotas','Tabaco','Otros'];
+  const DEPTOS = ['Alimentación','Bebidas con Alcohol','Belleza y Cuidado Personal','Limpieza del Hogar','Mundo Bebé','Mascotas','Manualidades y Hogar','Juguetes y Entretencion','Ferretería Básica','Tabaco','Otros'];
   const grupos = {};
   DEPTOS.forEach(d => grupos[d] = []);
   categorias.forEach(c => {
