@@ -490,46 +490,87 @@ def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
 
 
 def _leer_etiqueta_ocr(imagen_bytes: bytes) -> dict | None:
-    """Capa 2: OCR local con Tesseract. Sin internet, sin API key."""
+    """Capa 2: OCR local con Tesseract. Prueba 4 rotaciones, elige la mejor."""
     try:
         import pytesseract
-        from PIL import Image as _PIL
+        from PIL import Image as _PIL, ImageEnhance, ImageFilter
         import io as _io
         import re
 
         img = _PIL.open(_io.BytesIO(imagen_bytes))
+        img = _corregir_orientacion(img)
+        if img.mode != "RGB":
+            img = img.convert("RGB")
 
-        try:
-            texto = pytesseract.image_to_string(img, lang="spa")
-        except Exception:
-            texto = pytesseract.image_to_string(img)
+        def _preprocesar(imagen):
+            gris = imagen.convert("L")
+            gris = ImageEnhance.Contrast(gris).enhance(2.0)
+            gris = gris.filter(ImageFilter.SHARPEN)
+            w, h = gris.size
+            if w < 800:
+                gris = gris.resize((w * 2, h * 2), _PIL.LANCZOS)
+            return gris
 
-        logger.info(f"OCR texto: {texto[:200]!r}")
+        def _extraer(img_proc):
+            try:
+                return pytesseract.image_to_string(
+                    img_proc, lang="spa", config="--oem 3 --psm 3"
+                )
+            except Exception:
+                try:
+                    return pytesseract.image_to_string(img_proc, config="--oem 3 --psm 3")
+                except Exception:
+                    return ""
 
-        lineas = [l.strip() for l in texto.split("\n")
-                  if l.strip() and len(l.strip()) > 2]
+        def _puntaje(texto):
+            return sum(
+                1 for p in texto.split()
+                if len(p) >= 3 and sum(1 for c in p if c.isalpha()) >= 2
+            )
+
+        # Probar las 4 rotaciones y quedarse con la que produce más texto legible
+        mejor_texto, mejor_puntaje = "", 0
+        for angulo in (0, 90, 180, 270):
+            rotada = img if angulo == 0 else img.rotate(angulo, expand=True)
+            texto = _extraer(_preprocesar(rotada))
+            pts   = _puntaje(texto)
+            logger.info(f"OCR {angulo}°: puntaje={pts} '{texto[:80].strip()!r}'")
+            if pts > mejor_puntaje:
+                mejor_puntaje, mejor_texto = pts, texto
+
+        if mejor_puntaje < 2:
+            logger.warning("OCR: no encontró texto legible en ninguna rotación")
+            return None
+
+        lineas = [
+            l.strip() for l in mejor_texto.split("\n")
+            if len(l.strip()) >= 3 and sum(1 for c in l if c.isalpha()) >= 2
+        ]
         if not lineas:
             return None
 
-        # Línea más larga = nombre más probable
-        nombre = max(lineas, key=len)[:60]
+        # Preferir líneas con mayúsculas (suelen ser el nombre del producto)
+        candidatos_may = [l for l in lineas if sum(1 for c in l if c.isupper()) >= 2]
+        pool = candidatos_may if candidatos_may else lineas
+        nombre = max(pool, key=lambda l: sum(1 for c in l if c.isalpha()))[:60]
 
         # Buscar peso/volumen
         _pat = re.compile(
-            r"(\d+[\.,]?\d*)\s*(ml|ML|cl|CL|L|lt|g|gr|GR|kg|KG|cc|oz)",
+            r"(\d+[\.,]?\d*)\s*(ml|ML|cl|CL|L|lt|g|gr|GR|Gr|kg|KG|Kg|cc|CC|oz)",
             re.IGNORECASE,
         )
-        contenido = None
-        for linea in lineas:
-            m = _pat.search(linea)
-            if m:
-                contenido = m.group(0).strip()
-                break
+        texto_completo = " ".join(lineas)
+        m = _pat.search(texto_completo)
+        contenido = m.group(0).strip() if m else None
 
-        # Clasificar por palabras clave usando las mismas reglas del seed
-        from scripts.clasificar_productos import clasificar_producto
-        categoria, departamento = clasificar_producto(" ".join(lineas))
+        # Clasificar con reglas de palabras clave
+        try:
+            from scripts.clasificar_productos import clasificar_producto
+            categoria, departamento = clasificar_producto(nombre or texto_completo)
+        except Exception:
+            categoria, departamento = "Sin categoría", "Otros"
 
+        logger.info(f"OCR OK: nombre='{nombre}' contenido={contenido} cat={categoria}")
         return {
             "nombre": nombre,
             "marca": None,
@@ -539,7 +580,9 @@ def _leer_etiqueta_ocr(imagen_bytes: bytes) -> dict | None:
             "fuente": "ocr_local",
         }
     except Exception as e:
+        import traceback as _tb
         logger.error(f"OCR error: {e}")
+        logger.error(_tb.format_exc())
         return None
 
 
