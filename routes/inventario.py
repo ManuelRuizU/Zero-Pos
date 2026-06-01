@@ -192,87 +192,16 @@ def leer_factura():
         return jsonify({"error": "Archivo requerido"}), 400
 
     try:
-        import anthropic as _anthropic
-    except ImportError:
-        return jsonify({"error": "Librería anthropic no instalada. Ejecuta: pip install anthropic"}), 500
-
-    try:
-        import base64
-        import io
-        import json
+        from utils.lector_facturas import procesar_factura
 
         data = file.read()
         content_type = (file.content_type or "").lower()
 
-        if "pdf" in content_type:
-            try:
-                import pdfplumber
-                with pdfplumber.open(io.BytesIO(data)) as pdf:
-                    if not pdf.pages:
-                        return jsonify({"error": "PDF vacío"}), 400
-                    img_obj = pdf.pages[0].to_image(resolution=150)
-                    buf = io.BytesIO()
-                    img_obj.original.save(buf, format="PNG")
-                    data = buf.getvalue()
-                    media_type = "image/png"
-            except Exception as e:
-                return jsonify({"error": f"No se pudo convertir PDF: {e}"}), 400
-        else:
-            media_type = content_type if content_type.startswith("image/") else "image/jpeg"
+        resultado = procesar_factura(data, content_type)
+        if not resultado["ok"]:
+            return jsonify(resultado), 400
 
-        b64 = base64.standard_b64encode(data).decode("utf-8")
-
-        PROMPT = (
-            "Eres un asistente especializado en leer facturas comerciales chilenas.\n"
-            "Extrae la información de la imagen y responde ÚNICAMENTE con un JSON válido con esta estructura:\n\n"
-            "{\n"
-            '  "proveedor": {\n'
-            '    "nombre": "empresa vendedora",\n'
-            '    "rut": "RUT formato XX.XXX.XXX-X o null",\n'
-            '    "vendedor_nombre": "nombre del vendedor si aparece o null",\n'
-            '    "vendedor_telefono": "teléfono de contacto si aparece o null"\n'
-            "  },\n"
-            '  "folio": "número de factura o null",\n'
-            '  "fecha": "YYYY-MM-DD o null",\n'
-            '  "total": 12345,\n'
-            '  "productos": [\n'
-            "    {\n"
-            '      "nombre": "descripción del producto",\n'
-            '      "codigo_barras": "código EAN/UPC si aparece o null",\n'
-            '      "cantidad": 1,\n'
-            '      "precio_unitario": 1000,\n'
-            '      "subtotal": 1000\n'
-            "    }\n"
-            "  ]\n"
-            "}\n\n"
-            "Reglas: total, precio_unitario y subtotal como enteros CLP sin decimales. "
-            "Si un campo no aparece en la factura usa null. "
-            "Responde SOLO el JSON, sin texto adicional, sin markdown."
-        )
-
-        client = _anthropic.Anthropic()
-        msg = client.messages.create(
-            model="claude-opus-4-5",
-            max_tokens=2048,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {"type": "base64", "media_type": media_type, "data": b64},
-                    },
-                    {"type": "text", "text": PROMPT},
-                ],
-            }],
-        )
-
-        text = msg.content[0].text.strip()
-        if text.startswith("```"):
-            parts = text.split("```")
-            text = parts[1] if len(parts) > 1 else parts[0]
-            if text.startswith("json"):
-                text = text[4:]
-        datos = json.loads(text.strip())
+        datos = resultado["datos"]
 
         with db_session() as conn:
             for prod in datos.get("productos", []):
@@ -287,7 +216,7 @@ def leer_factura():
                     prod["existe"] = False
                     prod["producto_id"] = None
 
-        return jsonify({"ok": True, "datos": datos})
+        return jsonify({"ok": True, "datos": datos, "fuente": datos.get("_fuente", "")})
 
     except Exception as e:
         logger.error(f"leer_factura: {e}")
