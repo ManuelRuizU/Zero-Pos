@@ -1,6 +1,13 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
+# Cargar variables de entorno desde .env si existe
+if [ -f ".env" ]; then
+  set -a
+  source .env
+  set +a
+fi
+
 # Activar entorno virtual
 source venv/bin/activate
 

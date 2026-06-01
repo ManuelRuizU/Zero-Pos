@@ -433,36 +433,53 @@ def _guardar_imagen_producto(codigo_barras: str, imagen_bytes: bytes) -> str:
 
 @inventario_bp.route("/leer-producto-ia", methods=["POST"])
 def leer_producto_ia():
+    import traceback as _tb
+
     uid = _auth()
     if not uid:
         return jsonify({"error": "No autenticado"}), 401
 
-    # Acepta múltiples imágenes ('imagenes') o una sola ('imagen') para compatibilidad
+    logger.info("leer_producto_ia: inicio")
+
+    # ── Verificar dependencia anthropic ───────────────────────────────────────
+    try:
+        import anthropic as _anthropic
+        logger.info("leer_producto_ia: anthropic importado OK")
+    except ImportError as e:
+        logger.error(f"leer_producto_ia: anthropic NO instalado: {e}")
+        return jsonify({"error": "anthropic no instalado",
+                        "detalle": str(e)}), 500
+
+    # ── Verificar API key ─────────────────────────────────────────────────────
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    logger.info(f"leer_producto_ia: API key presente={bool(api_key)}")
+    if not api_key:
+        logger.error("leer_producto_ia: ANTHROPIC_API_KEY no configurada")
+        return jsonify({"error": "API key no configurada",
+                        "detalle": "Falta ANTHROPIC_API_KEY en variables de entorno"}), 500
+
+    # ── Verificar imágenes recibidas ──────────────────────────────────────────
     files = request.files.getlist("imagenes")
+    single = request.files.get("imagen")
+    logger.info(f"leer_producto_ia: archivos lista={len(files)} single={single is not None}")
+    if not files and single:
+        files = [single]
     if not files:
-        single = request.files.get("imagen")
-        if single:
-            files = [single]
-    if not files:
-        return jsonify({"error": "Imagen requerida"}), 400
+        return jsonify({"error": "No se recibieron imágenes"}), 400
 
     codigo_barras = request.form.get("codigo_barras", "").strip()
     categorias_str = request.form.get("categorias", "")
 
     try:
-        import anthropic as _anthropic
-    except ImportError:
-        return jsonify({"error": "Librería anthropic no instalada"}), 500
-
-    try:
         import base64, json, time
 
-        # Leer hasta 3 imágenes y construir content para Claude
+        # ── Construir content para Claude (hasta 3 imágenes) ─────────────────
         content = []
         img_bytes_list = []
         for f in files[:3]:
             data = f.read()
             img_bytes_list.append(data)
+            logger.info(f"leer_producto_ia: imagen {len(data)} bytes, content_type={f.content_type}")
             mt = (f.content_type or "").lower()
             media_type = mt if mt.startswith("image/") else "image/jpeg"
             b64 = base64.standard_b64encode(data).decode("utf-8")
@@ -472,7 +489,6 @@ def leer_producto_ia():
             })
 
         cats_hint = f"\nCategorías disponibles: {categorias_str}" if categorias_str else ""
-
         PROMPT = (
             "Analiza estas imágenes de un producto de supermercado o tienda chilena. "
             "Extrae TODA la información visible: nombre completo, marca, contenido/peso, "
@@ -492,7 +508,9 @@ def leer_producto_ia():
         )
         content.append({"type": "text", "text": PROMPT})
 
-        client = _anthropic.Anthropic()
+        # ── Llamar a Claude Vision ────────────────────────────────────────────
+        logger.info("leer_producto_ia: llamando a Claude Vision…")
+        client = _anthropic.Anthropic(api_key=api_key)
         msg = client.messages.create(
             model="claude-opus-4-5",
             max_tokens=512,
@@ -500,6 +518,9 @@ def leer_producto_ia():
         )
 
         text = msg.content[0].text.strip()
+        logger.info(f"leer_producto_ia: respuesta IA: {text[:200]}")
+
+        # Limpiar posibles bloques markdown
         if text.startswith("```"):
             parts = text.split("```")
             text = parts[1] if len(parts) > 1 else parts[0]
@@ -510,19 +531,21 @@ def leer_producto_ia():
         if codigo_barras:
             producto["codigo_barras"] = codigo_barras
 
-        # Guardar la primera imagen optimizada (usa barcode o ID temporal)
+        # ── Guardar imagen optimizada ─────────────────────────────────────────
         if img_bytes_list:
             img_id = codigo_barras if codigo_barras else f"tmp_{int(time.time())}"
             try:
                 imagen_url = _guardar_imagen_producto(img_id, img_bytes_list[0])
                 producto["imagen_url"] = imagen_url
-                producto["imagen_id"] = img_id
+                producto["imagen_id"]  = img_id
+                logger.info(f"leer_producto_ia: imagen guardada {imagen_url}")
             except Exception as img_err:
-                logger.warning(f"leer_producto_ia guardar_imagen: {img_err}")
+                logger.warning(f"leer_producto_ia: guardar_imagen falló: {img_err}")
 
-        logger.info(f"leer_producto_ia: '{producto.get('nombre')}' dept={producto.get('departamento')}")
+        logger.info(f"leer_producto_ia: OK '{producto.get('nombre')}' dept={producto.get('departamento')}")
         return jsonify({"ok": True, "producto": producto})
 
     except Exception as e:
-        logger.error(f"leer_producto_ia: {e}")
-        return jsonify({"ok": False, "error": str(e)}), 500
+        logger.error(f"leer_producto_ia: {type(e).__name__}: {e}")
+        logger.error(_tb.format_exc())
+        return jsonify({"ok": False, "error": str(e), "tipo": type(e).__name__}), 500

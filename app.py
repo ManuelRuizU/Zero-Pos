@@ -8,6 +8,12 @@ from flask import Flask, redirect, url_for, send_from_directory, request
 from flask_cors import CORS
 from flask_session import Session
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 SSL_DIR = Path(__file__).parent / "ssl"
 SSL_CERT = SSL_DIR / "cert.pem"
 SSL_KEY  = SSL_DIR / "key.pem"

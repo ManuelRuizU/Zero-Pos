@@ -1240,13 +1240,32 @@ async function _ejecutarAnalisisIA() {
     const fd = new FormData();
     estadoNuevoProd.fotos.forEach(f => fd.append('imagenes', f));
     fd.append('categorias', categorias.map(c=>c.nombre).join(', '));
-    const resp = await fetch('/api/inventario/leer-producto-ia', {method:'POST',credentials:'include',body:fd});
-    const data = await resp.json();
-    if (data.ok && data.producto) {
-      estadoNuevoProd.datosIA = data.producto;
-      estadoNuevoProd.imagenUrl = data.producto.imagen_url || null;
+
+    const resp = await fetch('/api/inventario/leer-producto-ia', {
+      method: 'POST', credentials: 'include', body: fd,
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      console.error('[ZERO] Error IA:', err);
+      showToast('IA: ' + (err.detalle || err.error || `Error ${resp.status}`), 'error');
+      avanzarPaso(3);
+      return;
     }
-  } catch(e) {}
+
+    const data = await resp.json();
+    console.log('[ZERO] IA retornó:', data);
+
+    if (data.ok && data.producto) {
+      estadoNuevoProd.datosIA  = data.producto;
+      estadoNuevoProd.imagenUrl = data.producto.imagen_url || null;
+    } else {
+      showToast('IA no pudo leer el producto — rellena el formulario', 'error');
+    }
+  } catch(e) {
+    console.error('[ZERO] _ejecutarAnalisisIA excepción:', e);
+    showToast('Error de conexión con IA', 'error');
+  }
   avanzarPaso(3);
 }
 
