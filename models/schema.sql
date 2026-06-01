@@ -30,10 +30,11 @@ CREATE TABLE IF NOT EXISTS sucursales (
 );
 
 CREATE TABLE IF NOT EXISTS categorias (
-    id     INTEGER PRIMARY KEY AUTOINCREMENT,
-    nombre TEXT NOT NULL UNIQUE,
-    color  TEXT DEFAULT '#6366f1',
-    icono  TEXT DEFAULT '📦'
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre       TEXT NOT NULL UNIQUE,
+    color        TEXT DEFAULT '#6366f1',
+    icono        TEXT DEFAULT '📦',
+    departamento TEXT DEFAULT 'Alimentación'
 );
 
 CREATE TABLE IF NOT EXISTS clientes (

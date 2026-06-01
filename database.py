@@ -263,6 +263,18 @@ def _migrate_columns(conn: sqlite3.Connection):
     except Exception as e:
         logger.debug(f"migrate proveedores.apodo: {e}")
 
+    # Departamento en categorías (jerarquía 3 niveles)
+    try:
+        cols_cats = {r[1] for r in conn.execute("PRAGMA table_info(categorias)").fetchall()}
+        if "departamento" not in cols_cats:
+            conn.execute("ALTER TABLE categorias ADD COLUMN departamento TEXT DEFAULT 'Alimentación'")
+            conn.execute("UPDATE categorias SET departamento='Bebidas con Alcohol' WHERE nombre IN ('Bebidas Alcohólicas','Vinos','Cervezas')")
+            conn.execute("UPDATE categorias SET departamento='Cuidado Personal' WHERE nombre IN ('Higiene','Cuidado Personal','Farmacia')")
+            conn.execute("UPDATE categorias SET departamento='Limpieza del Hogar' WHERE nombre IN ('Limpieza','Limpieza e Higiene','Detergentes')")
+            conn.execute("UPDATE categorias SET departamento='Mascotas' WHERE nombre IN ('Mascotas','Alimentos Mascotas')")
+    except Exception as e:
+        logger.debug(f"migrate categorias.departamento: {e}")
+
     # Índices de código de barras para escaneo O(1)
     try:
         conn.execute(

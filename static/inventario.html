@@ -129,6 +129,7 @@ select option{background:#13131a;}
     <button class="nav-btn active" onclick="showTab('productos',this)">📦 Productos</button>
     <button class="nav-btn" onclick="showTab('proveedores',this)">🏭 Proveedores</button>
     <button class="nav-btn" onclick="showTab('alertas',this)">⚠️ Alertas</button>
+    <button class="nav-btn" onclick="showTab('categorias',this)">🏷️ Categorías</button>
     <button class="nav-btn" onclick="leerFactura()">📄 Leer factura</button>
     <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
   </div>
@@ -188,6 +189,36 @@ select option{background:#13131a;}
         <tbody id="tablaAlertas"></tbody>
       </table>
     </div>
+  </div>
+
+  <!-- Categorías (FIX 7) -->
+  <div class="tab-content" id="tab-categorias">
+    <h2>Categorías</h2>
+    <div class="toolbar">
+      <button class="btn primary" onclick="document.getElementById('formNuevaCat').style.display=document.getElementById('formNuevaCat').style.display==='none'?'block':'none'">+ Nueva categoría</button>
+    </div>
+    <div id="formNuevaCat" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 90px;gap:10px;align-items:end">
+        <div>
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px">Nombre *</label>
+          <input id="catNombreInput" type="text" placeholder="Ej: Pastas" class="search-input" style="width:100%;box-sizing:border-box">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px">Departamento</label>
+          <select id="catDeptoInput" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 14px;color:var(--text);font-size:13px;outline:none;box-sizing:border-box">
+            <option>Alimentación</option><option>Bebidas con Alcohol</option>
+            <option>Cuidado Personal</option><option>Limpieza del Hogar</option>
+            <option>Mascotas</option><option>Tabaco</option><option>Otros</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px">Ícono</label>
+          <input id="catIconoInput" type="text" placeholder="📦" class="search-input" style="width:100%;text-align:center;font-size:20px;box-sizing:border-box">
+        </div>
+      </div>
+      <button class="btn primary" style="margin-top:10px;width:100%" onclick="crearCategoria()">Crear categoría</button>
+    </div>
+    <div id="tablaCats"></div>
   </div>
 </div>
 
@@ -265,6 +296,18 @@ select option{background:#13131a;}
       <input id="prodBarras" type="text" placeholder="Código de barras (opcional)" inputmode="numeric" style="flex:1">
       <button type="button" class="btn" style="padding:9px 14px;font-size:16px;flex-shrink:0" onclick="escanearProductoConIA()" title="Escanear con cámara + IA">📷</button>
     </div>
+  </div>
+  <div class="form-group"><label>Departamento</label>
+    <select id="prodDepartamento" onchange="filtrarCategoriasPorDepto()">
+      <option value="">Todos</option>
+      <option>Alimentación</option>
+      <option>Bebidas con Alcohol</option>
+      <option>Cuidado Personal</option>
+      <option>Limpieza del Hogar</option>
+      <option>Mascotas</option>
+      <option>Tabaco</option>
+      <option>Otros</option>
+    </select>
   </div>
   <div class="form-group"><label>Categoría</label>
     <select id="prodCategoria"><option value="">Sin categoría</option></select>
@@ -418,11 +461,54 @@ async function init() {
   const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
   if (!me||me.error) { location.href='login.html'; return; }
   categorias = await fetch('/api/productos/categorias',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
-  const sel = document.getElementById('prodCategoria');
-  categorias.forEach(c => sel.insertAdjacentHTML('beforeend',`<option value="${c.id}">${c.nombre}</option>`));
+  filtrarCategoriasPorDepto();
   cargarCatFiltros();
-
+  renderCatTab();
   cargarProductos();
+}
+
+function renderCatTab() {
+  const div = document.getElementById('tablaCats');
+  if (!div) return;
+  const DEPTOS = ['Alimentación','Bebidas con Alcohol','Cuidado Personal','Limpieza del Hogar','Mascotas','Tabaco','Otros'];
+  const grupos = {};
+  DEPTOS.forEach(d => grupos[d] = []);
+  categorias.forEach(c => {
+    const d = c.departamento || 'Alimentación';
+    (grupos[d] = grupos[d] || []).push(c);
+  });
+  div.innerHTML = DEPTOS.filter(d => grupos[d]?.length).map(d => `
+    <div style="margin-bottom:20px">
+      <h3 style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-weight:600">${d}</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${grupos[d].map(c => `<span style="background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px">${c.icono||'📦'} ${escH(c.nombre)}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+async function crearCategoria() {
+  const nombre = document.getElementById('catNombreInput')?.value.trim();
+  if (!nombre) { showToast('El nombre es requerido', 'error'); return; }
+  const depto = document.getElementById('catDeptoInput')?.value || 'Alimentación';
+  const icono = document.getElementById('catIconoInput')?.value.trim() || '📦';
+  try {
+    const r = await fetch('/api/productos/categorias', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nombre, departamento: depto, icono }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      categorias = await fetch('/api/productos/categorias',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+      filtrarCategoriasPorDepto();
+      document.getElementById('catFiltros').innerHTML = '<button class="cat-filtro-btn active" onclick="filtrarPorCat(null,this)">Todos</button>';
+      cargarCatFiltros();
+      renderCatTab();
+      if (document.getElementById('catNombreInput')) document.getElementById('catNombreInput').value = '';
+      showToast('✅ Categoría creada: ' + nombre, 'ok');
+      document.getElementById('formNuevaCat').style.display = 'none';
+    } else { showToast('Error: ' + (d.error || 'No se pudo crear'), 'error'); }
+  } catch(e) { showToast('Error al crear categoría', 'error'); }
 }
 
 function showTab(name, btn) {
@@ -433,6 +519,7 @@ function showTab(name, btn) {
   if (name==='proveedores') cargarProveedores();
   if (name==='alertas') cargarAlertas();
   if (name==='productos') cargarProductos();
+  if (name==='categorias') renderCatTab();
 }
 
 // ── Filtro por categoría ───────────────────────────────────────────────
@@ -660,6 +747,18 @@ function toggleImpAdic() {
   calcularFinanciero();
 }
 
+// ── Departamento / categoría ──────────────────────────────────────────
+function filtrarCategoriasPorDepto() {
+  const depto = document.getElementById('prodDepartamento').value;
+  const sel = document.getElementById('prodCategoria');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Sin categoría</option>';
+  categorias
+    .filter(c => !depto || (c.departamento || 'Alimentación') === depto)
+    .forEach(c => sel.insertAdjacentHTML('beforeend', `<option value="${c.id}">${c.nombre}</option>`));
+  if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
 // ── Modal producto ────────────────────────────────────────────────────
 function abrirModalProd() {
   document.getElementById('prodId').value = '';
@@ -668,6 +767,8 @@ function abrirModalProd() {
   ['prodPrecio','prodCosto'].forEach(id => document.getElementById(id).value = '0');
   document.getElementById('prodStock').value = '0';
   document.getElementById('prodStockMin').value = '5';
+  document.getElementById('prodDepartamento').value = '';
+  filtrarCategoriasPorDepto();
   document.getElementById('prodCategoria').value = '';
   document.getElementById('prodGranel').checked = false;
   document.getElementById('granelOpts').style.display = 'none';
@@ -693,6 +794,9 @@ async function editarProd(id) {
   document.getElementById('prodCosto').value = p.precio_costo || 0;
   document.getElementById('prodStockMin').value = p.stock_minimo;
   document.getElementById('prodBarras').value = p.codigo_barras || '';
+  const catDeProd = categorias.find(c => c.id == p.categoria_id);
+  document.getElementById('prodDepartamento').value = catDeProd?.departamento || '';
+  filtrarCategoriasPorDepto();
   document.getElementById('prodCategoria').value = p.categoria_id || '';
   document.getElementById('prodStock').value = p.stock;
   const granel = p.es_granel === 1 || p.es_granel === true;

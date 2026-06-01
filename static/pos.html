@@ -162,6 +162,20 @@ body {
 }
 .btn-scan:hover { filter: brightness(1.15); }
 
+/* Departments */
+.deptos {
+  display: flex; gap: 6px; padding: 6px 12px 2px;
+  overflow-x: auto; flex-shrink: 0; scrollbar-width: none;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.deptos::-webkit-scrollbar { display: none; }
+.depto-btn {
+  background: none; border: none; color: var(--text-dim);
+  border-radius: 6px; padding: 4px 10px; font-size: 12px;
+  cursor: pointer; white-space: nowrap; transition: all .15s; flex-shrink: 0;
+}
+.depto-btn.active { background: rgba(99,102,241,.15); color: var(--accent2); font-weight: 600; }
+
 /* Categories */
 .categorias {
   display: flex; gap: 8px; padding: 8px 12px;
@@ -652,6 +666,13 @@ body {
         inputmode="search" oninput="filtrar()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();procesarCodigo(this.value);}">
       <button class="btn-scan" id="btnCamara">📷</button>
+    </div>
+    <div class="deptos" id="deptos">
+      <button class="depto-btn active" data-depto="" onclick="selDepto(this,'')">Todos</button>
+      <button class="depto-btn" data-depto="Alimentación" onclick="selDepto(this,'Alimentación')">🛒 Alimentos</button>
+      <button class="depto-btn" data-depto="Bebidas con Alcohol" onclick="selDepto(this,'Bebidas con Alcohol')">🍺 Alcohol</button>
+      <button class="depto-btn" data-depto="Cuidado Personal" onclick="selDepto(this,'Cuidado Personal')">🧴 Cuidado</button>
+      <button class="depto-btn" data-depto="Mascotas" onclick="selDepto(this,'Mascotas')">🐾 Mascotas</button>
     </div>
     <div class="categorias" id="categorias">
       <button class="cat-btn active" data-id="" onclick="selCat(this,'')">Todos</button>
@@ -1677,12 +1698,16 @@ async function verificarTurno(me) {
   }
 }
 
-// ── Categorías y Subcategorías ───────────────────────────────
+// ── Departamentos, Categorías y Subcategorías ────────────────
+let catDeptoMap = {};
+let deptoActual = '';
+
 async function cargarCategorias() {
   const data = await fetch('/api/productos/categorias', {credentials:'include'}).then(r => r.json()).catch(() => []);
   const div = document.getElementById('categorias');
   data.forEach(c => {
     catIconoMap[c.id] = c.icono || '📦';
+    catDeptoMap[c.id] = c.departamento || 'Alimentación';
     const btn = document.createElement('button');
     btn.className = 'cat-btn';
     btn.dataset.id = c.id;
@@ -1690,6 +1715,18 @@ async function cargarCategorias() {
     btn.onclick = () => selCat(btn, c.id);
     div.appendChild(btn);
   });
+}
+
+function selDepto(btn, depto) {
+  document.querySelectorAll('.depto-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  deptoActual = depto;
+  document.querySelectorAll('#categorias .cat-btn:not([data-id=""])').forEach(b => {
+    const d = catDeptoMap[b.dataset.id] || 'Alimentación';
+    b.style.display = (!depto || d === depto) ? '' : 'none';
+  });
+  const allCatBtn = document.querySelector('#categorias .cat-btn[data-id=""]');
+  if (allCatBtn) selCat(allCatBtn, '');
 }
 
 async function cargarSubcategorias(catId) {

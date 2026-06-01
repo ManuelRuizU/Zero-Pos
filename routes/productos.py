@@ -535,8 +535,9 @@ def crear_categoria():
         return jsonify({"error": "Nombre requerido"}), 400
     with db_session() as conn:
         cur = conn.execute(
-            "INSERT INTO categorias (nombre, color, icono) VALUES (?,?,?)",
-            (nombre, data.get("color", "#6366f1"), data.get("icono", "📦"))
+            "INSERT INTO categorias (nombre, color, icono, departamento) VALUES (?,?,?,?)",
+            (nombre, data.get("color", "#6366f1"), data.get("icono", "📦"),
+             data.get("departamento", "Alimentación"))
         )
         return jsonify({"ok": True, "id": cur.lastrowid}), 201
 
