@@ -437,8 +437,13 @@ def leer_producto_ia():
     if not uid:
         return jsonify({"error": "No autenticado"}), 401
 
-    file = request.files.get("imagen")
-    if not file:
+    # Acepta múltiples imágenes ('imagenes') o una sola ('imagen') para compatibilidad
+    files = request.files.getlist("imagenes")
+    if not files:
+        single = request.files.get("imagen")
+        if single:
+            files = [single]
+    if not files:
         return jsonify({"error": "Imagen requerida"}), 400
 
     codigo_barras = request.form.get("codigo_barras", "").strip()
@@ -450,24 +455,34 @@ def leer_producto_ia():
         return jsonify({"error": "Librería anthropic no instalada"}), 500
 
     try:
-        import base64, json
+        import base64, json, time
 
-        data = file.read()
-        content_type = (file.content_type or "").lower()
-        media_type = content_type if content_type.startswith("image/") else "image/jpeg"
-        b64 = base64.standard_b64encode(data).decode("utf-8")
+        # Leer hasta 3 imágenes y construir content para Claude
+        content = []
+        img_bytes_list = []
+        for f in files[:3]:
+            data = f.read()
+            img_bytes_list.append(data)
+            mt = (f.content_type or "").lower()
+            media_type = mt if mt.startswith("image/") else "image/jpeg"
+            b64 = base64.standard_b64encode(data).decode("utf-8")
+            content.append({
+                "type": "image",
+                "source": {"type": "base64", "media_type": media_type, "data": b64},
+            })
 
         cats_hint = f"\nCategorías disponibles: {categorias_str}" if categorias_str else ""
 
         PROMPT = (
-            "Eres un asistente que lee etiquetas de productos de supermercado chilenos.\n"
-            "Extrae la información visible en la imagen y responde SOLO con un JSON válido, "
-            "sin texto adicional ni markdown:\n"
+            "Analiza estas imágenes de un producto de supermercado o tienda chilena. "
+            "Extrae TODA la información visible: nombre completo, marca, contenido/peso, "
+            "categoría del producto. Si hay varias imágenes usa la que tenga más información legible.\n"
+            "Responde SOLO con un JSON válido, sin texto adicional ni markdown:\n"
             "{\n"
             '  "nombre": "nombre completo del producto",\n'
             '  "marca": "marca si es visible o null",\n'
             '  "contenido": "cantidad y unidad ej: 1.5L, 400g o null",\n'
-            '  "departamento": "Alimentación|Bebidas con Alcohol|Cuidado Personal|Limpieza del Hogar|Mascotas|Tabaco|Otros",\n'
+            '  "departamento": "uno de: Alimentación|Bebidas con Alcohol|Belleza y Cuidado Personal|Limpieza del Hogar|Mundo Bebé|Mascotas|Manualidades y Hogar|Juguetes y Entretencion|Ferretería Básica|Tabaco|Otros",\n'
             '  "categoria_sugerida": "nombre de categoría específica del producto",\n'
             '  "categoria_nueva": "nombre si no calza en ninguna categoría existente, sino null",\n'
             '  "descripcion": "descripción breve o null"\n'
@@ -475,18 +490,13 @@ def leer_producto_ia():
             + cats_hint
             + "\nSi no puedes leer algún campo usa null. Responde SOLO el JSON."
         )
+        content.append({"type": "text", "text": PROMPT})
 
         client = _anthropic.Anthropic()
         msg = client.messages.create(
             model="claude-opus-4-5",
             max_tokens=512,
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}},
-                    {"type": "text", "text": PROMPT},
-                ],
-            }],
+            messages=[{"role": "user", "content": content}],
         )
 
         text = msg.content[0].text.strip()
@@ -500,15 +510,17 @@ def leer_producto_ia():
         if codigo_barras:
             producto["codigo_barras"] = codigo_barras
 
-        # Guardar imagen optimizada
-        if codigo_barras:
+        # Guardar la primera imagen optimizada (usa barcode o ID temporal)
+        if img_bytes_list:
+            img_id = codigo_barras if codigo_barras else f"tmp_{int(time.time())}"
             try:
-                imagen_url = _guardar_imagen_producto(codigo_barras, data)
+                imagen_url = _guardar_imagen_producto(img_id, img_bytes_list[0])
                 producto["imagen_url"] = imagen_url
+                producto["imagen_id"] = img_id
             except Exception as img_err:
                 logger.warning(f"leer_producto_ia guardar_imagen: {img_err}")
 
-        logger.info(f"leer_producto_ia: '{producto.get('nombre')}' dept={producto.get('departamento')} para {codigo_barras}")
+        logger.info(f"leer_producto_ia: '{producto.get('nombre')}' dept={producto.get('departamento')}")
         return jsonify({"ok": True, "producto": producto})
 
     except Exception as e:
