@@ -1269,6 +1269,14 @@ async function _ejecutarAnalisisIA() {
   avanzarPaso(3);
 }
 
+function volverAPaso1() {
+  estadoNuevoProd.fotos = [];
+  estadoNuevoProd.datosIA = {};
+  estadoNuevoProd.imagenUrl = null;
+  estadoNuevoProd.codigoBarras = null;
+  avanzarPaso(1);
+}
+
 function _rpFormulario(c) {
   const d = estadoNuevoProd.datosIA;
   const f = estadoNuevoProd._form;
@@ -1288,6 +1296,11 @@ function _rpFormulario(c) {
   c.innerHTML = `
     <h2 style="font-size:20px;margin-bottom:4px">✨ Revisar y completar</h2>
     <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">${d.nombre?'IA detectó estos datos. Revisa y ajusta.':'Ingresa los datos del producto.'}</p>
+
+    ${!d.nombre ? `
+      <div style="background:#1c0a0a;border:1px solid #ef4444;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;color:#fca5a5">
+        📷 No pudimos leer la etiqueta automáticamente. Ingresa el nombre manualmente.
+      </div>` : ''}
 
     ${estadoNuevoProd.imagenUrl ? `
       <div style="text-align:center;margin-bottom:16px">
@@ -1317,36 +1330,39 @@ function _rpFormulario(c) {
       <input id="iaPrecio" type="number" class="flujo-input" value="${f.precio||''}" placeholder="Ej: 1890" inputmode="numeric" style="font-size:18px;font-weight:700">
     </div>
 
+    <div class="flujo-field">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <label class="flujo-label" style="margin:0">Marca</label>
+        ${ia('marca')?'<span class="ia-badge">✅ IA</span>':''}
+      </div>
+      <input id="iaMarca" class="flujo-input ${ia('marca')?'ia-filled':''}" value="${escH(val('marca'))}" placeholder="Marca">
+    </div>
+
+    <div class="flujo-field">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <label class="flujo-label" style="margin:0">Departamento</label>
+        ${ia('departamento')?'<span class="ia-badge">✅ IA</span>':''}
+      </div>
+      <select id="iaDepto" class="flujo-input ${ia('departamento')?'ia-filled':''}" onchange="_actualizarCatsFormIA()">
+        <option value="">Seleccionar...</option>
+        ${DEPTOS.map(dep=>`<option value="${escH(dep)}" ${dep===depAct?'selected':''}>${escH(dep)}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="flujo-field">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <label class="flujo-label" style="margin:0">Categoría</label>
+        ${catSugeridaId?'<span class="ia-badge">✅ IA</span>':''}
+      </div>
+      <select id="iaCatId" class="flujo-input ${catSugeridaId?'ia-filled':''}">
+        <option value="">Sin categoría</option>
+        ${catsFilt.map(cat=>`<option value="${cat.id}" ${cat.id==catSugeridaId?'selected':''}>${escH(cat.nombre)}</option>`).join('')}
+      </select>
+    </div>
+
     <details style="margin-bottom:16px">
       <summary style="color:var(--accent2);cursor:pointer;font-size:13px;padding:8px 0">▼ Más datos (opcional)</summary>
       <div style="display:flex;flex-direction:column;gap:12px;padding-top:12px">
-        <div class="flujo-field" style="margin:0">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <label class="flujo-label" style="margin:0">Marca</label>
-            ${ia('marca')?'<span class="ia-badge">✅ IA</span>':''}
-          </div>
-          <input id="iaMarca" class="flujo-input ${ia('marca')?'ia-filled':''}" value="${escH(val('marca'))}" placeholder="Marca">
-        </div>
-        <div class="flujo-field" style="margin:0">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <label class="flujo-label" style="margin:0">Departamento</label>
-            ${ia('departamento')?'<span class="ia-badge">✅ IA</span>':''}
-          </div>
-          <select id="iaDepto" class="flujo-input ${ia('departamento')?'ia-filled':''}" onchange="_actualizarCatsFormIA()">
-            <option value="">Seleccionar...</option>
-            ${DEPTOS.map(dep=>`<option value="${escH(dep)}" ${dep===depAct?'selected':''}>${escH(dep)}</option>`).join('')}
-          </select>
-        </div>
-        <div class="flujo-field" style="margin:0">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <label class="flujo-label" style="margin:0">Categoría</label>
-            ${catSugeridaId?'<span class="ia-badge">✅ IA</span>':''}
-          </div>
-          <select id="iaCatId" class="flujo-input ${catSugeridaId?'ia-filled':''}">
-            <option value="">Sin categoría</option>
-            ${catsFilt.map(cat=>`<option value="${cat.id}" ${cat.id==catSugeridaId?'selected':''}>${escH(cat.nombre)}</option>`).join('')}
-          </select>
-        </div>
         <div class="flujo-field" style="margin:0">
           <label class="flujo-label">Precio de costo (opcional)</label>
           <input id="iaCosto" type="number" class="flujo-input" value="${f.costo||''}" placeholder="Precio pagado al proveedor" inputmode="numeric">
@@ -1359,7 +1375,7 @@ function _rpFormulario(c) {
     </details>
 
     <div style="display:flex;flex-direction:column;gap:10px">
-      ${estadoNuevoProd.fotos.length ? `<button class="btn" style="padding:11px" onclick="avanzarPaso(1)">← Volver a la foto</button>` : ''}
+      ${estadoNuevoProd.fotos.length ? `<button class="btn" style="padding:11px" onclick="volverAPaso1()">← Volver a la foto</button>` : ''}
       <button class="btn primary" style="padding:14px;font-size:15px;font-weight:700" onclick="avanzarPaso(4)">Continuar → Código de barras</button>
     </div>`;
 
