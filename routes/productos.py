@@ -589,6 +589,83 @@ def crear_categoria():
         return jsonify({"ok": True, "id": cur.lastrowid}), 201
 
 
+@productos_bp.route("/categorias/arbol", methods=["GET"])
+def categorias_arbol():
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    with db_session() as conn:
+        rows = conn.execute(
+            """SELECT c.id, c.nombre, c.icono, c.departamento,
+                      COUNT(p.id) as total_productos
+               FROM categorias c
+               LEFT JOIN productos p ON p.categoria_id=c.id AND p.activo=1
+               GROUP BY c.id
+               ORDER BY c.departamento, c.nombre"""
+        ).fetchall()
+    arbol = {}
+    for r in rows:
+        d = r["departamento"] or "Otros"
+        arbol.setdefault(d, []).append({
+            "id": r["id"],
+            "nombre": r["nombre"],
+            "icono": r["icono"] or "📦",
+            "total_productos": r["total_productos"],
+        })
+    return jsonify(arbol)
+
+
+@productos_bp.route("/categorias/<int:cid>", methods=["PUT"])
+def editar_categoria(cid):
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    nombre = str(data.get("nombre", "")).strip()
+    if not nombre:
+        return jsonify({"error": "Nombre requerido"}), 400
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE categorias SET nombre=?, departamento=?, icono=? WHERE id=?",
+            (nombre, data.get("departamento", "Otros"), data.get("icono", "📦"), cid)
+        )
+    return jsonify({"ok": True})
+
+
+@productos_bp.route("/categorias/<int:cid>", methods=["DELETE"])
+def eliminar_categoria(cid):
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    mover_a = request.args.get("mover_a", type=int)
+    with db_session() as conn:
+        total = conn.execute(
+            "SELECT COUNT(*) FROM productos WHERE categoria_id=? AND activo=1", (cid,)
+        ).fetchone()[0]
+        if total > 0 and not mover_a:
+            return jsonify({"error": "tiene_productos", "total": total}), 409
+        if mover_a:
+            conn.execute(
+                "UPDATE productos SET categoria_id=? WHERE categoria_id=?", (mover_a, cid)
+            )
+        conn.execute("DELETE FROM categorias WHERE id=?", (cid,))
+    return jsonify({"ok": True})
+
+
+@productos_bp.route("/departamentos", methods=["POST"])
+def crear_departamento():
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    nombre = str(data.get("nombre", "")).strip()
+    if not nombre:
+        return jsonify({"error": "Nombre requerido"}), 400
+    with db_session() as conn:
+        existing = conn.execute(
+            "SELECT COUNT(*) FROM categorias WHERE departamento=?", (nombre,)
+        ).fetchone()[0]
+        if existing:
+            return jsonify({"error": "El departamento ya existe"}), 409
+    return jsonify({"ok": True, "departamento": nombre})
+
+
 # ── Alertas stock ─────────────────────────────────────────────────────────────
 
 @productos_bp.route("/alertas", methods=["GET"])

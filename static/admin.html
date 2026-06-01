@@ -182,6 +182,50 @@ input:checked + .slider:before{transform:translateX(20px);}
 .tab-content{display:none;}
 .tab-content.active{display:block;}
 
+/* ── Category tree ──────────────────────── */
+.cat-tree{display:flex;flex-direction:column;gap:14px;}
+.cat-depto-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.cat-depto-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;background:rgba(255,255,255,0.04);
+  border-bottom:1px solid var(--border);
+}
+.cat-depto-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);}
+.cat-list{display:flex;flex-direction:column;}
+.cat-row{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);
+  transition:background .1s;
+}
+.cat-row:last-child{border-bottom:none;}
+.cat-row:hover{background:rgba(255,255,255,0.025);}
+.cat-icono{font-size:17px;width:26px;text-align:center;flex-shrink:0;}
+.cat-nombre{flex:1;font-size:13px;font-weight:500;}
+.cat-count{font-size:11px;color:var(--text-dim);background:rgba(255,255,255,0.06);border-radius:10px;padding:2px 8px;flex-shrink:0;}
+.cat-actions{display:flex;gap:5px;flex-shrink:0;}
+.cat-modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);
+  z-index:3000;align-items:center;justify-content:center;
+}
+.cat-modal-overlay.open{display:flex;}
+.cat-modal{
+  background:#13131a;border:1px solid var(--border);
+  border-radius:var(--radius);padding:24px;
+  width:min(420px,92vw);
+}
+.cat-modal-title{font-size:15px;font-weight:700;margin-bottom:18px;}
+.cat-modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
+.cat-input{
+  width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  border-radius:9px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;
+}
+.cat-input:focus{border-color:var(--accent);}
+.cat-select{
+  width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  border-radius:9px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;
+}
+.cat-select option{background:#13131a;}
+
 /* ── Responsive mobile ──────────────────── */
 @media(max-width:767px){
   .topbar{flex-wrap:wrap;gap:8px;padding:10px 12px;}
@@ -228,6 +272,7 @@ input:checked + .slider:before{transform:translateX(20px);}
     <button class="nav-btn" onclick="showTab('ia',this)">🤖 IA</button>
     <button class="nav-btn" onclick="showTab('config',this)">⚙️ Config</button>
     <button class="nav-btn" onclick="showTab('voz',this)">🎤 Voz</button>
+    <button class="nav-btn" onclick="showTab('categorias',this)">🗂️ Categorías</button>
     <button class="nav-btn" onclick="location.href='inventario.html'">📦 Inventario</button>
     <button class="nav-btn" onclick="location.href='pedidos.html'">🛵 Pedidos</button>
     <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
@@ -598,6 +643,17 @@ input:checked + .slider:before{transform:translateX(20px);}
     </div>
   </div>
 
+  <!-- Categorías -->
+  <div class="tab-content" id="tab-categorias">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <h2 style="margin:0;">🗂️ Categorías y Departamentos</h2>
+      <button class="btn primary" onclick="catNuevoDepto()">+ Nuevo departamento</button>
+    </div>
+    <div class="cat-tree" id="catArbol">
+      <p style="color:var(--text-dim);font-size:13px;">Cargando...</p>
+    </div>
+  </div>
+
   <!-- Voz -->
   <div class="tab-content" id="tab-voz">
     <h2>🎤 Asistente de Voz ZERO</h2>
@@ -714,6 +770,18 @@ input:checked + .slider:before{transform:translateX(20px);}
 
 </div>
 
+<!-- Modal Categorías -->
+<div class="cat-modal-overlay" id="catModalOverlay" onclick="if(event.target===this)catCerrarModal()">
+  <div class="cat-modal">
+    <div class="cat-modal-title" id="catModalTitle">Nueva categoría</div>
+    <div id="catModalBody"></div>
+    <div class="cat-modal-footer">
+      <button class="btn" onclick="catCerrarModal()">Cancelar</button>
+      <button class="btn primary" id="catModalOkBtn" onclick="catModalOk()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
 
@@ -743,6 +811,7 @@ function showTab(name, btn) {
   if (name==='ventas') cargarVentas();
   if (name==='config') cargarConfig();
   if (name==='voz') { cargarVozConfig(); cargarHistorialVoz(); cargarAprendizaje(); }
+  if (name==='categorias') cargarCatArbol();
 }
 
 async function cargarDashboard() {
@@ -1252,6 +1321,211 @@ async function cargarHistorialVoz() {
       </tr>`;
     }).join('')}
     </tbody></table>`;
+}
+
+// ── Categorías ────────────────────────────────────────────────────────────────
+let _catModalFn = null;
+let _catArbol   = {};
+
+async function cargarCatArbol() {
+  const el = document.getElementById('catArbol');
+  el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Cargando...</p>';
+  _catArbol = await fetch('/api/productos/categorias/arbol',{credentials:'include'})
+    .then(r=>r.json()).catch(()=>({}));
+  renderCatArbol(_catArbol);
+}
+
+function renderCatArbol(arbol) {
+  const el = document.getElementById('catArbol');
+  const deptos = Object.keys(arbol);
+  if (!deptos.length) {
+    el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Sin categorías</p>';
+    return;
+  }
+  el.innerHTML = deptos.map(depto => {
+    const cats = arbol[depto];
+    const dq   = depto.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `<div class="cat-depto-section">
+      <div class="cat-depto-header">
+        <span class="cat-depto-title">${depto}</span>
+        <button class="btn sm" onclick="catNuevaCat('${dq}')">+ Categoría</button>
+      </div>
+      <div class="cat-list">
+        ${cats.map(c => {
+          const nq = c.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          const iq = (c.icono||'📦').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          return `<div class="cat-row">
+            <span class="cat-icono">${c.icono||'📦'}</span>
+            <span class="cat-nombre">${c.nombre}</span>
+            <span class="cat-count">${c.total_productos} prod.</span>
+            <div class="cat-actions">
+              <button class="btn sm" title="Editar"
+                onclick="catEditarCat(${c.id},'${nq}','${dq}','${iq}')">✏️</button>
+              <button class="btn sm danger" title="Eliminar"
+                onclick="catEliminarCat(${c.id},'${nq}',${c.total_productos})">🗑️</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _catDeptoOptions(selected) {
+  return Object.keys(_catArbol).map(d =>
+    `<option value="${d.replace(/"/g,'&quot;')}" ${d===selected?'selected':''}>${d}</option>`
+  ).join('');
+}
+
+function catNuevaCat(depto) {
+  document.getElementById('catModalTitle').textContent = '+ Nueva categoría';
+  document.getElementById('catModalOkBtn').textContent = 'Crear';
+  document.getElementById('catModalBody').innerHTML = `
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Nombre</label>
+      <input id="catInNombre" class="cat-input" placeholder="Ej: Frutas Exóticas">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Ícono (emoji)</label>
+      <input id="catInIcono" class="cat-input" placeholder="📦" value="📦">
+    </div>
+    <div class="form-group">
+      <label>Departamento</label>
+      <input id="catInDepto" class="cat-input" list="catDeptoList" value="${depto.replace(/"/g,'&quot;')}">
+      <datalist id="catDeptoList">${Object.keys(_catArbol).map(d=>`<option value="${d}">`).join('')}</datalist>
+    </div>`;
+  _catModalFn = async () => {
+    const nombre = document.getElementById('catInNombre').value.trim();
+    const icono  = document.getElementById('catInIcono').value.trim() || '📦';
+    const dept   = document.getElementById('catInDepto').value.trim() || depto;
+    if (!nombre) { document.getElementById('catInNombre').focus(); return; }
+    const r = await fetch('/api/productos/categorias',{
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({nombre, icono, departamento: dept}),
+    }).then(r=>r.json());
+    if (r.ok) { catCerrarModal(); cargarCatArbol(); }
+    else alert(r.error || 'Error al crear categoría');
+  };
+  _catAbrirModal();
+}
+
+function catEditarCat(id, nombre, depto, icono) {
+  document.getElementById('catModalTitle').textContent = '✏️ Editar categoría';
+  document.getElementById('catModalOkBtn').textContent = 'Guardar';
+  document.getElementById('catModalBody').innerHTML = `
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Nombre</label>
+      <input id="catInNombre" class="cat-input" value="${nombre.replace(/"/g,'&quot;')}">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Ícono (emoji)</label>
+      <input id="catInIcono" class="cat-input" value="${(icono||'📦').replace(/"/g,'&quot;')}">
+    </div>
+    <div class="form-group">
+      <label>Departamento</label>
+      <input id="catInDepto" class="cat-input" list="catDeptoListE" value="${depto.replace(/"/g,'&quot;')}">
+      <datalist id="catDeptoListE">${Object.keys(_catArbol).map(d=>`<option value="${d}">`).join('')}</datalist>
+    </div>`;
+  _catModalFn = async () => {
+    const n   = document.getElementById('catInNombre').value.trim();
+    const ico = document.getElementById('catInIcono').value.trim() || '📦';
+    const d   = document.getElementById('catInDepto').value.trim();
+    if (!n) { document.getElementById('catInNombre').focus(); return; }
+    const r = await fetch(`/api/productos/categorias/${id}`,{
+      method:'PUT', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({nombre:n, icono:ico, departamento:d}),
+    }).then(r=>r.json());
+    if (r.ok) { catCerrarModal(); cargarCatArbol(); }
+    else alert(r.error || 'Error al guardar');
+  };
+  _catAbrirModal();
+}
+
+async function catEliminarCat(id, nombre, total) {
+  if (total > 0) {
+    const cats = await fetch('/api/productos/categorias',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+    const opts = cats.filter(c=>c.id!==id)
+      .map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+    document.getElementById('catModalTitle').textContent = '🗑️ Eliminar categoría';
+    document.getElementById('catModalOkBtn').textContent = 'Mover y eliminar';
+    document.getElementById('catModalBody').innerHTML = `
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">
+        <strong style="color:var(--text)">"${nombre}"</strong> tiene
+        <strong style="color:var(--warning)">${total} productos</strong>.<br>
+        Elige a qué categoría moverlos:
+      </p>
+      <div class="form-group">
+        <label>Mover productos a</label>
+        <select id="catInMoverA" class="cat-select">${opts}</select>
+      </div>`;
+    _catModalFn = async () => {
+      const moverId = document.getElementById('catInMoverA').value;
+      const r = await fetch(`/api/productos/categorias/${id}?mover_a=${moverId}`,{
+        method:'DELETE', credentials:'include',
+      }).then(r=>r.json());
+      if (r.ok) { catCerrarModal(); cargarCatArbol(); }
+      else alert(r.error || 'Error al eliminar');
+    };
+    _catAbrirModal();
+  } else {
+    if (!confirm(`¿Eliminar la categoría "${nombre}"?`)) return;
+    const r = await fetch(`/api/productos/categorias/${id}`,{
+      method:'DELETE', credentials:'include',
+    }).then(r=>r.json());
+    if (r.ok) cargarCatArbol();
+    else alert(r.error || 'Error al eliminar');
+  }
+}
+
+function catNuevoDepto() {
+  document.getElementById('catModalTitle').textContent = '+ Nuevo departamento';
+  document.getElementById('catModalOkBtn').textContent = 'Crear';
+  document.getElementById('catModalBody').innerHTML = `
+    <p style="font-size:12px;color:var(--text-dim);margin-bottom:14px;">
+      Crea el departamento y luego añade categorías con [+ Categoría].
+    </p>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Nombre del departamento</label>
+      <input id="catInNombre" class="cat-input" placeholder="Ej: Electrónica">
+    </div>
+    <div class="form-group">
+      <label>Ícono (emoji)</label>
+      <input id="catInIcono" class="cat-input" placeholder="💡" value="📦">
+    </div>`;
+  _catModalFn = async () => {
+    const nombre = document.getElementById('catInNombre').value.trim();
+    if (!nombre) { document.getElementById('catInNombre').focus(); return; }
+    const r = await fetch('/api/productos/departamentos',{
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({nombre}),
+    }).then(r=>r.json());
+    if (r.ok) {
+      catCerrarModal();
+      _catArbol[nombre] = [];
+      renderCatArbol(_catArbol);
+    } else {
+      alert(r.error || 'Error al crear departamento');
+    }
+  };
+  _catAbrirModal();
+}
+
+function _catAbrirModal() {
+  document.getElementById('catModalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('catInNombre')?.focus(), 60);
+}
+
+function catCerrarModal() {
+  document.getElementById('catModalOverlay').classList.remove('open');
+  document.getElementById('catModalOkBtn').textContent = 'Guardar';
+  _catModalFn = null;
+}
+
+async function catModalOk() {
+  if (_catModalFn) await _catModalFn();
 }
 
 init();
