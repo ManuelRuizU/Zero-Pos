@@ -1865,7 +1865,9 @@ function renderProductos(lista) {
     div.className = 'prod-card' + (sinStock ? ' sin-stock' : '');
     div.setAttribute('data-producto-id', p.id);
 
-    const emoji = p.imagen_url ? `<img src="${p.imagen_url}" onerror="this.style.display='none'" style="width:60px;height:60px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 2px">` : getProductEmoji(p);
+    const emoji = p.imagen_url
+      ? `<img src="${p.imagen_url}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" style="width:60px;height:60px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 2px"><span style="display:none;font-size:36px;display:none">${getProductEmoji(p)}</span>`
+      : getProductEmoji(p);
     // Escape name for safe innerHTML insertion
     const nombreSafe = (p.nombre || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 

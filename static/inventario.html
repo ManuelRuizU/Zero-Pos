@@ -917,6 +917,7 @@ function abrirModalProd() {
   document.getElementById('impAdicOpts').style.display = 'none';
   document.getElementById('prodTasaImp').value = '20.5';
   selModoStock('normal');
+  _bindNormBlur('prodNombre');
   calcularFinanciero();
   document.getElementById('modalProd').classList.add('active');
 }
@@ -949,6 +950,7 @@ async function editarProd(id) {
   document.getElementById('prodTasaImp').value = p.tasa_impuesto_adicional || 20.5;
   document.getElementById('prodMarcaInput').value = p.marca_nombre || '';
   document.getElementById('prodMarcaId').value    = p.marca_id    || '';
+  _bindNormBlur('prodNombre');
   selModoStock(p.modo_stock || 'normal');
   calcularFinanciero();
   document.getElementById('modalProd').classList.add('active');
@@ -1189,12 +1191,29 @@ async function detectarConZXing(file) {
   }
 }
 
+// ── Normalización de nombres (Title Case español) ────────────────────────────
+const _MINUSC = new Set(['de','del','la','las','los','el','y','e','o','a','en','con','por','para','sin','al','un','una']);
+function normalizarNombreJS(texto) {
+  return texto.trim().toLowerCase().split(' ')
+    .map((p, i) => (i === 0 || !_MINUSC.has(p)) ? p.charAt(0).toUpperCase() + p.slice(1) : p)
+    .join(' ');
+}
+function _bindNormBlur(id) {
+  const el = document.getElementById(id);
+  if (!el || el._normBound) return;
+  el._normBound = true;
+  el.addEventListener('blur', e => {
+    const v = e.target.value.trim();
+    if (v) e.target.value = normalizarNombreJS(v);
+  });
+}
+
 // ─── Flujo 4 pasos: Nuevo producto con IA ─────────────────────────────────────
 
-let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{} };
+let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true };
 
 function iniciarFlujoIA() {
-  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{} };
+  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true };
   document.getElementById('flujoNuevoProd').style.display = 'block';
   renderPasoActual();
 }
@@ -1340,13 +1359,16 @@ async function _ejecutarAnalisisIA() {
   avanzarPaso(3);
 }
 
-function volverAPaso1() {
+window.volverAPaso1 = function volverAPaso1() {
   estadoNuevoProd.fotos = [];
   estadoNuevoProd.datosIA = {};
   estadoNuevoProd.imagenUrl = null;
   estadoNuevoProd.codigoBarras = null;
-  avanzarPaso(1);
-}
+  estadoNuevoProd._form = {};
+  estadoNuevoProd._usarFoto = true;
+  estadoNuevoProd.paso = 1;
+  renderPasoActual();
+};
 
 function _rpFormulario(c) {
   const d = estadoNuevoProd.datosIA;
@@ -1373,11 +1395,26 @@ function _rpFormulario(c) {
         📷 No pudimos leer la etiqueta automáticamente. Ingresa el nombre manualmente.
       </div>` : ''}
 
-    ${estadoNuevoProd.imagenUrl ? `
-      <div style="text-align:center;margin-bottom:16px">
-        <img src="${escH(estadoNuevoProd.imagenUrl)}" style="width:100px;height:100px;object-fit:cover;border-radius:10px;border:2px solid #22c55e" onerror="this.parentElement.style.display='none'">
-        <p style="color:#86efac;font-size:11px;margin:4px 0">📷 Foto guardada</p>
-      </div>` : ''}
+    ${estadoNuevoProd.imagenUrl ? (() => {
+      const usarFoto = estadoNuevoProd._usarFoto !== false;
+      const catEmoji = (() => { try { return categorias.find(c=>c.id==catSugeridaId)?.icono || '📦'; } catch(e){ return '📦'; } })();
+      return `
+      <div style="margin-bottom:16px">
+        <label class="flujo-label">Imagen del producto</label>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button onclick="estadoNuevoProd._usarFoto=true;renderPasoActual()"
+            style="flex:1;padding:10px;background:${usarFoto?'rgba(34,197,94,.15)':'var(--surface)'};border:2px solid ${usarFoto?'#22c55e':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <img src="${escH(estadoNuevoProd.imagenUrl)}" style="width:64px;height:64px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
+            <span style="font-size:11px;color:${usarFoto?'#86efac':'var(--text-dim)'}">📷 Foto tomada</span>
+          </button>
+          <button onclick="estadoNuevoProd._usarFoto=false;renderPasoActual()"
+            style="flex:1;padding:10px;background:${!usarFoto?'rgba(99,102,241,.15)':'var(--surface)'};border:2px solid ${!usarFoto?'#6366f1':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+            <span style="font-size:48px;line-height:1">${catEmoji}</span>
+            <span style="font-size:11px;color:${!usarFoto?'#a5b4fc':'var(--text-dim)'}">🎨 Ícono auto</span>
+          </button>
+        </div>
+      </div>`;
+    })() : ''}
 
     ${d.categoria_nueva ? `
       <div id="npCatNuevaBanner" style="background:#1a1040;border:1px solid #6366f1;border-radius:8px;padding:10px;margin-bottom:14px;font-size:12px;color:#a5b4fc">
@@ -1456,7 +1493,10 @@ function _rpFormulario(c) {
       <button class="btn primary" style="padding:14px;font-size:15px;font-weight:700" onclick="avanzarPaso(4)">Continuar → Código de barras</button>
     </div>`;
 
-  setTimeout(() => { (!d.nombre ? document.getElementById('iaNombre') : document.getElementById('iaPrecio'))?.focus(); }, 80);
+  setTimeout(() => {
+    _bindNormBlur('iaNombre');
+    (!d.nombre ? document.getElementById('iaNombre') : document.getElementById('iaPrecio'))?.focus();
+  }, 80);
 }
 
 function _actualizarCatsFormIA() {
@@ -1533,7 +1573,7 @@ async function _guardarProductoFlujoIA() {
     codigo_barras: estadoNuevoProd.codigoBarras || null,
     ...(fd.catId   ? { categoria_id: parseInt(fd.catId) } : {}),
     ...(fd.marcaId ? { marca_id: parseInt(fd.marcaId) }  : {}),
-    ...(estadoNuevoProd.imagenUrl ? { imagen_url: estadoNuevoProd.imagenUrl } : {}),
+    ...(estadoNuevoProd._usarFoto !== false && estadoNuevoProd.imagenUrl ? { imagen_url: estadoNuevoProd.imagenUrl } : {}),
   };
 
   try {
@@ -1577,7 +1617,7 @@ async function guardarProductoNuevo() {
   const nombre = document.getElementById('npNombre')?.value.trim();
   const precio = parseInt(document.getElementById('npPrecio')?.value) || 0;
   if (!nombre) { showToast('El nombre es requerido', 'error'); document.getElementById('npNombre')?.focus(); return; }
-  const imagenUrl = modal?.dataset.imagenUrl || null;
+  const imagenUrl = modal?.dataset.imagenUrl || estadoNuevoProd.imagenUrl || null;
   const data = {
     nombre,
     precio,
