@@ -18,5 +18,12 @@ python3 -c "from pyzbar import pyzbar" 2>/dev/null || {
   pip install pyzbar Pillow -q
 }
 
+# Verificar pytesseract (OCR offline para leer etiquetas de productos)
+python3 -c "import pytesseract" 2>/dev/null || pip install pytesseract -q
+tesseract --version 2>/dev/null || {
+  echo "Instalando Tesseract OCR..."
+  sudo apt-get install -y tesseract-ocr tesseract-ocr-spa -q 2>/dev/null || true
+}
+
 # Arrancar ZERO POS
 python3 app.py

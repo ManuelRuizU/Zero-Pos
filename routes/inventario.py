@@ -431,121 +431,162 @@ def _guardar_imagen_producto(codigo_barras: str, imagen_bytes: bytes) -> str:
     return f"/static/productos_img/{nombre}"
 
 
-@inventario_bp.route("/leer-producto-ia", methods=["POST"])
-def leer_producto_ia():
-    import traceback as _tb
+def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
+    """Capa 1: consulta Open Food Facts. Requiere internet. Sin API key."""
+    try:
+        import requests as _req
+        url = f"https://world.openfoodfacts.org/api/v0/product/{codigo_barras}.json"
+        headers = {"User-Agent": "ZeroPOS/1.0 (zero-pos; contact@zero-pos.app)"}
+        r = _req.get(url, timeout=5, headers=headers)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        if data.get("status") != 1:
+            return None
+        p = data.get("product", {})
+        nombre = (
+            p.get("product_name_es")
+            or p.get("product_name")
+            or p.get("generic_name_es")
+            or p.get("generic_name")
+        )
+        if not nombre:
+            return None
 
+        # Primera categoría legible de categories_tags
+        cat_sugerida = None
+        for tag in p.get("categories_tags", []):
+            if ":" in tag:
+                tag = tag.split(":", 1)[1]
+            tag = tag.replace("-", " ").strip()
+            if tag:
+                cat_sugerida = tag.title()
+                break
+
+        logger.info(f"OFF: '{nombre}' marca={p.get('brands')} cat={cat_sugerida}")
+        return {
+            "nombre": nombre,
+            "marca": p.get("brands") or None,
+            "contenido": p.get("quantity") or None,
+            "categoria_sugerida": cat_sugerida,
+            "imagen_url_externa": p.get("image_front_url") or None,
+            "fuente": "open_food_facts",
+        }
+    except Exception as e:
+        logger.warning(f"OFF error: {e}")
+        return None
+
+
+def _leer_etiqueta_ocr(imagen_bytes: bytes) -> dict | None:
+    """Capa 2: OCR local con Tesseract. Sin internet, sin API key."""
+    try:
+        import pytesseract
+        from PIL import Image as _PIL
+        import io as _io
+        import re
+
+        img = _PIL.open(_io.BytesIO(imagen_bytes))
+
+        try:
+            texto = pytesseract.image_to_string(img, lang="spa")
+        except Exception:
+            texto = pytesseract.image_to_string(img)
+
+        logger.info(f"OCR texto: {texto[:200]!r}")
+
+        lineas = [l.strip() for l in texto.split("\n")
+                  if l.strip() and len(l.strip()) > 2]
+        if not lineas:
+            return None
+
+        # Línea más larga = nombre más probable
+        nombre = max(lineas, key=len)[:60]
+
+        # Buscar peso/volumen
+        _pat = re.compile(
+            r"(\d+[\.,]?\d*)\s*(ml|ML|cl|CL|L|lt|g|gr|GR|kg|KG|cc|oz)",
+            re.IGNORECASE,
+        )
+        contenido = None
+        for linea in lineas:
+            m = _pat.search(linea)
+            if m:
+                contenido = m.group(0).strip()
+                break
+
+        # Clasificar por palabras clave usando las mismas reglas del seed
+        from scripts.clasificar_productos import clasificar_producto
+        categoria, departamento = clasificar_producto(" ".join(lineas))
+
+        return {
+            "nombre": nombre,
+            "marca": None,
+            "contenido": contenido,
+            "categoria_sugerida": categoria if categoria != "Sin categoría" else None,
+            "departamento": departamento if departamento != "Otros" else "Alimentación",
+            "fuente": "ocr_local",
+        }
+    except Exception as e:
+        logger.error(f"OCR error: {e}")
+        return None
+
+
+@inventario_bp.route("/leer-producto", methods=["POST"])
+def leer_producto():
+    """Identifica un producto por código de barras (OFF) o foto (OCR).
+    Sin API key. Funciona offline con la capa OCR."""
     uid = _auth()
     if not uid:
         return jsonify({"error": "No autenticado"}), 401
 
-    logger.info("leer_producto_ia: inicio")
-
-    # ── Verificar dependencia anthropic ───────────────────────────────────────
-    try:
-        import anthropic as _anthropic
-        logger.info("leer_producto_ia: anthropic importado OK")
-    except ImportError as e:
-        logger.error(f"leer_producto_ia: anthropic NO instalado: {e}")
-        return jsonify({"error": "anthropic no instalado",
-                        "detalle": str(e)}), 500
-
-    # ── Verificar API key ─────────────────────────────────────────────────────
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    logger.info(f"leer_producto_ia: API key presente={bool(api_key)}")
-    if not api_key:
-        logger.error("leer_producto_ia: ANTHROPIC_API_KEY no configurada")
-        return jsonify({"error": "API key no configurada",
-                        "detalle": "Falta ANTHROPIC_API_KEY en variables de entorno"}), 500
-
-    # ── Verificar imágenes recibidas ──────────────────────────────────────────
+    codigo_barras = request.form.get("codigo_barras", "").strip()
     files = request.files.getlist("imagenes")
     single = request.files.get("imagen")
-    logger.info(f"leer_producto_ia: archivos lista={len(files)} single={single is not None}")
     if not files and single:
         files = [single]
-    if not files:
-        return jsonify({"error": "No se recibieron imágenes"}), 400
 
-    codigo_barras = request.form.get("codigo_barras", "").strip()
-    categorias_str = request.form.get("categorias", "")
+    img_bytes = files[0].read() if files else None
 
-    try:
-        import base64, json, time
+    producto = None
 
-        # ── Construir content para Claude (hasta 3 imágenes) ─────────────────
-        content = []
-        img_bytes_list = []
-        for f in files[:3]:
-            data = f.read()
-            img_bytes_list.append(data)
-            logger.info(f"leer_producto_ia: imagen {len(data)} bytes, content_type={f.content_type}")
-            mt = (f.content_type or "").lower()
-            media_type = mt if mt.startswith("image/") else "image/jpeg"
-            b64 = base64.standard_b64encode(data).decode("utf-8")
-            content.append({
-                "type": "image",
-                "source": {"type": "base64", "media_type": media_type, "data": b64},
-            })
-
-        cats_hint = f"\nCategorías disponibles: {categorias_str}" if categorias_str else ""
-        PROMPT = (
-            "Analiza estas imágenes de un producto de supermercado o tienda chilena. "
-            "Extrae TODA la información visible: nombre completo, marca, contenido/peso, "
-            "categoría del producto. Si hay varias imágenes usa la que tenga más información legible.\n"
-            "Responde SOLO con un JSON válido, sin texto adicional ni markdown:\n"
-            "{\n"
-            '  "nombre": "nombre completo del producto",\n'
-            '  "marca": "marca si es visible o null",\n'
-            '  "contenido": "cantidad y unidad ej: 1.5L, 400g o null",\n'
-            '  "departamento": "uno de: Alimentación|Bebidas con Alcohol|Belleza y Cuidado Personal|Limpieza del Hogar|Mundo Bebé|Mascotas|Manualidades y Hogar|Juguetes y Entretencion|Ferretería Básica|Tabaco|Otros",\n'
-            '  "categoria_sugerida": "nombre de categoría específica del producto",\n'
-            '  "categoria_nueva": "nombre si no calza en ninguna categoría existente, sino null",\n'
-            '  "descripcion": "descripción breve o null"\n'
-            "}\n"
-            + cats_hint
-            + "\nSi no puedes leer algún campo usa null. Responde SOLO el JSON."
-        )
-        content.append({"type": "text", "text": PROMPT})
-
-        # ── Llamar a Claude Vision ────────────────────────────────────────────
-        logger.info("leer_producto_ia: llamando a Claude Vision…")
-        client = _anthropic.Anthropic(api_key=api_key)
-        msg = client.messages.create(
-            model="claude-opus-4-5",
-            max_tokens=512,
-            messages=[{"role": "user", "content": content}],
-        )
-
-        text = msg.content[0].text.strip()
-        logger.info(f"leer_producto_ia: respuesta IA: {text[:200]}")
-
-        # Limpiar posibles bloques markdown
-        if text.startswith("```"):
-            parts = text.split("```")
-            text = parts[1] if len(parts) > 1 else parts[0]
-            if text.startswith("json"):
-                text = text[4:]
-
-        producto = json.loads(text.strip())
-        if codigo_barras:
+    # Capa 1: Open Food Facts (requiere barcode + internet)
+    if codigo_barras:
+        logger.info(f"leer_producto: buscando OFF código={codigo_barras}")
+        producto = _buscar_open_food_facts(codigo_barras)
+        if producto:
             producto["codigo_barras"] = codigo_barras
 
-        # ── Guardar imagen optimizada ─────────────────────────────────────────
-        if img_bytes_list:
-            img_id = codigo_barras if codigo_barras else f"tmp_{int(time.time())}"
-            try:
-                imagen_url = _guardar_imagen_producto(img_id, img_bytes_list[0])
+    # Capa 2: OCR local (requiere imagen, funciona offline)
+    if not producto and img_bytes:
+        logger.info("leer_producto: OCR local")
+        producto = _leer_etiqueta_ocr(img_bytes)
+        if producto and codigo_barras:
+            producto["codigo_barras"] = codigo_barras
+
+    # Guardar imagen optimizada si la recibimos
+    if img_bytes:
+        import time as _time
+        img_id = codigo_barras if codigo_barras else f"tmp_{int(_time.time())}"
+        try:
+            imagen_url = _guardar_imagen_producto(img_id, img_bytes)
+            if producto:
                 producto["imagen_url"] = imagen_url
                 producto["imagen_id"]  = img_id
-                logger.info(f"leer_producto_ia: imagen guardada {imagen_url}")
-            except Exception as img_err:
-                logger.warning(f"leer_producto_ia: guardar_imagen falló: {img_err}")
+        except Exception as img_err:
+            logger.warning(f"leer_producto: guardar_imagen: {img_err}")
 
-        logger.info(f"leer_producto_ia: OK '{producto.get('nombre')}' dept={producto.get('departamento')}")
-        return jsonify({"ok": True, "producto": producto})
+    if not producto:
+        logger.info("leer_producto: sin resultado")
+        return jsonify({"ok": False})
 
-    except Exception as e:
-        logger.error(f"leer_producto_ia: {type(e).__name__}: {e}")
-        logger.error(_tb.format_exc())
-        return jsonify({"ok": False, "error": str(e), "tipo": type(e).__name__}), 500
+    logger.info(
+        f"leer_producto: OK nombre='{producto.get('nombre')}' "
+        f"fuente={producto.get('fuente')}"
+    )
+    return jsonify({"ok": True, "producto": producto})
+
+
+# Alias para compatibilidad con versiones anteriores del frontend
+@inventario_bp.route("/leer-producto-ia", methods=["POST"])
+def leer_producto_ia():
+    return leer_producto()

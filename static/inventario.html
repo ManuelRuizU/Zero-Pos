@@ -1241,7 +1241,7 @@ async function _ejecutarAnalisisIA() {
     estadoNuevoProd.fotos.forEach(f => fd.append('imagenes', f));
     fd.append('categorias', categorias.map(c=>c.nombre).join(', '));
 
-    const resp = await fetch('/api/inventario/leer-producto-ia', {
+    const resp = await fetch('/api/inventario/leer-producto', {
       method: 'POST', credentials: 'include', body: fd,
     });
 
