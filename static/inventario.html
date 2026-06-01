@@ -1124,16 +1124,43 @@ function abrirModalNuevoProducto(codigo, datos = {}) {
   const modal = document.createElement('div');
   modal.id = 'modalNuevoProd';
   modal.dataset.codigo = codigo;
+  modal.dataset.imagenUrl = datos.imagen_url || '';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;overflow-y:auto;padding:20px;';
+
+  // FIX 5: preview foto
+  const fotoHtml = datos.imagen_url ? `
+    <div style="text-align:center;margin-bottom:14px">
+      <img src="${escH(datos.imagen_url)}" onerror="this.parentElement.style.display='none'"
+        style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:2px solid #22c55e">
+      <p style="color:#86efac;font-size:12px;margin:4px 0">✅ Foto guardada para el catálogo</p>
+    </div>` : '';
+
+  // FIX 4 & 6: sugerencia IA de dept/cat + categoria_nueva
   const iaInfo = datos.nombre ? `
     <div style="background:#0f2d1a;border:1px solid #22c55e;border-radius:8px;padding:10px;margin-bottom:14px;font-size:12px;color:#86efac">
       ✨ IA detectó: ${escH(datos.nombre)}${datos.marca ? ' · ' + escH(datos.marca) : ''}${datos.contenido ? ' · ' + escH(datos.contenido) : ''}
+      ${datos.departamento ? `<br>📂 ${escH(datos.departamento)}${datos.categoria_sugerida ? ' → ' + escH(datos.categoria_sugerida) : ''}` : ''}
       <br><span style="opacity:.7">Revisa que sea correcto antes de guardar.</span>
     </div>` : '';
+
+  const catNuevaBanner = datos.categoria_nueva ? `
+    <div id="npCatNuevaBanner" style="background:#1a1040;border:1px solid #6366f1;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#a5b4fc">
+      ✨ Categoría nueva sugerida por IA<br>
+      <strong style="font-size:13px">${datos.departamento ? escH(datos.departamento) + ' → ' : ''}${escH(datos.categoria_nueva)}</strong><br>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="crearCatNueva('${escH(datos.categoria_nueva)}','${escH(datos.departamento||'Alimentación')}')"
+          style="flex:1;padding:6px;background:#6366f1;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px">Crear esta categoría</button>
+        <button onclick="document.getElementById('npCatNuevaBanner').style.display='none'"
+          style="flex:1;padding:6px;background:#374151;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px">Usar Otros</button>
+      </div>
+    </div>` : '';
+
   modal.innerHTML = `
     <div style="background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;width:100%;max-width:380px">
       <h3 style="color:white;margin:0 0 4px;font-size:18px">📦 Nuevo producto</h3>
-      <p style="color:#6366f1;font-size:13px;margin:0 0 16px">${escH(codigo)}${datos.nombre ? ' · Leído por IA ✨' : ''}</p>
+      <p style="color:#6366f1;font-size:13px;margin:0 0 12px">${escH(codigo)}${datos.nombre ? ' · Leído por IA ✨' : ''}</p>
+      ${fotoHtml}
+      ${catNuevaBanner}
       ${iaInfo}
       <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px">Nombre *</label>
       <input id="npNombre" value="${escH(datos.nombre||'')}" placeholder="Nombre del producto"
@@ -1173,12 +1200,14 @@ async function guardarProductoNuevo() {
   const nombre = document.getElementById('npNombre')?.value.trim();
   const precio = parseInt(document.getElementById('npPrecio')?.value) || 0;
   if (!nombre) { showToast('El nombre es requerido', 'error'); document.getElementById('npNombre')?.focus(); return; }
+  const imagenUrl = modal?.dataset.imagenUrl || null;
   const data = {
     nombre,
     precio,
     precio_costo: parseInt(document.getElementById('npCosto')?.value) || 0,
     stock:        parseInt(document.getElementById('npStock')?.value) || 0,
     codigo_barras: codigo || null,
+    ...(imagenUrl ? { imagen_url: imagenUrl } : {}),
   };
   try {
     const r = await fetch('/api/productos', {
@@ -1197,6 +1226,27 @@ async function guardarProductoNuevo() {
   } catch(e) {
     showToast('Error al guardar', 'error');
   }
+}
+
+async function crearCatNueva(nombre, depto) {
+  try {
+    const r = await fetch('/api/productos/categorias', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ nombre, departamento: depto, icono: '📦' }),
+    });
+    const d = await r.json();
+    if (r.ok) {
+      categorias = await fetch('/api/productos/categorias',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+      filtrarCategoriasPorDepto();
+      document.getElementById('catFiltros').innerHTML = '<button class="cat-filtro-btn active" onclick="filtrarPorCat(null,this)">Todos</button>';
+      cargarCatFiltros();
+      renderCatTab();
+      const banner = document.getElementById('npCatNuevaBanner');
+      if (banner) banner.innerHTML = `<span style="color:#86efac">✅ Categoría "${nombre}" creada</span>`;
+      showToast('✅ Categoría creada: ' + nombre, 'ok');
+    } else { showToast('Error: ' + (d.error || 'No se pudo crear'), 'error'); }
+  } catch(e) { showToast('Error al crear categoría', 'error'); }
 }
 
 // ── Lector de facturas ────────────────────────────────────────────────

@@ -410,6 +410,27 @@ def importar_factura():
         })
 
 
+def _guardar_imagen_producto(codigo_barras: str, imagen_bytes: bytes) -> str:
+    """Optimiza y guarda la foto del producto. Retorna la URL relativa."""
+    import os
+    from PIL import Image as _PIL
+    import io as _io
+
+    BASE_DIR = Path(__file__).parent.parent
+    directorio = os.path.join(BASE_DIR, "static", "productos_img")
+    os.makedirs(directorio, exist_ok=True)
+
+    img = _PIL.open(_io.BytesIO(imagen_bytes)).convert("RGB")
+    w, h = img.size
+    lado = min(w, h)
+    x, y = (w - lado) // 2, (h - lado) // 2
+    img = img.crop((x, y, x + lado, y + lado)).resize((400, 400), _PIL.LANCZOS)
+
+    nombre = f"{codigo_barras}.jpg"
+    img.save(os.path.join(directorio, nombre), "JPEG", quality=85)
+    return f"/static/productos_img/{nombre}"
+
+
 @inventario_bp.route("/leer-producto-ia", methods=["POST"])
 def leer_producto_ia():
     uid = _auth()
@@ -420,7 +441,8 @@ def leer_producto_ia():
     if not file:
         return jsonify({"error": "Imagen requerida"}), 400
 
-    codigo_barras = request.form.get("codigo_barras", "")
+    codigo_barras = request.form.get("codigo_barras", "").strip()
+    categorias_str = request.form.get("categorias", "")
 
     try:
         import anthropic as _anthropic
@@ -435,6 +457,8 @@ def leer_producto_ia():
         media_type = content_type if content_type.startswith("image/") else "image/jpeg"
         b64 = base64.standard_b64encode(data).decode("utf-8")
 
+        cats_hint = f"\nCategorías disponibles: {categorias_str}" if categorias_str else ""
+
         PROMPT = (
             "Eres un asistente que lee etiquetas de productos de supermercado chilenos.\n"
             "Extrae la información visible en la imagen y responde SOLO con un JSON válido, "
@@ -443,11 +467,13 @@ def leer_producto_ia():
             '  "nombre": "nombre completo del producto",\n'
             '  "marca": "marca si es visible o null",\n'
             '  "contenido": "cantidad y unidad ej: 1.5L, 400g o null",\n'
-            '  "categoria_sugerida": "Bebidas|Lácteos|Snacks|Cereales|Pastas|Pan|Conservas|Limpieza|Otros",\n'
+            '  "departamento": "Alimentación|Bebidas con Alcohol|Cuidado Personal|Limpieza del Hogar|Mascotas|Tabaco|Otros",\n'
+            '  "categoria_sugerida": "nombre de categoría específica del producto",\n'
+            '  "categoria_nueva": "nombre si no calza en ninguna categoría existente, sino null",\n'
             '  "descripcion": "descripción breve o null"\n'
             "}\n"
-            "Si no puedes leer algún campo usa null. "
-            "Responde SOLO el JSON."
+            + cats_hint
+            + "\nSi no puedes leer algún campo usa null. Responde SOLO el JSON."
         )
 
         client = _anthropic.Anthropic()
@@ -474,7 +500,15 @@ def leer_producto_ia():
         if codigo_barras:
             producto["codigo_barras"] = codigo_barras
 
-        logger.info(f"leer_producto_ia: detectado '{producto.get('nombre')}' para {codigo_barras}")
+        # Guardar imagen optimizada
+        if codigo_barras:
+            try:
+                imagen_url = _guardar_imagen_producto(codigo_barras, data)
+                producto["imagen_url"] = imagen_url
+            except Exception as img_err:
+                logger.warning(f"leer_producto_ia guardar_imagen: {img_err}")
+
+        logger.info(f"leer_producto_ia: '{producto.get('nombre')}' dept={producto.get('departamento')} para {codigo_barras}")
         return jsonify({"ok": True, "producto": producto})
 
     except Exception as e:
