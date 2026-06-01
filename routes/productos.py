@@ -366,16 +366,17 @@ def crear():
     categoria_id = data.get("categoria_id")
 
     with db_session() as conn:
-        # Duplicate barcode → upsert existing product
+        # Duplicate barcode → upsert existing product (activo o inactivo)
         barras = (data.get("codigo_barras") or "").strip() or None
         if barras:
             exist_barras = conn.execute(
-                "SELECT id FROM productos WHERE codigo_barras=? AND activo=1", (barras,)
+                "SELECT id FROM productos WHERE codigo_barras=?", (barras,)
             ).fetchone()
             if exist_barras:
                 pid = exist_barras["id"]
                 conn.execute(
-                    "UPDATE productos SET nombre=?, precio=?, precio_costo=?, imagen_url=COALESCE(?,imagen_url) WHERE id=?",
+                    """UPDATE productos SET nombre=?, precio=?, precio_costo=?,
+                       activo=1, imagen_url=COALESCE(?,imagen_url) WHERE id=?""",
                     (nombre, float(data.get("precio", 0)), float(data.get("precio_costo", 0)),
                      data.get("imagen_url"), pid)
                 )
@@ -411,34 +412,44 @@ def crear():
                     categoria_id = _sc.lastrowid
                 pendiente_verificar = 1
 
-        cur = conn.execute(
-            """INSERT INTO productos
-               (nombre, descripcion, precio, precio_costo, stock, stock_minimo,
-                codigo_barras, categoria_id, imagen_url, activo,
-                es_granel, unidad_medida, precio_por, modo_stock, hora_reset_stock,
-                pendiente_verificar, tiene_impuesto_adicional, tasa_impuesto_adicional)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (
-                nombre,
-                data.get("descripcion"),
-                float(data.get("precio", 0)),
-                float(data.get("precio_costo", 0)),
-                int(data.get("stock", 0)),
-                int(data.get("stock_minimo", 5)),
-                data.get("codigo_barras"),
-                categoria_id,
-                data.get("imagen_url"),
-                activo,
-                int(bool(data.get("es_granel", 0))),
-                data.get("unidad_medida", "unidad"),
-                data.get("precio_por", "unidad"),
-                modo_stock,
-                data.get("hora_reset_stock", "06:00"),
-                pendiente_verificar,
-                int(bool(data.get("tiene_impuesto_adicional", 0))),
-                float(data.get("tasa_impuesto_adicional", 0)),
+        import sqlite3 as _sqlite3
+        try:
+            cur = conn.execute(
+                """INSERT INTO productos
+                   (nombre, descripcion, precio, precio_costo, stock, stock_minimo,
+                    codigo_barras, categoria_id, imagen_url, activo,
+                    es_granel, unidad_medida, precio_por, modo_stock, hora_reset_stock,
+                    pendiente_verificar, tiene_impuesto_adicional, tasa_impuesto_adicional)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    nombre,
+                    data.get("descripcion"),
+                    float(data.get("precio", 0)),
+                    float(data.get("precio_costo", 0)),
+                    int(data.get("stock", 0)),
+                    int(data.get("stock_minimo", 5)),
+                    data.get("codigo_barras"),
+                    categoria_id,
+                    data.get("imagen_url"),
+                    activo,
+                    int(bool(data.get("es_granel", 0))),
+                    data.get("unidad_medida", "unidad"),
+                    data.get("precio_por", "unidad"),
+                    modo_stock,
+                    data.get("hora_reset_stock", "06:00"),
+                    pendiente_verificar,
+                    int(bool(data.get("tiene_impuesto_adicional", 0))),
+                    float(data.get("tasa_impuesto_adicional", 0)),
+                )
             )
-        )
+        except _sqlite3.IntegrityError as ie:
+            exist = conn.execute(
+                "SELECT id, nombre FROM productos WHERE codigo_barras=? OR (activo=1 AND nombre=?)",
+                (data.get("codigo_barras"), nombre)
+            ).fetchone()
+            if exist:
+                return jsonify({"error": "duplicado", "existente": dict(exist)}), 409
+            return jsonify({"error": str(ie)}), 409
         pid = cur.lastrowid
         cat_row = conn.execute(
             "SELECT COALESCE(c.nombre,'') as cn FROM productos p LEFT JOIN categorias c ON p.categoria_id=c.id WHERE p.id=?",
