@@ -53,6 +53,35 @@ h2{font-size:22px;font-weight:700;margin-bottom:20px;}
 .cat-filtro-btn:hover{border-color:var(--accent);color:var(--text);}
 .cat-filtro-btn.active{background:rgba(99,102,241,0.2);border-color:var(--accent);color:var(--accent2);font-weight:600;}
 .cat-depto-sep{display:inline-flex;align-items:center;padding:0 4px;font-size:10px;color:var(--text-dim);white-space:nowrap;opacity:0.55;pointer-events:none;align-self:center;}
+/* ── Flujo nuevo producto con IA ── */
+.flujo-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:2000;overflow-y:auto;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(99,102,241,0.1) 0%,transparent 70%);}
+.flujo-inner{max-width:480px;margin:0 auto;padding:20px 20px 60px;}
+.flujo-progress{display:flex;align-items:flex-start;gap:0;margin-bottom:28px;padding-top:8px;}
+.flujo-step{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:52px;}
+.flujo-step span{font-size:10px;color:var(--text-dim);white-space:nowrap;}
+.flujo-step.active span{color:var(--accent2);}
+.flujo-step.done span{color:var(--success);}
+.flujo-dot{width:28px;height:28px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-dim);}
+.flujo-step.active .flujo-dot{background:rgba(99,102,241,.25);border-color:var(--accent2);color:var(--accent2);}
+.flujo-step.done .flujo-dot{background:rgba(34,197,94,.2);border-color:var(--success);color:var(--success);}
+.flujo-line{flex:1;height:2px;background:var(--border);margin-top:13px;}
+.flujo-line.done{background:var(--success);}
+.flujo-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+.flujo-input{width:100%;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:10px;color:var(--text);font-size:14px;outline:none;box-sizing:border-box;}
+.flujo-input:focus{border-color:var(--accent);}
+.flujo-input.ia-filled{border-color:#22c55e;}
+.flujo-label{font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;}
+.flujo-field{margin-bottom:14px;}
+.ia-badge{display:inline-block;font-size:10px;color:#22c55e;margin-left:4px;vertical-align:middle;}
+.foto-preview-grid{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.foto-thumb{width:88px;height:88px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.15);}
+.foto-thumb.principal{border-color:#22c55e;}
+.drop-zone{background:var(--surface);border:2px dashed var(--border);border-radius:12px;padding:32px 20px;
+  text-align:center;color:var(--text-dim);}
+@keyframes pulse-dot{0%,100%{opacity:.25}50%{opacity:1}}
 /* Table */
 .table-card{background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius);overflow:hidden;}
@@ -150,7 +179,8 @@ select option{background:#13131a;}
         <button class="btn" onclick="abrirEscanerInv()" title="Escanear código de barras">📷</button>
       </div>
       <button class="btn" onclick="filtrarProds(true)">⚠️ Stock bajo</button>
-      <button class="btn primary" onclick="abrirModalProd()">+ Nuevo producto</button>
+      <button class="btn" onclick="abrirModalProd()">+ Manual</button>
+      <button class="btn primary" onclick="iniciarFlujoIA()">✨ Nuevo con IA</button>
     </div>
     <!-- Filtro por categoría -->
     <div class="cat-filtros" id="catFiltros">
@@ -297,7 +327,7 @@ select option{background:#13131a;}
     <label>Código de barras</label>
     <div style="display:flex;gap:8px">
       <input id="prodBarras" type="text" placeholder="Código de barras (opcional)" inputmode="numeric" style="flex:1">
-      <button type="button" class="btn" style="padding:9px 14px;font-size:16px;flex-shrink:0" onclick="escanearProductoConIA()" title="Escanear con cámara + IA">📷</button>
+      <button type="button" class="btn" style="padding:9px 14px;font-size:16px;flex-shrink:0" onclick="_escanearBarraModal()" title="Escanear código de barras">📷</button>
     </div>
   </div>
   <div class="form-group"><label>Departamento</label>
@@ -419,6 +449,18 @@ select option{background:#13131a;}
 
 <!-- Toast -->
 <div id="toast"></div>
+
+<!-- ── Flujo Nuevo Producto con IA (4 pasos) ── -->
+<div class="flujo-overlay" id="flujoNuevoProd">
+  <div class="flujo-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div class="logo">ZERO<span style="color:var(--accent)">POS</span></div>
+      <button onclick="cerrarFlujoIA()" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:4px 8px">✕</button>
+    </div>
+    <div id="flujoProgreso"></div>
+    <div id="flujoPaso"></div>
+  </div>
+</div>
 
 <!-- Modal revisión factura -->
 <div class="modal-overlay" id="modalFactura">
@@ -1078,150 +1120,342 @@ async function detectarConZXing(file) {
   }
 }
 
-async function escanearProductoConIA() {
-  showToast('📷 Paso 1: Apunta al código de barras', 'ok');
+// ─── Flujo 4 pasos: Nuevo producto con IA ─────────────────────────────────────
 
-  const codigo = await new Promise(resolve => {
-    const esMobil = /iPhone|iPad|Android/i.test(navigator.userAgent);
-    if (esMobil) {
-      abrirEscanerVideo(c => resolve(c));
-    } else {
-      abrirEscanerArchivo(c => resolve(c));
-    }
+let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{} };
+
+function iniciarFlujoIA() {
+  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{} };
+  document.getElementById('flujoNuevoProd').style.display = 'block';
+  renderPasoActual();
+}
+function cerrarFlujoIA() { document.getElementById('flujoNuevoProd').style.display = 'none'; }
+
+function avanzarPaso(n) {
+  // Guardar form al salir del paso 3
+  if (estadoNuevoProd.paso === 3 && n !== 3) {
+    const nombre = document.getElementById('iaNombre')?.value.trim() || '';
+    const precio = parseInt(document.getElementById('iaPrecio')?.value) || 0;
+    if (!nombre) { showToast('El nombre es requerido', 'error'); document.getElementById('iaNombre')?.focus(); return; }
+    if (!precio) { showToast('El precio de venta es requerido', 'error'); document.getElementById('iaPrecio')?.focus(); return; }
+    estadoNuevoProd._form = {
+      nombre,
+      precio,
+      costo:  parseInt(document.getElementById('iaCosto')?.value) || 0,
+      stock:  parseInt(document.getElementById('iaStock')?.value) || 0,
+      catId:  document.getElementById('iaCatId')?.value || '',
+    };
+  }
+  estadoNuevoProd.paso = n;
+  renderPasoActual();
+}
+
+function renderPasoActual() {
+  const PASOS = [{n:1,l:'Foto'},{n:2,l:'IA'},{n:3,l:'Datos'},{n:4,l:'Código'}];
+  const p = estadoNuevoProd.paso;
+  document.getElementById('flujoProgreso').innerHTML = `
+    <div class="flujo-progress">
+      ${PASOS.map((s,i) => `
+        <div class="flujo-step ${s.n===p?'active':s.n<p?'done':''}">
+          <div class="flujo-dot">${s.n<p?'✓':s.n}</div>
+          <span>${s.l}</span>
+        </div>
+        ${i<3?`<div class="flujo-line ${s.n<p?'done':''}"></div>`:''}
+      `).join('')}
+    </div>`;
+  const c = document.getElementById('flujoPaso');
+  c.innerHTML = '';
+  if (p===1) _rpFoto(c);
+  else if (p===2) _rpAnalizando(c);
+  else if (p===3) _rpFormulario(c);
+  else if (p===4) _rpCodigo(c);
+}
+
+function _rpFoto(c) {
+  const n = estadoNuevoProd.fotos.length;
+  const previewsHtml = n ? estadoNuevoProd.fotos.map((f,i) => {
+    const url = URL.createObjectURL(f);
+    return `<div style="position:relative">
+      <img src="${url}" class="foto-thumb ${i===0?'principal':''}">
+      ${i===0?'<span style="position:absolute;bottom:3px;left:3px;background:#22c55e;color:#000;font-size:9px;padding:1px 5px;border-radius:4px">portada</span>':''}
+      <button onclick="_eliminarFoto(${i})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);border:none;color:white;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;padding:0">✕</button>
+    </div>`;
+  }).join('') : '';
+
+  c.innerHTML = `
+    <h2 style="font-size:20px;margin-bottom:8px">📷 Fotografía el producto</h2>
+    <p style="color:var(--text-dim);font-size:14px;margin-bottom:16px">
+      Toma 1-3 fotos para que la IA pueda leer sus datos.
+    </p>
+    ${n ? `<div class="foto-preview-grid">${previewsHtml}</div>` : `
+      <div class="drop-zone" style="margin-bottom:16px">
+        <div style="font-size:48px;margin-bottom:10px">📷</div>
+        <p style="font-size:13px">Recomendado:<br>
+        ✅ Foto frontal con etiqueta<br>
+        ✅ Buena iluminación<br>
+        ✅ Código de barras visible</p>
+      </div>`}
+    ${n < 3 ? `<button class="btn primary" style="width:100%;padding:14px;font-size:15px;margin-bottom:10px" onclick="_tomarFoto()">
+      📷 ${n===0?'Tomar foto 1':'+ Agregar otra foto'}
+    </button>` : ''}
+    ${n > 0 ? `<button class="btn" style="width:100%;padding:14px;font-size:15px;font-weight:700;margin-bottom:10px;background:#22c55e;border-color:#22c55e;color:#000" onclick="avanzarPaso(2)">
+      ✓ Listo, analizar con IA
+    </button>` : ''}
+    <button style="width:100%;padding:10px;background:none;border:none;color:var(--text-dim);font-size:13px;cursor:pointer" onclick="avanzarPaso(3)">
+      Saltar → ingresar manual
+    </button>`;
+}
+
+function _eliminarFoto(i) { estadoNuevoProd.fotos.splice(i,1); renderPasoActual(); }
+
+function _tomarFoto() {
+  const input = document.createElement('input');
+  input.type='file'; input.accept='image/*'; input.style.display='none';
+  if (/iPhone|iPad|Android/i.test(navigator.userAgent)) input.capture='environment';
+  document.body.appendChild(input);
+  input.addEventListener('change', e => {
+    document.body.removeChild(input);
+    const f = e.target.files?.[0];
+    if (f) { estadoNuevoProd.fotos.push(f); renderPasoActual(); }
   });
+  input.click();
+}
 
-  if (!codigo) return;
-  showToast('✅ Código: ' + codigo, 'ok');
+function _rpAnalizando(c) {
+  const url = estadoNuevoProd.fotos.length ? URL.createObjectURL(estadoNuevoProd.fotos[0]) : '';
+  c.innerHTML = `
+    <div style="text-align:center;padding:32px 16px">
+      <h2 style="font-size:20px;margin-bottom:20px">🤖 Analizando el producto...</h2>
+      ${url?`<img src="${url}" style="width:180px;height:180px;object-fit:cover;border-radius:12px;margin-bottom:20px;border:2px solid var(--border)">`:'' }
+      <p style="color:var(--text-dim);font-size:14px;margin-bottom:20px" id="flujoEstadoIA">⏳ Leyendo etiqueta...</p>
+      <div style="display:flex;gap:8px;justify-content:center">
+        ${[0,1,2].map(i=>`<div style="width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse-dot 1s ${i*.33}s infinite alternate"></div>`).join('')}
+      </div>
+    </div>`;
+  _ejecutarAnalisisIA();
+}
 
+async function _ejecutarAnalisisIA() {
   try {
-    const resp = await fetch('/api/productos/barras/' + encodeURIComponent(codigo), { credentials: 'include' });
+    const fd = new FormData();
+    estadoNuevoProd.fotos.forEach(f => fd.append('imagenes', f));
+    fd.append('categorias', categorias.map(c=>c.nombre).join(', '));
+    const resp = await fetch('/api/inventario/leer-producto-ia', {method:'POST',credentials:'include',body:fd});
+    const data = await resp.json();
+    if (data.ok && data.producto) {
+      estadoNuevoProd.datosIA = data.producto;
+      estadoNuevoProd.imagenUrl = data.producto.imagen_url || null;
+    }
+  } catch(e) {}
+  avanzarPaso(3);
+}
+
+function _rpFormulario(c) {
+  const d = estadoNuevoProd.datosIA;
+  const f = estadoNuevoProd._form;
+  const ia = v => !!(d[v]);
+  const val = (key, fallback='') => f[key] !== undefined ? f[key] : (d[key]||fallback);
+
+  // Categoría sugerida por IA
+  let catSugeridaId = '';
+  if (d.categoria_sugerida) {
+    const match = categorias.find(c => c.nombre === d.categoria_sugerida);
+    if (match) catSugeridaId = match.id;
+  }
+  const depAct = f.depto || d.departamento || '';
+  const DEPTOS = ['Alimentación','Bebidas con Alcohol','Belleza y Cuidado Personal','Limpieza del Hogar','Mundo Bebé','Mascotas','Manualidades y Hogar','Juguetes y Entretencion','Ferretería Básica','Tabaco','Otros'];
+  const catsFilt = depAct ? categorias.filter(c=>c.departamento===depAct) : categorias;
+
+  c.innerHTML = `
+    <h2 style="font-size:20px;margin-bottom:4px">✨ Revisar y completar</h2>
+    <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">${d.nombre?'IA detectó estos datos. Revisa y ajusta.':'Ingresa los datos del producto.'}</p>
+
+    ${estadoNuevoProd.imagenUrl ? `
+      <div style="text-align:center;margin-bottom:16px">
+        <img src="${escH(estadoNuevoProd.imagenUrl)}" style="width:100px;height:100px;object-fit:cover;border-radius:10px;border:2px solid #22c55e" onerror="this.parentElement.style.display='none'">
+        <p style="color:#86efac;font-size:11px;margin:4px 0">📷 Foto guardada</p>
+      </div>` : ''}
+
+    ${d.categoria_nueva ? `
+      <div id="npCatNuevaBanner" style="background:#1a1040;border:1px solid #6366f1;border-radius:8px;padding:10px;margin-bottom:14px;font-size:12px;color:#a5b4fc">
+        ✨ Categoría nueva sugerida: <strong>${escH(d.categoria_nueva)}</strong>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button onclick="crearCatNueva('${escH(d.categoria_nueva)}','${escH(d.departamento||'Alimentación')}')" style="flex:1;padding:6px;background:#6366f1;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px">Crear categoría</button>
+          <button onclick="document.getElementById('npCatNuevaBanner').style.display='none'" style="flex:1;padding:6px;background:#374151;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px">Omitir</button>
+        </div>
+      </div>` : ''}
+
+    <div class="flujo-field">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <label class="flujo-label" style="margin:0">Nombre *</label>
+        ${ia('nombre')?'<span class="ia-badge">✅ IA</span>':''}
+      </div>
+      <input id="iaNombre" class="flujo-input ${ia('nombre')?'ia-filled':''}" value="${escH(val('nombre'))}" placeholder="Nombre del producto" style="font-size:15px">
+    </div>
+
+    <div class="flujo-field">
+      <label class="flujo-label">Precio de venta * <span style="font-size:11px;color:var(--text-dim)">(único campo manual)</span></label>
+      <input id="iaPrecio" type="number" class="flujo-input" value="${f.precio||''}" placeholder="Ej: 1890" inputmode="numeric" style="font-size:18px;font-weight:700">
+    </div>
+
+    <details style="margin-bottom:16px">
+      <summary style="color:var(--accent2);cursor:pointer;font-size:13px;padding:8px 0">▼ Más datos (opcional)</summary>
+      <div style="display:flex;flex-direction:column;gap:12px;padding-top:12px">
+        <div class="flujo-field" style="margin:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <label class="flujo-label" style="margin:0">Marca</label>
+            ${ia('marca')?'<span class="ia-badge">✅ IA</span>':''}
+          </div>
+          <input id="iaMarca" class="flujo-input ${ia('marca')?'ia-filled':''}" value="${escH(val('marca'))}" placeholder="Marca">
+        </div>
+        <div class="flujo-field" style="margin:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <label class="flujo-label" style="margin:0">Departamento</label>
+            ${ia('departamento')?'<span class="ia-badge">✅ IA</span>':''}
+          </div>
+          <select id="iaDepto" class="flujo-input ${ia('departamento')?'ia-filled':''}" onchange="_actualizarCatsFormIA()">
+            <option value="">Seleccionar...</option>
+            ${DEPTOS.map(dep=>`<option value="${escH(dep)}" ${dep===depAct?'selected':''}>${escH(dep)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="flujo-field" style="margin:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <label class="flujo-label" style="margin:0">Categoría</label>
+            ${catSugeridaId?'<span class="ia-badge">✅ IA</span>':''}
+          </div>
+          <select id="iaCatId" class="flujo-input ${catSugeridaId?'ia-filled':''}">
+            <option value="">Sin categoría</option>
+            ${catsFilt.map(cat=>`<option value="${cat.id}" ${cat.id==catSugeridaId?'selected':''}>${escH(cat.nombre)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="flujo-field" style="margin:0">
+          <label class="flujo-label">Precio de costo (opcional)</label>
+          <input id="iaCosto" type="number" class="flujo-input" value="${f.costo||''}" placeholder="Precio pagado al proveedor" inputmode="numeric">
+        </div>
+        <div class="flujo-field" style="margin:0">
+          <label class="flujo-label">Stock inicial</label>
+          <input id="iaStock" type="number" class="flujo-input" value="${f.stock!==undefined?f.stock:0}" inputmode="numeric">
+        </div>
+      </div>
+    </details>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${estadoNuevoProd.fotos.length ? `<button class="btn" style="padding:11px" onclick="avanzarPaso(1)">← Volver a la foto</button>` : ''}
+      <button class="btn primary" style="padding:14px;font-size:15px;font-weight:700" onclick="avanzarPaso(4)">Continuar → Código de barras</button>
+    </div>`;
+
+  setTimeout(() => { (!d.nombre ? document.getElementById('iaNombre') : document.getElementById('iaPrecio'))?.focus(); }, 80);
+}
+
+function _actualizarCatsFormIA() {
+  const depto = document.getElementById('iaDepto')?.value;
+  estadoNuevoProd._form.depto = depto;
+  const sel = document.getElementById('iaCatId');
+  if (!sel) return;
+  const cf = depto ? categorias.filter(c=>c.departamento===depto) : categorias;
+  sel.innerHTML = '<option value="">Sin categoría</option>' + cf.map(c=>`<option value="${c.id}">${escH(c.nombre)}</option>`).join('');
+}
+
+function _rpCodigo(c) {
+  const cod = estadoNuevoProd.codigoBarras;
+  c.innerHTML = `
+    <h2 style="font-size:20px;margin-bottom:8px">🔢 Código de barras</h2>
+    <p style="color:var(--text-dim);font-size:14px;margin-bottom:20px">Si el producto tiene código, escanéalo ahora.</p>
+
+    ${cod ? `<div style="background:#0f2d1a;border:1px solid #22c55e;border-radius:8px;padding:12px;margin-bottom:16px;font-size:14px;color:#86efac;text-align:center">
+      ✅ Código: <strong>${escH(cod)}</strong>
+      <button onclick="estadoNuevoProd.codigoBarras=null;renderPasoActual()" style="margin-left:8px;background:none;border:none;color:#86efac;cursor:pointer;font-size:13px">✕</button>
+    </div>` : ''}
+
+    <div id="codigoManualWrap" style="display:none;margin-bottom:12px">
+      <input id="codigoManualInput" type="text" placeholder="Ingresa el código" inputmode="numeric"
+        class="flujo-input" style="margin-bottom:8px;font-size:16px">
+      <button class="btn" style="width:100%;padding:10px" onclick="_confirmarCodigoManual()">Confirmar</button>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn" style="padding:14px;font-size:15px" onclick="_escanearCodigoFlujo()">📷 Escanear código</button>
+      <button class="btn" style="padding:11px;font-size:14px" onclick="document.getElementById('codigoManualWrap').style.display='';document.getElementById('codigoManualInput').focus()">✏️ Ingresar manual</button>
+      <button class="btn primary" style="padding:14px;font-size:15px;font-weight:700" onclick="_guardarProductoFlujoIA()">💾 Guardar producto</button>
+      ${!cod?'<p style="text-align:center;font-size:12px;color:var(--text-dim)">Sin código se generará uno interno automático</p>':''}
+    </div>
+    <button style="width:100%;padding:10px;margin-top:8px;background:none;border:none;color:var(--text-dim);font-size:13px;cursor:pointer" onclick="estadoNuevoProd.paso=3;renderPasoActual()">← Volver al formulario</button>`;
+}
+
+async function _escanearCodigoFlujo() {
+  const esMobil = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  const codigo = await new Promise(resolve => {
+    if (esMobil) abrirEscanerVideo(c => resolve(c));
+    else abrirEscanerArchivo(c => resolve(c));
+  });
+  if (!codigo) return;
+  try {
+    const resp = await fetch('/api/productos/barras/' + encodeURIComponent(codigo), {credentials:'include'});
     if (resp.ok) {
       const prod = await resp.json();
       if (prod?.id) {
-        showToast('⚠️ Ya existe: ' + prod.nombre, 'error');
-        editarProd(prod.id);
-        return;
+        if (!confirm(`⚠️ Ya existe: "${prod.nombre}"\n¿Es el mismo producto?`)) return;
       }
     }
   } catch(e) {}
+  estadoNuevoProd.codigoBarras = codigo;
+  renderPasoActual();
+}
 
-  _mostrarToastPersistente('📷 Paso 2: Fotografía el frente del producto');
+function _confirmarCodigoManual() {
+  const val = document.getElementById('codigoManualInput')?.value.trim();
+  if (val) { estadoNuevoProd.codigoBarras = val; renderPasoActual(); }
+}
 
-  const fotoProducto = await new Promise(resolve => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    if (/iPhone|iPad|Android/i.test(navigator.userAgent)) input.capture = 'environment';
-    input.style.display = 'none';
-    document.body.appendChild(input);
-    input.addEventListener('change', e => {
-      document.body.removeChild(input);
-      resolve(e.target.files?.[0] || null);
-    });
-    input.click();
-  });
+async function _guardarProductoFlujoIA() {
+  const fd = estadoNuevoProd._form;
+  const nombre = fd.nombre || estadoNuevoProd.datosIA.nombre || '';
+  const precio = fd.precio || 0;
+  if (!nombre) { showToast('El nombre es requerido', 'error'); avanzarPaso(3); return; }
+  if (!precio) { showToast('El precio es requerido', 'error'); avanzarPaso(3); return; }
 
-  if (!fotoProducto) {
-    abrirModalNuevoProducto(codigo);
-    return;
-  }
-
-  showToast('🤖 IA analizando el producto...', 'ok');
+  const data = {
+    nombre, precio,
+    precio_costo: fd.costo || 0,
+    stock: fd.stock || 0,
+    codigo_barras: estadoNuevoProd.codigoBarras || null,
+    ...(fd.catId ? { categoria_id: parseInt(fd.catId) } : {}),
+    ...(estadoNuevoProd.imagenUrl ? { imagen_url: estadoNuevoProd.imagenUrl } : {}),
+  };
 
   try {
-    const fd = new FormData();
-    fd.append('imagen', fotoProducto);
-    fd.append('codigo_barras', codigo);
-    const resp = await fetch('/api/inventario/leer-producto-ia', { method: 'POST', credentials: 'include', body: fd });
-    const data = await resp.json();
-    abrirModalNuevoProducto(codigo, data.ok ? (data.producto || {}) : {});
-  } catch(e) {
-    abrirModalNuevoProducto(codigo);
-  }
+    const r = await fetch('/api/productos', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(data),
+    });
+    if (r.ok) {
+      cerrarFlujoIA();
+      showToast(`✅ ${nombre} guardado en el catálogo`, 'ok');
+      cargarProductos();
+    } else if (r.status === 409) {
+      const e = await r.json();
+      if (confirm(`Ya existe: "${e.existente.nombre}"\n¿Actualizar sus datos?`)) {
+        const rPut = await fetch(`/api/productos/${e.existente.id}`, {
+          method:'PUT', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(data),
+        });
+        if (rPut.ok) { cerrarFlujoIA(); showToast('✅ Producto actualizado', 'ok'); cargarProductos(); }
+      }
+    } else {
+      const e = await r.json();
+      showToast('Error: ' + (e.error || 'No se pudo guardar'), 'error');
+    }
+  } catch(e) { showToast('Error al guardar', 'error'); }
 }
 
-function _mostrarToastPersistente(msg) {
-  const t = document.getElementById('toast');
-  if (!t) return;
-  t.textContent = msg;
-  t.className = 'show';
-  clearTimeout(_mostrarToastPersistente._t);
-  _mostrarToastPersistente._t = setTimeout(() => { t.className = ''; }, 15000);
-}
-
-function abrirModalNuevoProducto(codigo, datos = {}) {
-  document.getElementById('modalNuevoProd')?.remove();
-  const modal = document.createElement('div');
-  modal.id = 'modalNuevoProd';
-  modal.dataset.codigo = codigo;
-  modal.dataset.imagenUrl = datos.imagen_url || '';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;overflow-y:auto;padding:20px;';
-
-  // FIX 5: preview foto
-  const fotoHtml = datos.imagen_url ? `
-    <div style="text-align:center;margin-bottom:14px">
-      <img src="${escH(datos.imagen_url)}" onerror="this.parentElement.style.display='none'"
-        style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:2px solid #22c55e">
-      <p style="color:#86efac;font-size:12px;margin:4px 0">✅ Foto guardada para el catálogo</p>
-    </div>` : '';
-
-  // FIX 4 & 6: sugerencia IA de dept/cat + categoria_nueva
-  const iaInfo = datos.nombre ? `
-    <div style="background:#0f2d1a;border:1px solid #22c55e;border-radius:8px;padding:10px;margin-bottom:14px;font-size:12px;color:#86efac">
-      ✨ IA detectó: ${escH(datos.nombre)}${datos.marca ? ' · ' + escH(datos.marca) : ''}${datos.contenido ? ' · ' + escH(datos.contenido) : ''}
-      ${datos.departamento ? `<br>📂 ${escH(datos.departamento)}${datos.categoria_sugerida ? ' → ' + escH(datos.categoria_sugerida) : ''}` : ''}
-      <br><span style="opacity:.7">Revisa que sea correcto antes de guardar.</span>
-    </div>` : '';
-
-  const catNuevaBanner = datos.categoria_nueva ? `
-    <div id="npCatNuevaBanner" style="background:#1a1040;border:1px solid #6366f1;border-radius:8px;padding:10px;margin-bottom:12px;font-size:12px;color:#a5b4fc">
-      ✨ Categoría nueva sugerida por IA<br>
-      <strong style="font-size:13px">${datos.departamento ? escH(datos.departamento) + ' → ' : ''}${escH(datos.categoria_nueva)}</strong><br>
-      <div style="display:flex;gap:6px;margin-top:8px">
-        <button onclick="crearCatNueva('${escH(datos.categoria_nueva)}','${escH(datos.departamento||'Alimentación')}')"
-          style="flex:1;padding:6px;background:#6366f1;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px">Crear esta categoría</button>
-        <button onclick="document.getElementById('npCatNuevaBanner').style.display='none'"
-          style="flex:1;padding:6px;background:#374151;color:white;border:none;border-radius:6px;cursor:pointer;font-size:12px">Usar Otros</button>
-      </div>
-    </div>` : '';
-
-  modal.innerHTML = `
-    <div style="background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:24px;width:100%;max-width:380px">
-      <h3 style="color:white;margin:0 0 4px;font-size:18px">📦 Nuevo producto</h3>
-      <p style="color:#6366f1;font-size:13px;margin:0 0 12px">${escH(codigo)}${datos.nombre ? ' · Leído por IA ✨' : ''}</p>
-      ${fotoHtml}
-      ${catNuevaBanner}
-      ${iaInfo}
-      <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px">Nombre *</label>
-      <input id="npNombre" value="${escH(datos.nombre||'')}" placeholder="Nombre del producto"
-        style="width:100%;padding:10px;background:#374151;border:1px solid ${datos.nombre?'#22c55e':'#4b5563'};border-radius:8px;color:white;font-size:15px;margin-bottom:12px;box-sizing:border-box;outline:none">
-      <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px">Precio de venta *</label>
-      <input id="npPrecio" type="number" value="${datos.precio||''}" placeholder="Ej: 1890" inputmode="numeric"
-        style="width:100%;padding:10px;background:#374151;border:1px solid #4b5563;border-radius:8px;color:white;font-size:18px;font-weight:bold;margin-bottom:12px;box-sizing:border-box;outline:none">
-      <details style="margin-bottom:16px">
-        <summary style="color:#6366f1;cursor:pointer;font-size:13px">+ Más datos (opcional)</summary>
-        <div style="padding-top:12px;display:flex;flex-direction:column;gap:8px">
-          <input id="npMarca" value="${escH(datos.marca||'')}" placeholder="Marca"
-            style="width:100%;padding:8px;background:#374151;border:1px solid #4b5563;border-radius:8px;color:white;font-size:14px;box-sizing:border-box;outline:none">
-          <input id="npCosto" type="number" placeholder="Precio de costo"
-            style="width:100%;padding:8px;background:#374151;border:1px solid #4b5563;border-radius:8px;color:white;font-size:14px;box-sizing:border-box;outline:none">
-          <input id="npStock" type="number" value="0" placeholder="Stock inicial"
-            style="width:100%;padding:8px;background:#374151;border:1px solid #4b5563;border-radius:8px;color:white;font-size:14px;box-sizing:border-box;outline:none">
-        </div>
-      </details>
-      <div style="display:flex;gap:8px">
-        <button onclick="document.getElementById('modalNuevoProd').remove()"
-          style="flex:1;padding:12px;background:#374151;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px">Cancelar</button>
-        <button onclick="guardarProductoNuevo()"
-          style="flex:2;padding:12px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:15px">✅ Guardar</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-  setTimeout(() => {
-    if (!datos.nombre) document.getElementById('npNombre')?.focus();
-    else document.getElementById('npPrecio')?.focus();
-  }, 80);
+// Escanear barcode en el modal manual (sin IA)
+function _escanearBarraModal() {
+  const esMobil = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  const cb = c => { if (c) document.getElementById('prodBarras').value = c; };
+  if (esMobil) abrirEscanerVideo(cb);
+  else abrirEscanerArchivo(cb);
 }
 
 async function guardarProductoNuevo() {
