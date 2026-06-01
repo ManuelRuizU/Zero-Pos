@@ -7,6 +7,7 @@ import urllib.error
 from pathlib import Path
 from flask import Blueprint, request, jsonify, session
 from database import db_session
+from scripts.clasificar_productos import clasificar_producto, obtener_o_crear_categoria
 
 BASE_DIR = Path(__file__).parent.parent
 PRODUCTOS_BASE_FILE = BASE_DIR / "data" / "productos_base.json"
@@ -393,17 +394,22 @@ def crear():
                 return jsonify({"error": "duplicado", "existente": dict(row)}), 409
 
         if not categoria_id:
-            sin_cat = conn.execute(
-                "SELECT id FROM categorias WHERE nombre='Sin categoría'"
-            ).fetchone()
-            if sin_cat:
-                categoria_id = sin_cat["id"]
+            cat_kw, depto_kw = clasificar_producto(nombre)
+            if cat_kw != 'Sin categoría':
+                categoria_id = obtener_o_crear_categoria(conn, cat_kw, depto_kw)
+                # clasificado automáticamente → no requiere revisión manual
             else:
-                _sc = conn.execute(
-                    "INSERT INTO categorias (nombre, departamento, icono) VALUES ('Sin categoría','Otros','📦')"
-                )
-                categoria_id = _sc.lastrowid
-            pendiente_verificar = 1
+                sin_cat = conn.execute(
+                    "SELECT id FROM categorias WHERE nombre='Sin categoría'"
+                ).fetchone()
+                if sin_cat:
+                    categoria_id = sin_cat["id"]
+                else:
+                    _sc = conn.execute(
+                        "INSERT INTO categorias (nombre, departamento, icono) VALUES ('Sin categoría','Otros','📦')"
+                    )
+                    categoria_id = _sc.lastrowid
+                pendiente_verificar = 1
 
         cur = conn.execute(
             """INSERT INTO productos

@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 from flask import Blueprint, jsonify, request, session
 from database import db_session
+from scripts.clasificar_productos import clasificar_producto, obtener_o_crear_categoria
 
 onboarding_bp = Blueprint("onboarding", __name__, url_prefix="/api/onboarding")
 logger = logging.getLogger("zero_pos.onboarding")
@@ -63,19 +64,16 @@ def _cargar_productos_flat(conn, uid: int) -> int:
 
     for p in productos:
         try:
-            cat_nombre = p.get("categoria", "General")
+            nombre_prod = p.get("nombre", "").strip()
+            # Clasificar por palabras clave; fallback al campo "categoria" del JSON
+            cat_kw, depto_kw = clasificar_producto(nombre_prod)
+            if cat_kw != 'Sin categoría':
+                cat_nombre, depto = cat_kw, depto_kw
+            else:
+                cat_nombre = p.get("categoria", "General")
+                depto = 'Alimentación'
             if cat_nombre not in cat_cache:
-                row = conn.execute(
-                    "SELECT id FROM categorias WHERE nombre=?", (cat_nombre,)
-                ).fetchone()
-                if row:
-                    cat_cache[cat_nombre] = row["id"]
-                else:
-                    cur = conn.execute(
-                        "INSERT INTO categorias (nombre, icono, color) VALUES (?,?,?)",
-                        (cat_nombre, "📦", "#6366f1")
-                    )
-                    cat_cache[cat_nombre] = cur.lastrowid
+                cat_cache[cat_nombre] = obtener_o_crear_categoria(conn, cat_nombre, depto)
             cat_id = cat_cache[cat_nombre]
 
             codigo = p.get("codigo_barras", "").strip()
@@ -160,6 +158,11 @@ def _cargar_productos_estructurado(tipo_base: str, conn, uid: int) -> int:
     for prod_def in cfg.get("productos", []):
         cat_nombre  = prod_def.get("categoria", "")
         cat_id      = cat_ids.get(cat_nombre)
+        # Si no hay cat_id del JSON, intentar clasificar por palabras clave
+        if not cat_id:
+            cat_kw, depto_kw = clasificar_producto(prod_def.get("nombre", ""))
+            if cat_kw != 'Sin categoría':
+                cat_id = obtener_o_crear_categoria(conn, cat_kw, depto_kw)
         subcat_nombre = prod_def.get("subcategoria", "")
         subcat_id   = subcat_ids.get((cat_id, subcat_nombre)) if subcat_nombre and cat_id else None
         variantes   = prod_def.get("variantes", [])
