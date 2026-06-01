@@ -8,6 +8,7 @@ from pathlib import Path
 from flask import Blueprint, request, jsonify, session
 from database import db_session
 from scripts.clasificar_productos import clasificar_producto, obtener_o_crear_categoria
+from utils.normalizar import normalizar_nombre
 
 BASE_DIR = Path(__file__).parent.parent
 PRODUCTOS_BASE_FILE = BASE_DIR / "data" / "productos_base.json"
@@ -362,7 +363,7 @@ def crear():
         return jsonify({"error": "No autenticado"}), 401
 
     data = request.get_json(silent=True) or {}
-    nombre = str(data.get("nombre", "")).strip()
+    nombre = normalizar_nombre(str(data.get("nombre", "")).strip())
     if not nombre:
         return jsonify({"error": "Nombre requerido"}), 400
 
@@ -494,6 +495,9 @@ def actualizar(pid):
 
     if not campos:
         return jsonify({"error": "Sin campos para actualizar"}), 400
+
+    if "nombre" in campos:
+        campos["nombre"] = normalizar_nombre(str(campos["nombre"]).strip())
 
     set_clause = ", ".join(f"{k}=?" for k in campos)
     valores = list(campos.values()) + [pid]
