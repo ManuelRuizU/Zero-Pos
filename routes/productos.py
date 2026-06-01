@@ -362,8 +362,40 @@ def crear():
 
     activo = int(bool(data.get("activo", 1)))
     pendiente_verificar = int(bool(data.get("pendiente_verificar", 0)))
+    categoria_id = data.get("categoria_id")
 
     with db_session() as conn:
+        # Duplicate barcode → upsert existing product
+        barras = (data.get("codigo_barras") or "").strip() or None
+        if barras:
+            exist_barras = conn.execute(
+                "SELECT id FROM productos WHERE codigo_barras=? AND activo=1", (barras,)
+            ).fetchone()
+            if exist_barras:
+                pid = exist_barras["id"]
+                conn.execute(
+                    "UPDATE productos SET nombre=?, precio=?, precio_costo=?, imagen_url=COALESCE(?,imagen_url) WHERE id=?",
+                    (nombre, float(data.get("precio", 0)), float(data.get("precio_costo", 0)),
+                     data.get("imagen_url"), pid)
+                )
+                sku_row = conn.execute("SELECT sku FROM productos WHERE id=?", (pid,)).fetchone()
+                return jsonify({"ok": True, "actualizado": True, "id": pid, "sku": sku_row["sku"] if sku_row else None})
+
+        # Duplicate name → 409
+        import unicodedata as _udn
+        def _norm(s):
+            return "".join(c.lower() for c in _udn.normalize("NFKD", s) if c.isalnum())
+        exist_nombre = conn.execute(
+            "SELECT id, nombre FROM productos WHERE activo=1"
+        ).fetchall()
+        for row in exist_nombre:
+            if _norm(row["nombre"]) == _norm(nombre):
+                return jsonify({"error": "duplicado", "existente": dict(row)}), 409
+
+        # Sin categoría → pendiente_verificar
+        if not categoria_id:
+            pendiente_verificar = 1
+
         cur = conn.execute(
             """INSERT INTO productos
                (nombre, descripcion, precio, precio_costo, stock, stock_minimo,

@@ -1219,6 +1219,24 @@ async function guardarProductoNuevo() {
       modal?.remove();
       showToast('✅ Producto guardado', 'ok');
       cargarProductos();
+    } else if (r.status === 409) {
+      const e = await r.json();
+      const existente = e.existente;
+      if (confirm(`Ya existe: "${existente.nombre}"\n¿Actualizar sus datos?`)) {
+        const rPut = await fetch(`/api/productos/${existente.id}`, {
+          method: 'PUT', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        if (rPut.ok) {
+          modal?.remove();
+          showToast('✅ Producto actualizado', 'ok');
+          cargarProductos();
+        } else {
+          const ep = await rPut.json();
+          showToast('Error al actualizar: ' + (ep.error || ''), 'error');
+        }
+      }
     } else {
       const e = await r.json();
       showToast('Error: ' + (e.error || 'No se pudo guardar'), 'error');
