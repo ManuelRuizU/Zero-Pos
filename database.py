@@ -446,6 +446,44 @@ def _seed_defaults(conn: sqlite3.Connection):
             (_depto, *_nombres)
         )
 
+    # Fusionar categorías duplicadas — idempotente
+    # (orig_nombre, dest_nombre, dest_departamento, dest_icono)
+    _fusiones = [
+        ('Lácteos',  'Lácteos y Huevos',  'Alimentación',      '🥛'),
+        ('Limpieza', 'Limpieza del Hogar', 'Limpieza del Hogar', '🧹'),
+        ('Despensa', 'Abarrotes',          'Alimentación',      '🛒'),
+    ]
+    for _orig_nom, _dest_nom, _dest_depto, _dest_ico in _fusiones:
+        _orig = conn.execute(
+            "SELECT id FROM categorias WHERE nombre=?", (_orig_nom,)
+        ).fetchone()
+        if not _orig:
+            continue
+        _dest = conn.execute(
+            "SELECT id FROM categorias WHERE nombre=?", (_dest_nom,)
+        ).fetchone()
+        if not _dest:
+            _cur = conn.execute(
+                "INSERT INTO categorias (nombre, departamento, icono) VALUES (?,?,?)",
+                (_dest_nom, _dest_depto, _dest_ico)
+            )
+            _dest_id = _cur.lastrowid
+        else:
+            _dest_id = _dest["id"]
+        conn.execute(
+            "UPDATE productos SET categoria_id=? WHERE categoria_id=?",
+            (_dest_id, _orig["id"])
+        )
+        conn.execute(
+            """UPDATE productos SET subcategoria_id=NULL
+               WHERE subcategoria_id IN (
+                   SELECT id FROM subcategorias WHERE categoria_id=?
+               )""",
+            (_orig["id"],)
+        )
+        conn.execute("DELETE FROM subcategorias WHERE categoria_id=?", (_orig["id"],))
+        conn.execute("DELETE FROM categorias WHERE id=?", (_orig["id"],))
+
 
 def _seed_montos_chilenos(conn: sqlite3.Connection):
     """Pre-carga modismos chilenos para montos de dinero (funcionan desde el día 1)."""
