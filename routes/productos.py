@@ -392,8 +392,17 @@ def crear():
             if _norm(row["nombre"]) == _norm(nombre):
                 return jsonify({"error": "duplicado", "existente": dict(row)}), 409
 
-        # Sin categoría → pendiente_verificar
         if not categoria_id:
+            sin_cat = conn.execute(
+                "SELECT id FROM categorias WHERE nombre='Sin categoría'"
+            ).fetchone()
+            if sin_cat:
+                categoria_id = sin_cat["id"]
+            else:
+                _sc = conn.execute(
+                    "INSERT INTO categorias (nombre, departamento, icono) VALUES ('Sin categoría','Otros','📦')"
+                )
+                categoria_id = _sc.lastrowid
             pendiente_verificar = 1
 
         cur = conn.execute(
@@ -411,7 +420,7 @@ def crear():
                 int(data.get("stock", 0)),
                 int(data.get("stock_minimo", 5)),
                 data.get("codigo_barras"),
-                data.get("categoria_id"),
+                categoria_id,
                 data.get("imagen_url"),
                 activo,
                 int(bool(data.get("es_granel", 0))),

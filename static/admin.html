@@ -249,6 +249,11 @@ input:checked + .slider:before{transform:translateX(20px);}
         <div class="kpi-value" id="kpiPendientes" style="color:var(--warning)">0</div>
         <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Productos del mesón</div>
       </div>
+      <div class="kpi-card" id="kpiSinCatCard" style="display:none;cursor:pointer;" onclick="irAInventarioSinCat()">
+        <div class="kpi-label">⚠️ Sin categoría</div>
+        <div class="kpi-value" id="kpiSinCat" style="color:var(--warning)">0</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Asignar en Inventario</div>
+      </div>
     </div>
 
     <div class="chart-row">
@@ -756,6 +761,8 @@ async function cargarDashboard() {
   if (pendientes.length) {
     document.getElementById('kpiPendientes').textContent = pendientes.length;
     document.getElementById('kpiPendientesCard').style.display = '';
+    document.getElementById('kpiSinCat').textContent = pendientes.length;
+    document.getElementById('kpiSinCatCard').style.display = '';
   }
 
   renderBars('chartHoras', dia.por_hora, r=>r.hora+':00', r=>r.total);
@@ -766,6 +773,10 @@ function irAProductosPendientes() {
   const btn = document.querySelector('.nav-btn[onclick*="productos"]');
   if (btn) btn.click();
   alert('Hay ' + document.getElementById('kpiPendientes').textContent + ' productos creados desde el mesón pendientes de verificar.');
+}
+
+function irAInventarioSinCat() {
+  window.location.href = '/static/inventario.html?filtrar_cat=Sin+categor%C3%ADa';
 }
 
 function renderBars(elId, data, labelFn, valFn) {

@@ -52,6 +52,7 @@ h2{font-size:22px;font-weight:700;margin-bottom:20px;}
   font-size:12px;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .cat-filtro-btn:hover{border-color:var(--accent);color:var(--text);}
 .cat-filtro-btn.active{background:rgba(99,102,241,0.2);border-color:var(--accent);color:var(--accent2);font-weight:600;}
+.cat-depto-sep{display:inline-flex;align-items:center;padding:0 4px;font-size:10px;color:var(--text-dim);white-space:nowrap;opacity:0.55;pointer-events:none;align-self:center;}
 /* Table */
 .table-card{background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius);overflow:hidden;}
@@ -464,6 +465,16 @@ async function init() {
   filtrarCategoriasPorDepto();
   cargarCatFiltros();
   renderCatTab();
+  // Auto-filtrar por categoría si viene ?filtrar_cat= desde admin
+  const paramCat = new URLSearchParams(window.location.search).get('filtrar_cat');
+  if (paramCat) {
+    const cat = categorias.find(c => c.nombre === paramCat);
+    if (cat) {
+      catFiltroId = cat.id;
+      const btn = document.querySelector(`#catFiltros [data-cat-id="${cat.id}"]`);
+      if (btn) { document.querySelectorAll('.cat-filtro-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+    }
+  }
   cargarProductos();
 }
 
@@ -525,12 +536,25 @@ function showTab(name, btn) {
 // ── Filtro por categoría ───────────────────────────────────────────────
 function cargarCatFiltros() {
   const filtros = document.getElementById('catFiltros');
+  const byDepto = {};
   categorias.forEach(c => {
-    const btn = document.createElement('button');
-    btn.className = 'cat-filtro-btn';
-    btn.textContent = c.nombre;
-    btn.onclick = () => filtrarPorCat(c.id, btn);
-    filtros.appendChild(btn);
+    const d = c.departamento || 'Otros';
+    if (!byDepto[d]) byDepto[d] = [];
+    byDepto[d].push(c);
+  });
+  Object.entries(byDepto).forEach(([depto, cats]) => {
+    const sep = document.createElement('span');
+    sep.className = 'cat-depto-sep';
+    sep.textContent = depto;
+    filtros.appendChild(sep);
+    cats.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'cat-filtro-btn';
+      btn.dataset.catId = c.id;
+      btn.textContent = (c.icono ? c.icono + ' ' : '') + c.nombre;
+      btn.onclick = () => filtrarPorCat(c.id, btn);
+      filtros.appendChild(btn);
+    });
   });
 }
 

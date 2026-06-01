@@ -353,6 +353,12 @@ def _seed_defaults(conn: sqlite3.Connection):
 
     _seed_montos_chilenos(conn)
 
+    # Siempre asegurar "Sin categoría" presente
+    conn.execute("""
+        INSERT OR IGNORE INTO categorias (nombre, departamento, icono)
+        VALUES ('Sin categoría', 'Otros', '📦')
+    """)
+
 
 def _seed_montos_chilenos(conn: sqlite3.Connection):
     """Pre-carga modismos chilenos para montos de dinero (funcionan desde el día 1)."""
