@@ -523,6 +523,44 @@ def _leer_etiqueta_ocr(imagen_bytes: bytes) -> dict | None:
         return None
 
 
+def _buscar_off_por_texto(texto: str) -> list | None:
+    """Busca en OFF por nombre cuando no hay código de barras."""
+    try:
+        import urllib.request as _urllib
+        import urllib.parse as _parse
+        import json as _json
+
+        query = _parse.quote(texto.strip())
+        url = (
+            f"https://world.openfoodfacts.org/cgi/search.pl"
+            f"?search_terms={query}&search_simple=1&action=process"
+            f"&json=1&page_size=5"
+            f"&tagtype_0=countries&tag_contains_0=contains&tag_0=chile"
+        )
+        req = _urllib.Request(url, headers={"User-Agent": "ZERO-POS/1.0"})
+        with _urllib.urlopen(req, timeout=3) as resp:
+            data = _json.loads(resp.read())
+
+        productos = []
+        for p in data.get("products", [])[:3]:
+            nombre = (
+                p.get("product_name_es") or p.get("product_name") or ""
+            ).strip()
+            if not nombre:
+                continue
+            productos.append({
+                "nombre": nombre,
+                "marca": (p.get("brands") or "").split(",")[0].strip() or None,
+                "codigo_barras": p.get("code") or None,
+                "contenido": (p.get("quantity") or "").strip() or None,
+            })
+
+        return productos if productos else None
+    except Exception as e:
+        logger.debug(f"OFF texto: {e}")
+        return None
+
+
 @inventario_bp.route("/leer-producto", methods=["POST"])
 def leer_producto():
     """Identifica un producto por código de barras (OFF) o foto (OCR).
@@ -573,7 +611,15 @@ def leer_producto():
 
     fuente = producto.get("fuente", "")
     logger.info(f"leer_producto: OK nombre='{producto.get('nombre')}' fuente={fuente}")
-    return jsonify({"ok": True, "producto": producto, "fuente": fuente})
+
+    # Capa 2.5: si OCR encontró nombre pero sin barcode, sugerir productos similares de OFF
+    sugerencias = None
+    if fuente == "ocr_local" and not codigo_barras and producto.get("nombre"):
+        sugerencias = _buscar_off_por_texto(producto["nombre"])
+        if sugerencias:
+            logger.info(f"leer_producto: {len(sugerencias)} sugerencias OFF por texto")
+
+    return jsonify({"ok": True, "producto": producto, "fuente": fuente, "sugerencias": sugerencias})
 
 
 # Alias para compatibilidad con versiones anteriores del frontend

@@ -1210,10 +1210,10 @@ function _bindNormBlur(id) {
 
 // ─── Flujo 4 pasos: Nuevo producto con IA ─────────────────────────────────────
 
-let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null };
+let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null, _sugerencias:null };
 
 function iniciarFlujoIA() {
-  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null };
+  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null, _sugerencias:null };
   document.getElementById('flujoNuevoProd').style.display = 'block';
   renderPasoActual();
 }
@@ -1348,17 +1348,58 @@ async function _ejecutarAnalisisIA() {
     console.log('[ZERO] IA retornó:', data);
 
     if (data.ok && data.producto) {
-      estadoNuevoProd.datosIA   = data.producto;
-      estadoNuevoProd.imagenUrl = data.producto.imagen_url || null;
-      estadoNuevoProd._fuente   = data.fuente || data.producto.fuente || null;
+      estadoNuevoProd.datosIA     = data.producto;
+      estadoNuevoProd.imagenUrl   = data.producto.imagen_url || null;
+      estadoNuevoProd._fuente     = data.fuente || data.producto.fuente || null;
+      estadoNuevoProd._sugerencias = (data.sugerencias && data.sugerencias.length) ? data.sugerencias : null;
     } else {
       estadoNuevoProd._fuente = null;
+      estadoNuevoProd._sugerencias = null;
       showToast('IA no pudo leer el producto — rellena el formulario', 'error');
     }
   } catch(e) {
     console.error('[ZERO] _ejecutarAnalisisIA excepción:', e);
     showToast('Error de conexión con IA', 'error');
   }
+  // Si hay sugerencias OFF por texto → mostramos picker antes de ir al formulario
+  if (estadoNuevoProd._sugerencias) {
+    const c = document.getElementById('flujoPaso');
+    if (c) _rpSugerencias(c);
+  } else {
+    avanzarPaso(3);
+  }
+}
+
+function _rpSugerencias(c) {
+  const sugs = estadoNuevoProd._sugerencias || [];
+  const url  = estadoNuevoProd.fotos.length ? URL.createObjectURL(estadoNuevoProd.fotos[0]) : '';
+  c.innerHTML = `
+    <div style="padding:4px 0">
+      <h2 style="font-size:18px;margin-bottom:4px">🔍 ¿Es uno de estos?</h2>
+      <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">Open Food Facts encontró productos similares</p>
+      ${sugs.map((s, i) => `
+        <button onclick="_elegirSugerencia(${i})" style="width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px">
+          <span style="font-size:22px;flex-shrink:0">🏷️</span>
+          <span style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(s.nombre)}</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${[s.marca,s.contenido].filter(Boolean).map(escH).join(' · ') || '—'}</div>
+          </span>
+          <span style="font-size:18px;color:var(--accent2);flex-shrink:0">›</span>
+        </button>`).join('')}
+      <button onclick="_elegirSugerencia(null)" style="width:100%;padding:12px;background:none;border:1px dashed var(--border);border-radius:10px;color:var(--text-dim);font-size:13px;cursor:pointer;margin-top:4px">
+        Ninguno de estos → ingresar manual
+      </button>
+    </div>`;
+}
+
+function _elegirSugerencia(idx) {
+  if (idx !== null) {
+    const s = estadoNuevoProd._sugerencias[idx];
+    estadoNuevoProd.datosIA   = { ...estadoNuevoProd.datosIA, ...s };
+    estadoNuevoProd._fuente   = 'open_food_facts';
+    if (s.codigo_barras) estadoNuevoProd.codigoBarras = s.codigo_barras;
+  }
+  estadoNuevoProd._sugerencias = null;
   avanzarPaso(3);
 }
 
@@ -1370,6 +1411,7 @@ window.volverAPaso1 = function volverAPaso1() {
   estadoNuevoProd._form = {};
   estadoNuevoProd._usarFoto = true;
   estadoNuevoProd._fuente = null;
+  estadoNuevoProd._sugerencias = null;
   estadoNuevoProd.paso = 1;
   renderPasoActual();
 };
