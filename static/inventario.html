@@ -1210,10 +1210,10 @@ function _bindNormBlur(id) {
 
 // ─── Flujo 4 pasos: Nuevo producto con IA ─────────────────────────────────────
 
-let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null, _sugerencias:null };
+let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null, _sugerencias:null, _codigoDetectado:null, _imagenUrlOff:null };
 
 function iniciarFlujoIA() {
-  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null, _sugerencias:null };
+  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null, _sugerencias:null, _codigoDetectado:null, _imagenUrlOff:null };
   document.getElementById('flujoNuevoProd').style.display = 'block';
   renderPasoActual();
 }
@@ -1347,14 +1347,24 @@ async function _ejecutarAnalisisIA() {
     const data = await resp.json();
     console.log('[ZERO] IA retornó:', data);
 
+    const teniaCodigo = !!estadoNuevoProd.codigoBarras;
     if (data.ok && data.producto) {
-      estadoNuevoProd.datosIA     = data.producto;
-      estadoNuevoProd.imagenUrl   = data.producto.imagen_url || null;
-      estadoNuevoProd._fuente     = data.fuente || data.producto.fuente || null;
+      estadoNuevoProd.datosIA      = data.producto;
+      estadoNuevoProd.imagenUrl    = data.imagen_url || data.producto.imagen_url || null;
+      estadoNuevoProd._fuente      = data.fuente || data.producto.fuente || null;
       estadoNuevoProd._sugerencias = (data.sugerencias && data.sugerencias.length) ? data.sugerencias : null;
+      estadoNuevoProd._imagenUrlOff = data.producto.imagen_url_off || null;
+      if (data.codigo_detectado) {
+        estadoNuevoProd.codigoBarras = data.codigo_detectado;
+        if (!teniaCodigo) estadoNuevoProd._codigoDetectado = data.codigo_detectado;
+      }
     } else {
       estadoNuevoProd._fuente = null;
       estadoNuevoProd._sugerencias = null;
+      estadoNuevoProd._codigoDetectado = null;
+      estadoNuevoProd._imagenUrlOff = null;
+      // imagen_url puede venir aunque no haya producto (guardada en paso 1)
+      if (data.imagen_url) estadoNuevoProd.imagenUrl = data.imagen_url;
       showToast('IA no pudo leer el producto — rellena el formulario', 'error');
     }
   } catch(e) {
@@ -1412,6 +1422,8 @@ window.volverAPaso1 = function volverAPaso1() {
   estadoNuevoProd._usarFoto = true;
   estadoNuevoProd._fuente = null;
   estadoNuevoProd._sugerencias = null;
+  estadoNuevoProd._codigoDetectado = null;
+  estadoNuevoProd._imagenUrlOff = null;
   estadoNuevoProd.paso = 1;
   renderPasoActual();
 };
@@ -1448,24 +1460,38 @@ function _rpFormulario(c) {
         📷 No pudimos leer la etiqueta automáticamente. Ingresa el nombre manualmente.
       </div>` : ''}
 
-    ${estadoNuevoProd.imagenUrl ? (() => {
-      const usarFoto = estadoNuevoProd._usarFoto !== false;
+    ${estadoNuevoProd._codigoDetectado ? `
+    <div style="background:#0f2d1a;border:1px solid #22c55e;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#86efac">
+      ✅ Código detectado en la foto: <strong>${escH(estadoNuevoProd._codigoDetectado)}</strong>
+    </div>` : ''}
+
+    ${(estadoNuevoProd.imagenUrl || estadoNuevoProd._imagenUrlOff) ? (() => {
+      const sel = estadoNuevoProd._usarFoto;
       const catEmoji = (() => { try { return categorias.find(c=>c.id==catSugeridaId)?.icono || '📦'; } catch(e){ return '📦'; } })();
+      const tieneFoto = !!estadoNuevoProd.imagenUrl;
+      const tieneOff  = !!estadoNuevoProd._imagenUrlOff;
+      const btnFoto = tieneFoto ? `
+        <button onclick="estadoNuevoProd._usarFoto=true;renderPasoActual()"
+          style="flex:1;padding:10px;background:${sel===true?'rgba(34,197,94,.15)':'var(--surface)'};border:2px solid ${sel===true?'#22c55e':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <img src="${escH(estadoNuevoProd.imagenUrl)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
+          <span style="font-size:11px;color:${sel===true?'#86efac':'var(--text-dim)'}">📷 Mi foto</span>
+        </button>` : '';
+      const btnOff = tieneOff ? `
+        <button onclick="estadoNuevoProd._usarFoto='off';renderPasoActual()"
+          style="flex:1;padding:10px;background:${sel==='off'?'rgba(59,130,246,.15)':'var(--surface)'};border:2px solid ${sel==='off'?'#3b82f6':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <img src="${escH(estadoNuevoProd._imagenUrlOff)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
+          <span style="font-size:11px;color:${sel==='off'?'#93c5fd':'var(--text-dim)'}">🌐 Imagen de OFF</span>
+        </button>` : '';
+      const btnIcon = `
+        <button onclick="estadoNuevoProd._usarFoto=false;renderPasoActual()"
+          style="flex:1;padding:10px;background:${sel===false?'rgba(99,102,241,.15)':'var(--surface)'};border:2px solid ${sel===false?'#6366f1':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <span style="font-size:42px;line-height:1">${catEmoji}</span>
+          <span style="font-size:11px;color:${sel===false?'#a5b4fc':'var(--text-dim)'}">🎨 Ícono auto</span>
+        </button>`;
       return `
       <div style="margin-bottom:16px">
         <label class="flujo-label">Imagen del producto</label>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <button onclick="estadoNuevoProd._usarFoto=true;renderPasoActual()"
-            style="flex:1;padding:10px;background:${usarFoto?'rgba(34,197,94,.15)':'var(--surface)'};border:2px solid ${usarFoto?'#22c55e':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
-            <img src="${escH(estadoNuevoProd.imagenUrl)}" style="width:64px;height:64px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
-            <span style="font-size:11px;color:${usarFoto?'#86efac':'var(--text-dim)'}">📷 Foto tomada</span>
-          </button>
-          <button onclick="estadoNuevoProd._usarFoto=false;renderPasoActual()"
-            style="flex:1;padding:10px;background:${!usarFoto?'rgba(99,102,241,.15)':'var(--surface)'};border:2px solid ${!usarFoto?'#6366f1':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
-            <span style="font-size:48px;line-height:1">${catEmoji}</span>
-            <span style="font-size:11px;color:${!usarFoto?'#a5b4fc':'var(--text-dim)'}">🎨 Ícono auto</span>
-          </button>
-        </div>
+        <div style="display:flex;gap:8px;margin-top:6px">${btnFoto}${btnOff}${btnIcon}</div>
       </div>`;
     })() : ''}
 
@@ -1626,7 +1652,12 @@ async function _guardarProductoFlujoIA() {
     codigo_barras: estadoNuevoProd.codigoBarras || null,
     ...(fd.catId   ? { categoria_id: parseInt(fd.catId) } : {}),
     ...(fd.marcaId ? { marca_id: parseInt(fd.marcaId) }  : {}),
-    ...(estadoNuevoProd._usarFoto !== false && estadoNuevoProd.imagenUrl ? { imagen_url: estadoNuevoProd.imagenUrl } : {}),
+    ...(() => {
+      const sel = estadoNuevoProd._usarFoto;
+      if (sel === true  && estadoNuevoProd.imagenUrl)    return { imagen_url: estadoNuevoProd.imagenUrl };
+      if (sel === 'off' && estadoNuevoProd._imagenUrlOff) return { imagen_url: estadoNuevoProd._imagenUrlOff };
+      return {};
+    })(),
   };
 
   try {

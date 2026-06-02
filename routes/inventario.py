@@ -398,6 +398,16 @@ def _guardar_imagen_producto(codigo_barras: str, imagen_bytes: bytes) -> str:
     return f"/static/productos_img/{nombre}"
 
 
+def _guardar_imagen(imagen_bytes: bytes) -> str | None:
+    """Wrapper sin código de barras — genera ID temporal por timestamp."""
+    import time as _t
+    try:
+        return _guardar_imagen_producto(f"tmp_{int(_t.time() * 1000)}", imagen_bytes)
+    except Exception as e:
+        logger.debug(f"_guardar_imagen: {e}")
+        return None
+
+
 def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
     """Capa 1: consulta Open Food Facts. Requiere internet. Sin API key."""
     try:
@@ -437,6 +447,20 @@ def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
         except Exception:
             categoria, departamento = "Sin categoría", "Alimentación"
 
+        # Descargar imagen de OFF y guardarla localmente
+        imagen_url_off = None
+        img_url = p.get("image_front_small_url") or p.get("image_front_url")
+        if img_url:
+            try:
+                import urllib.request as _ur2
+                req2 = _ur2.Request(img_url, headers={"User-Agent": "ZERO-POS/1.0"})
+                with _ur2.urlopen(req2, timeout=5) as resp2:
+                    img_bytes = resp2.read()
+                imagen_url_off = _guardar_imagen(img_bytes)
+                logger.info(f"Imagen OFF descargada: {imagen_url_off}")
+            except Exception as e:
+                logger.debug(f"No se pudo descargar imagen OFF: {e}")
+
         logger.info(f"OFF: '{nombre}' marca={marca} cat={categoria}")
         return {
             "nombre": nombre,
@@ -444,7 +468,7 @@ def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
             "contenido": contenido,
             "categoria_sugerida": categoria if categoria != "Sin categoría" else None,
             "departamento": departamento if departamento != "Otros" else "Alimentación",
-            "imagen_url_externa": p.get("image_front_url") or None,
+            "imagen_url_off": imagen_url_off,
             "fuente": "open_food_facts",
         }
     except Exception as e:
@@ -589,63 +613,76 @@ def _buscar_off_por_texto(texto: str) -> list | None:
 
 @inventario_bp.route("/leer-producto", methods=["POST"])
 def leer_producto():
-    """Identifica un producto por código de barras (OFF) o foto (OCR).
-    Sin API key. Funciona offline con la capa OCR."""
+    """Identifica un producto por foto (pyzbar → OFF) o OCR como fallback."""
     uid = _auth()
     if not uid:
         return jsonify({"error": "No autenticado"}), 401
 
-    codigo_barras = request.form.get("codigo_barras", "").strip()
-    files = request.files.getlist("imagenes")
-    single = request.files.get("imagen")
-    if not files and single:
-        files = [single]
+    archivo = request.files.get("imagen") or next(
+        iter(request.files.getlist("imagenes")), None
+    )
+    codigo_manual = request.form.get("codigo_barras", "").strip() or None
 
-    img_bytes = files[0].read() if files else None
+    imagen_bytes = archivo.read() if archivo else None
+    imagen_url = None
 
-    producto = None
+    # PASO 1: Guardar imagen optimizada
+    if imagen_bytes:
+        imagen_url = _guardar_imagen(imagen_bytes)
 
-    # Capa 1: Open Food Facts (requiere barcode + internet)
-    if codigo_barras:
-        logger.info(f"leer_producto: buscando OFF código={codigo_barras}")
-        producto = _buscar_open_food_facts(codigo_barras)
-        if producto:
-            producto["codigo_barras"] = codigo_barras
-
-    # Capa 2: OCR local (requiere imagen, funciona offline)
-    if not producto and img_bytes:
-        logger.info("leer_producto: OCR local")
-        producto = _leer_etiqueta_ocr(img_bytes)
-        if producto and codigo_barras:
-            producto["codigo_barras"] = codigo_barras
-
-    # Guardar imagen optimizada si la recibimos
-    if img_bytes:
-        import time as _time
-        img_id = codigo_barras if codigo_barras else f"tmp_{int(_time.time())}"
+    # PASO 2: Detectar código en la foto con pyzbar
+    codigo = codigo_manual
+    if not codigo and imagen_bytes:
         try:
-            imagen_url = _guardar_imagen_producto(img_id, img_bytes)
-            if producto:
-                producto["imagen_url"] = imagen_url
-                producto["imagen_id"]  = img_id
-        except Exception as img_err:
-            logger.warning(f"leer_producto: guardar_imagen: {img_err}")
+            from PIL import Image as _PILpz, ImageOps as _IOSpz
+            from pyzbar import pyzbar as _pyzbar
+            import io as _iopz
+            img = _PILpz.open(_iopz.BytesIO(imagen_bytes))
+            img = _IOSpz.exif_transpose(img)
+            codigos = _pyzbar.decode(img)
+            if codigos:
+                codigo = codigos[0].data.decode("utf-8")
+                logger.info(f"Código detectado en foto: {codigo}")
+        except Exception as e:
+            logger.debug(f"pyzbar en foto: {e}")
 
-    if not producto:
-        logger.info("leer_producto: sin resultado")
-        return jsonify({"ok": False})
+    # PASO 3: Buscar en Open Food Facts
+    if codigo:
+        datos_off = _buscar_open_food_facts(codigo)
+        if datos_off:
+            logger.info(f"OFF encontró: {datos_off['nombre']}")
+            return jsonify({
+                "ok": True,
+                "codigo_detectado": codigo,
+                "producto": datos_off,
+                "imagen_url": imagen_url,
+                "fuente": "open_food_facts",
+            })
 
-    fuente = producto.get("fuente", "")
-    logger.info(f"leer_producto: OK nombre='{producto.get('nombre')}' fuente={fuente}")
+    # PASO 4: OCR como fallback
+    if imagen_bytes:
+        resultado_ocr = _leer_etiqueta_ocr(imagen_bytes)
+        if resultado_ocr:
+            sugerencias = None
+            if not codigo and resultado_ocr.get("nombre"):
+                sugerencias = _buscar_off_por_texto(resultado_ocr["nombre"])
+                if sugerencias:
+                    logger.info(f"leer_producto: {len(sugerencias)} sugerencias OFF por texto")
+            return jsonify({
+                "ok": True,
+                "codigo_detectado": codigo,
+                "producto": resultado_ocr,
+                "imagen_url": imagen_url,
+                "fuente": "ocr_local",
+                "sugerencias": sugerencias,
+            })
 
-    # Capa 2.5: si OCR encontró nombre pero sin barcode, sugerir productos similares de OFF
-    sugerencias = None
-    if fuente == "ocr_local" and not codigo_barras and producto.get("nombre"):
-        sugerencias = _buscar_off_por_texto(producto["nombre"])
-        if sugerencias:
-            logger.info(f"leer_producto: {len(sugerencias)} sugerencias OFF por texto")
-
-    return jsonify({"ok": True, "producto": producto, "fuente": fuente, "sugerencias": sugerencias})
+    logger.info("leer_producto: sin resultado")
+    return jsonify({
+        "ok": False,
+        "codigo_detectado": codigo,
+        "imagen_url": imagen_url,
+    })
 
 
 # Alias para compatibilidad con versiones anteriores del frontend
