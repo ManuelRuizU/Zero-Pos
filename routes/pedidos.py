@@ -190,6 +190,7 @@ def pedidos_listar():
     solo_activos = request.args.get("activos", "0") == "1"
     estado_fil   = request.args.get("estado", "")
 
+    sucursal_id = session.get("sucursal_id")
     query = """
         SELECT p.*, u.nombre as cajero_nombre
         FROM pedidos p LEFT JOIN usuarios u ON u.id = p.usuario_id
@@ -201,6 +202,9 @@ def pedidos_listar():
     if estado_fil:
         query += " AND p.estado=?"
         params.append(estado_fil)
+    if sucursal_id:
+        query += " AND p.usuario_id IN (SELECT id FROM usuarios WHERE sucursal_id=?)"
+        params.append(sucursal_id)
 
     query += " ORDER BY p.creado_en ASC"
 

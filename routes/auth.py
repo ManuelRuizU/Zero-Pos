@@ -87,16 +87,28 @@ def login():
                             "upgrade": True,
                         }), 403
 
-                session["usuario_id"]     = u["id"]
-                session["usuario_nombre"] = u["nombre"]
-                session["usuario_rol"]    = u["rol"]
-                logger.info(f"Login exitoso: {u['nombre']} (rol={u['rol']})")
+                session["usuario_id"]       = u["id"]
+                session["usuario_nombre"]   = u["nombre"]
+                session["usuario_rol"]      = u["rol"]
+                suc_id = u["sucursal_id"] if "sucursal_id" in u.keys() else None
+                if suc_id:
+                    session["sucursal_id"] = suc_id
+                else:
+                    session.pop("sucursal_id", None)
+                permisos_raw = u["permisos"] if "permisos" in u.keys() else None
+                session["usuario_permisos"] = permisos_raw
+
+                from database import permisos_efectivos
+                perms = permisos_efectivos(dict(session))
+                logger.info(f"Login exitoso: {u['nombre']} (rol={u['rol']}, sucursal={suc_id})")
                 return jsonify({
                     "ok": True,
                     "usuario": {
-                        "id":     u["id"],
-                        "nombre": u["nombre"],
-                        "rol":    u["rol"],
+                        "id":         u["id"],
+                        "nombre":     u["nombre"],
+                        "rol":        u["rol"],
+                        "sucursal_id": suc_id,
+                        "permisos":   perms,
                     }
                 })
             except Exception:
@@ -121,10 +133,14 @@ def me():
         if not u:
             session.clear()
             return jsonify({"error": "Usuario inválido"}), 401
+        from database import permisos_efectivos
+        perms = permisos_efectivos(dict(session))
         return jsonify({
-            "id": u["id"],
-            "nombre": u["nombre"],
-            "rol": u["rol"],
+            "id":         u["id"],
+            "nombre":     u["nombre"],
+            "rol":        u["rol"],
+            "sucursal_id": u["sucursal_id"] if "sucursal_id" in u.keys() else None,
+            "permisos":   perms,
         })
 
 
@@ -223,18 +239,83 @@ def crear_usuario():
 
     if not nombre or len(pin) != 4 or not pin.isdigit():
         return jsonify({"error": "Datos inválidos"}), 400
-    if rol not in ("admin", "cajero", "cocina"):
+
+    from database import ROLES_VALIDOS
+    if rol not in ROLES_VALIDOS:
         return jsonify({"error": "Rol inválido"}), 400
+
+    sucursal_id = data.get("sucursal_id") or None
+    permisos_json = None
+    if "permisos" in data and isinstance(data["permisos"], dict):
+        import json as _json
+        permisos_json = _json.dumps(data["permisos"])
 
     import bcrypt
     hashed = bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
 
     with db_session() as conn:
         cur = conn.execute(
-            "INSERT INTO usuarios (nombre, pin_hash, rol) VALUES (?,?,?)",
-            (nombre, hashed, rol)
+            "INSERT INTO usuarios (nombre, pin_hash, rol, sucursal_id, permisos) VALUES (?,?,?,?,?)",
+            (nombre, hashed, rol, sucursal_id, permisos_json)
         )
         return jsonify({"ok": True, "id": cur.lastrowid}), 201
+
+
+@auth_bp.route("/usuarios/<int:uid>", methods=["DELETE"])
+def eliminar_usuario(uid):
+    if session.get("usuario_rol") != "admin":
+        return jsonify({"error": "Sin permisos"}), 403
+    if uid == session.get("usuario_id"):
+        return jsonify({"error": "No puedes eliminarte a ti mismo"}), 400
+    with db_session() as conn:
+        conn.execute("UPDATE usuarios SET activo=0 WHERE id=?", (uid,))
+        return jsonify({"ok": True})
+
+
+# ── Sucursales ────────────────────────────────────────────────────────────────
+
+@auth_bp.route("/sucursales", methods=["GET"])
+def listar_sucursales():
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+    with db_session() as conn:
+        rows = conn.execute(
+            "SELECT * FROM sucursales ORDER BY id"
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
+
+
+@auth_bp.route("/sucursales", methods=["POST"])
+def crear_sucursal():
+    if session.get("usuario_rol") != "admin":
+        return jsonify({"error": "Sin permisos"}), 403
+    data = request.get_json(silent=True) or {}
+    nombre = str(data.get("nombre", "")).strip()
+    if not nombre:
+        return jsonify({"error": "Nombre requerido"}), 400
+    with db_session() as conn:
+        cur = conn.execute(
+            "INSERT INTO sucursales (nombre, direccion, telefono) VALUES (?,?,?)",
+            (nombre, data.get("direccion", ""), data.get("telefono", ""))
+        )
+        return jsonify({"ok": True, "id": cur.lastrowid}), 201
+
+
+@auth_bp.route("/sucursales/<int:sid>", methods=["PUT"])
+def actualizar_sucursal(sid):
+    if session.get("usuario_rol") != "admin":
+        return jsonify({"error": "Sin permisos"}), 403
+    data = request.get_json(silent=True) or {}
+    with db_session() as conn:
+        if "nombre" in data:
+            conn.execute("UPDATE sucursales SET nombre=? WHERE id=?", (data["nombre"], sid))
+        if "direccion" in data:
+            conn.execute("UPDATE sucursales SET direccion=? WHERE id=?", (data["direccion"], sid))
+        if "telefono" in data:
+            conn.execute("UPDATE sucursales SET telefono=? WHERE id=?", (data["telefono"], sid))
+        if "activa" in data:
+            conn.execute("UPDATE sucursales SET activa=? WHERE id=?", (int(data["activa"]), sid))
+        return jsonify({"ok": True})
 
 
 @auth_bp.route("/usuarios/<int:uid>", methods=["PUT"])
@@ -252,11 +333,19 @@ def actualizar_usuario(uid):
             hashed = bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
             conn.execute("UPDATE usuarios SET pin_hash=? WHERE id=?", (hashed, uid))
 
+        from database import ROLES_VALIDOS
         if "nombre" in data:
             conn.execute("UPDATE usuarios SET nombre=? WHERE id=?", (data["nombre"], uid))
-        if "rol" in data and data["rol"] in ("admin", "cajero", "cocina"):
+        if "rol" in data and data["rol"] in ROLES_VALIDOS:
             conn.execute("UPDATE usuarios SET rol=? WHERE id=?", (data["rol"], uid))
         if "activo" in data:
             conn.execute("UPDATE usuarios SET activo=? WHERE id=?", (int(data["activo"]), uid))
+        if "sucursal_id" in data:
+            conn.execute("UPDATE usuarios SET sucursal_id=? WHERE id=?",
+                         (data["sucursal_id"] or None, uid))
+        if "permisos" in data:
+            import json as _json
+            pj = _json.dumps(data["permisos"]) if isinstance(data["permisos"], dict) else None
+            conn.execute("UPDATE usuarios SET permisos=? WHERE id=?", (pj, uid))
 
         return jsonify({"ok": True})

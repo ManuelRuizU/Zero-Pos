@@ -6,7 +6,7 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 from flask import Blueprint, request, jsonify, session
-from database import db_session
+from database import db_session, tiene_permiso
 from scripts.clasificar_productos import clasificar_producto, obtener_o_crear_categoria
 from utils.normalizar import normalizar_nombre
 
@@ -109,13 +109,18 @@ def listar_completos():
     if not _require_auth():
         return jsonify({"error": "No autenticado"}), 401
 
-    cache_key = "productos_completos"
+    sucursal_id = session.get("sucursal_id")
+    # Con sucursal: no usar caché global (cada sucursal tiene su catálogo)
+    cache_key = f"productos_completos_s{sucursal_id}" if sucursal_id else "productos_completos"
     cached = _cache_get(cache_key)
     if cached is not None:
         return jsonify(cached)
 
+    suc_cond = "AND p.sucursal_id=?" if sucursal_id else ""
+    suc_param = [sucursal_id] if sucursal_id else []
+
     with db_session() as conn:
-        rows = conn.execute("""
+        rows = conn.execute(f"""
             SELECT p.id, p.nombre, p.precio, p.precio_costo, p.stock,
                    p.stock_minimo, p.codigo_barras, p.categoria_id,
                    p.subcategoria_id, p.tiene_variantes,
@@ -129,9 +134,9 @@ def listar_completos():
             LEFT JOIN categorias c ON c.id = p.categoria_id
             LEFT JOIN producto_variantes v
                    ON v.producto_id = p.id AND v.activo = 1
-            WHERE p.activo = 1
+            WHERE p.activo = 1 {suc_cond}
             ORDER BY p.nombre, v.id
-        """).fetchall()
+        """, suc_param).fetchall()
 
     productos: dict = {}
     for r in rows:
@@ -487,6 +492,12 @@ def actualizar(pid):
         return jsonify({"error": "No autenticado"}), 401
 
     data = request.get_json(silent=True) or {}
+
+    # Verificar permiso de editar precios si se intenta cambiar precio o precio_costo
+    if ("precio" in data or "precio_costo" in data):
+        if not tiene_permiso(dict(session), "puede_editar_precios"):
+            return jsonify({"error": "Sin permisos para editar precios"}), 403
+
     campos = {}
     permitidos = ("nombre", "descripcion", "precio", "precio_costo",
                   "stock", "stock_minimo", "codigo_barras", "categoria_id",

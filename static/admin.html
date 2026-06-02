@@ -273,6 +273,7 @@ input:checked + .slider:before{transform:translateX(20px);}
     <button class="nav-btn" onclick="showTab('config',this)">⚙️ Config</button>
     <button class="nav-btn" onclick="showTab('voz',this)">🎤 Voz</button>
     <button class="nav-btn" onclick="showTab('categorias',this)">🗂️ Categorías</button>
+    <button class="nav-btn" onclick="showTab('equipo',this)">👥 Equipo</button>
     <button class="nav-btn" onclick="location.href='inventario.html'">📦 Inventario</button>
     <button class="nav-btn" onclick="location.href='pedidos.html'">🛵 Pedidos</button>
     <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
@@ -654,6 +655,91 @@ input:checked + .slider:before{transform:translateX(20px);}
     </div>
   </div>
 
+  <!-- Equipo: Usuarios + Sucursales -->
+  <div class="tab-content" id="tab-equipo">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <h2 style="margin:0;">👥 Equipo</h2>
+    </div>
+
+    <!-- Sucursales -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:15px;">🏪 Sucursales</h3>
+      <button class="btn primary" style="padding:6px 14px;font-size:13px" onclick="abrirModalSucursal()">+ Nueva sucursal</button>
+    </div>
+    <div id="listaSucursales" style="margin-bottom:28px;">
+      <p style="color:var(--text-dim);font-size:13px;">Cargando...</p>
+    </div>
+
+    <!-- Usuarios -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;font-size:15px;">👤 Usuarios</h3>
+      <button class="btn primary" style="padding:6px 14px;font-size:13px" onclick="abrirModalUsuario()">+ Nuevo usuario</button>
+    </div>
+    <div id="listaUsuarios">
+      <p style="color:var(--text-dim);font-size:13px;">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- Modal Sucursal -->
+  <div class="modal-overlay" id="modalSucursal" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box" style="max-width:400px">
+      <h3 id="modalSucursalTitulo">Nueva Sucursal</h3>
+      <input id="sucNombre" class="flujo-input" placeholder="Nombre de la sucursal" style="margin-bottom:10px">
+      <input id="sucDireccion" class="flujo-input" placeholder="Dirección (opcional)" style="margin-bottom:10px">
+      <input id="sucTelefono" class="flujo-input" placeholder="Teléfono (opcional)" style="margin-bottom:16px">
+      <input type="hidden" id="sucId">
+      <div style="display:flex;gap:10px">
+        <button class="btn primary" style="flex:1" onclick="guardarSucursal()">Guardar</button>
+        <button class="btn" style="flex:1" onclick="document.getElementById('modalSucursal').style.display='none'">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Usuario -->
+  <div class="modal-overlay" id="modalUsuario" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box" style="max-width:440px">
+      <h3 id="modalUsuarioTitulo">Nuevo Usuario</h3>
+      <input id="usuNombre" class="flujo-input" placeholder="Nombre" style="margin-bottom:10px">
+      <input id="usuPin" class="flujo-input" placeholder="PIN de 4 dígitos" inputmode="numeric" maxlength="4" style="margin-bottom:10px">
+
+      <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Rol</label>
+      <select id="usuRol" class="flujo-input" style="margin-bottom:10px" onchange="actualizarPermisosUI()">
+        <option value="admin">Admin (acceso total)</option>
+        <option value="supervisor">Supervisor</option>
+        <option value="cajero" selected>Cajero</option>
+        <option value="vendedor">Vendedor</option>
+        <option value="bodega">Bodega</option>
+        <option value="delivery">Delivery</option>
+        <option value="cocina">Cocina</option>
+      </select>
+
+      <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Sucursal asignada</label>
+      <select id="usuSucursal" class="flujo-input" style="margin-bottom:14px">
+        <option value="">Sin sucursal (ve todo)</option>
+      </select>
+
+      <details id="permisosExtra" style="margin-bottom:16px">
+        <summary style="cursor:pointer;font-size:13px;color:var(--text-dim);margin-bottom:8px">Permisos adicionales (sobreescriben el rol)</summary>
+        <div style="background:var(--surface2);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="pAnular"> Puede anular ventas</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="pReportes"> Puede ver reportes</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="pPrecios"> Puede editar precios</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="pStock"> Puede gestionar stock</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" id="pDescuento"> Puede hacer descuentos</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px">
+            Descuento máximo: <input type="number" id="pDescuentoMax" min="0" max="100" value="0" style="width:60px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text);font-size:13px"> %
+          </label>
+        </div>
+      </details>
+
+      <input type="hidden" id="usuId">
+      <div style="display:flex;gap:10px">
+        <button class="btn primary" style="flex:1" onclick="guardarUsuario()">Guardar</button>
+        <button class="btn" style="flex:1" onclick="document.getElementById('modalUsuario').style.display='none'">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Voz -->
   <div class="tab-content" id="tab-voz">
     <h2>🎤 Asistente de Voz ZERO</h2>
@@ -812,6 +898,7 @@ function showTab(name, btn) {
   if (name==='config') cargarConfig();
   if (name==='voz') { cargarVozConfig(); cargarHistorialVoz(); cargarAprendizaje(); }
   if (name==='categorias') cargarCatArbol();
+  if (name==='equipo') cargarEquipo();
 }
 
 async function cargarDashboard() {
@@ -1529,6 +1616,194 @@ async function catModalOk() {
 }
 
 init();
+
+// ── Equipo: Usuarios + Sucursales ─────────────────────────────────────────────
+
+let _sucursales = [];
+
+async function cargarEquipo() {
+  await Promise.all([cargarSucursales(), cargarUsuarios()]);
+}
+
+async function cargarSucursales() {
+  const rows = await fetch('/api/auth/sucursales', {credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  _sucursales = Array.isArray(rows) ? rows : [];
+  const el = document.getElementById('listaSucursales');
+  if (!_sucursales.length) {
+    el.innerHTML = '<p style="color:var(--text-dim);font-size:13px">Sin sucursales registradas. El sistema funciona sin sucursales.</p>';
+    return;
+  }
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="color:var(--text-dim)">
+      <th style="text-align:left;padding:6px 8px">Nombre</th>
+      <th style="text-align:left;padding:6px 8px">Dirección</th>
+      <th style="text-align:left;padding:6px 8px">Estado</th>
+      <th style="padding:6px 8px"></th>
+    </tr></thead>
+    <tbody>
+      ${_sucursales.map(s=>`<tr style="border-top:1px solid var(--border)">
+        <td style="padding:8px">${s.nombre}</td>
+        <td style="padding:8px;color:var(--text-dim)">${s.direccion||'—'}</td>
+        <td style="padding:8px"><span style="background:${s.activa?'#0f2d1a':'#2d1515'};color:${s.activa?'#86efac':'#f87171'};border-radius:4px;padding:2px 8px;font-size:11px">${s.activa?'Activa':'Inactiva'}</span></td>
+        <td style="padding:8px"><button class="btn" style="padding:4px 10px;font-size:12px" onclick="editarSucursal(${s.id})">Editar</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+async function cargarUsuarios() {
+  const rows = await fetch('/api/auth/usuarios', {credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  const el = document.getElementById('listaUsuarios');
+  const ROLES_LABEL = {admin:'Admin',supervisor:'Supervisor',cajero:'Cajero',vendedor:'Vendedor',bodega:'Bodega',delivery:'Delivery',cocina:'Cocina'};
+  const suc_map = Object.fromEntries(_sucursales.map(s=>[s.id, s.nombre]));
+  el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="color:var(--text-dim)">
+      <th style="text-align:left;padding:6px 8px">Nombre</th>
+      <th style="text-align:left;padding:6px 8px">Rol</th>
+      <th style="text-align:left;padding:6px 8px">Sucursal</th>
+      <th style="text-align:left;padding:6px 8px">Estado</th>
+      <th style="padding:6px 8px"></th>
+    </tr></thead>
+    <tbody>
+      ${rows.map(u=>`<tr style="border-top:1px solid var(--border)">
+        <td style="padding:8px;font-weight:${u.rol==='admin'?'700':'400'}">${u.nombre}</td>
+        <td style="padding:8px;color:var(--text-dim)">${ROLES_LABEL[u.rol]||u.rol}</td>
+        <td style="padding:8px;color:var(--text-dim)">${suc_map[u.sucursal_id]||'—'}</td>
+        <td style="padding:8px"><span style="background:${u.activo?'#0f2d1a':'#2d1515'};color:${u.activo?'#86efac':'#f87171'};border-radius:4px;padding:2px 8px;font-size:11px">${u.activo?'Activo':'Inactivo'}</span></td>
+        <td style="padding:8px;display:flex;gap:6px">
+          <button class="btn" style="padding:4px 10px;font-size:12px" onclick="editarUsuario(${u.id})">Editar</button>
+          ${u.rol!=='admin'?`<button class="btn" style="padding:4px 10px;font-size:12px;background:${u.activo?'#2d1515':'#0f2d1a'}" onclick="toggleUsuario(${u.id},${u.activo})">${u.activo?'Desactivar':'Activar'}</button>`:''}
+        </td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+
+function abrirModalSucursal(id) {
+  const m = document.getElementById('modalSucursal');
+  document.getElementById('sucId').value = id || '';
+  document.getElementById('modalSucursalTitulo').textContent = id ? 'Editar Sucursal' : 'Nueva Sucursal';
+  const suc = _sucursales.find(s=>s.id===id);
+  document.getElementById('sucNombre').value = suc?.nombre || '';
+  document.getElementById('sucDireccion').value = suc?.direccion || '';
+  document.getElementById('sucTelefono').value = suc?.telefono || '';
+  m.style.display = 'flex';
+}
+
+function editarSucursal(id) { abrirModalSucursal(id); }
+
+async function guardarSucursal() {
+  const id = document.getElementById('sucId').value;
+  const body = {
+    nombre: document.getElementById('sucNombre').value.trim(),
+    direccion: document.getElementById('sucDireccion').value.trim(),
+    telefono: document.getElementById('sucTelefono').value.trim(),
+  };
+  if (!body.nombre) return alert('El nombre es requerido');
+  const url = id ? `/api/auth/sucursales/${id}` : '/api/auth/sucursales';
+  const r = await fetch(url, {method: id?'PUT':'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if (r.ok) { document.getElementById('modalSucursal').style.display='none'; cargarEquipo(); }
+  else alert('Error al guardar');
+}
+
+const _PERMISOS_ROL_DEFAULT = {
+  admin:      {puede_anular_ventas:true,puede_ver_reportes:true,puede_editar_precios:true,puede_gestionar_stock:true,puede_hacer_descuentos:true,descuento_maximo_pct:100},
+  supervisor: {puede_anular_ventas:true,puede_ver_reportes:true,puede_editar_precios:true,puede_gestionar_stock:true,puede_hacer_descuentos:true,descuento_maximo_pct:20},
+  cajero:     {puede_anular_ventas:false,puede_ver_reportes:false,puede_editar_precios:false,puede_gestionar_stock:false,puede_hacer_descuentos:true,descuento_maximo_pct:5},
+  vendedor:   {puede_anular_ventas:false,puede_ver_reportes:false,puede_editar_precios:false,puede_gestionar_stock:false,puede_hacer_descuentos:false,descuento_maximo_pct:0},
+  bodega:     {puede_anular_ventas:false,puede_ver_reportes:true,puede_editar_precios:false,puede_gestionar_stock:true,puede_hacer_descuentos:false,descuento_maximo_pct:0},
+  delivery:   {puede_anular_ventas:false,puede_ver_reportes:false,puede_editar_precios:false,puede_gestionar_stock:false,puede_hacer_descuentos:false,descuento_maximo_pct:0},
+  cocina:     {puede_anular_ventas:false,puede_ver_reportes:false,puede_editar_precios:false,puede_gestionar_stock:false,puede_hacer_descuentos:false,descuento_maximo_pct:0},
+};
+
+function actualizarPermisosUI() {
+  const rol = document.getElementById('usuRol').value;
+  const p = _PERMISOS_ROL_DEFAULT[rol] || {};
+  document.getElementById('pAnular').checked = p.puede_anular_ventas || false;
+  document.getElementById('pReportes').checked = p.puede_ver_reportes || false;
+  document.getElementById('pPrecios').checked = p.puede_editar_precios || false;
+  document.getElementById('pStock').checked = p.puede_gestionar_stock || false;
+  document.getElementById('pDescuento').checked = p.puede_hacer_descuentos || false;
+  document.getElementById('pDescuentoMax').value = p.descuento_maximo_pct || 0;
+}
+
+function abrirModalUsuario() {
+  const m = document.getElementById('modalUsuario');
+  document.getElementById('usuId').value = '';
+  document.getElementById('modalUsuarioTitulo').textContent = 'Nuevo Usuario';
+  document.getElementById('usuNombre').value = '';
+  document.getElementById('usuPin').value = '';
+  document.getElementById('usuRol').value = 'cajero';
+  // Llenar select de sucursales
+  const sel = document.getElementById('usuSucursal');
+  sel.innerHTML = '<option value="">Sin sucursal (ve todo)</option>' +
+    _sucursales.filter(s=>s.activa).map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
+  sel.value = '';
+  actualizarPermisosUI();
+  m.style.display = 'flex';
+}
+
+async function editarUsuario(id) {
+  const rows = await fetch('/api/auth/usuarios', {credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+  const u = rows.find(r=>r.id===id);
+  if (!u) return;
+  document.getElementById('usuId').value = id;
+  document.getElementById('modalUsuarioTitulo').textContent = 'Editar Usuario';
+  document.getElementById('usuNombre').value = u.nombre;
+  document.getElementById('usuPin').value = '';
+  document.getElementById('usuRol').value = u.rol;
+  const sel = document.getElementById('usuSucursal');
+  sel.innerHTML = '<option value="">Sin sucursal (ve todo)</option>' +
+    _sucursales.filter(s=>s.activa).map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
+  sel.value = u.sucursal_id || '';
+  // Aplicar permisos custom si existen
+  actualizarPermisosUI();
+  if (u.permisos) {
+    try {
+      const p = JSON.parse(u.permisos);
+      if ('puede_anular_ventas'    in p) document.getElementById('pAnular').checked = p.puede_anular_ventas;
+      if ('puede_ver_reportes'     in p) document.getElementById('pReportes').checked = p.puede_ver_reportes;
+      if ('puede_editar_precios'   in p) document.getElementById('pPrecios').checked = p.puede_editar_precios;
+      if ('puede_gestionar_stock'  in p) document.getElementById('pStock').checked = p.puede_gestionar_stock;
+      if ('puede_hacer_descuentos' in p) document.getElementById('pDescuento').checked = p.puede_hacer_descuentos;
+      if ('descuento_maximo_pct'   in p) document.getElementById('pDescuentoMax').value = p.descuento_maximo_pct;
+    } catch(e) {}
+  }
+  document.getElementById('modalUsuario').style.display = 'flex';
+}
+
+async function guardarUsuario() {
+  const id = document.getElementById('usuId').value;
+  const nombre = document.getElementById('usuNombre').value.trim();
+  const pin = document.getElementById('usuPin').value.trim();
+  const rol = document.getElementById('usuRol').value;
+  const suc = document.getElementById('usuSucursal').value;
+  const permisos = {
+    puede_anular_ventas:    document.getElementById('pAnular').checked,
+    puede_ver_reportes:     document.getElementById('pReportes').checked,
+    puede_editar_precios:   document.getElementById('pPrecios').checked,
+    puede_gestionar_stock:  document.getElementById('pStock').checked,
+    puede_hacer_descuentos: document.getElementById('pDescuento').checked,
+    descuento_maximo_pct:   parseInt(document.getElementById('pDescuentoMax').value) || 0,
+  };
+
+  if (!nombre) return alert('El nombre es requerido');
+  if (!id && (pin.length !== 4 || !/^\d{4}$/.test(pin))) return alert('PIN de 4 dígitos requerido');
+
+  const body = { nombre, rol, sucursal_id: suc ? parseInt(suc) : null, permisos };
+  if (pin) body.pin = pin;
+
+  const url = id ? `/api/auth/usuarios/${id}` : '/api/auth/usuarios';
+  const method = id ? 'PUT' : 'POST';
+  const r = await fetch(url, {method, credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if (r.ok) { document.getElementById('modalUsuario').style.display='none'; cargarEquipo(); }
+  else { const e = await r.json(); alert('Error: ' + (e.error||'No se pudo guardar')); }
+}
+
+async function toggleUsuario(id, activo) {
+  if (!confirm(activo ? '¿Desactivar este usuario?' : '¿Activar este usuario?')) return;
+  await fetch(`/api/auth/usuarios/${id}`, {method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({activo: activo ? 0 : 1})});
+  cargarEquipo();
+}
+
 </script>
 <script>
 if ('serviceWorker' in navigator) {
