@@ -375,46 +375,54 @@ def _guardar_imagen_producto(codigo_barras: str, imagen_bytes: bytes) -> str:
 def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
     """Capa 1: consulta Open Food Facts. Requiere internet. Sin API key."""
     try:
-        import requests as _req
+        import urllib.request as _urllib
+        import json as _json
+
         url = f"https://world.openfoodfacts.org/api/v0/product/{codigo_barras}.json"
-        headers = {"User-Agent": "ZeroPOS/1.0 (zero-pos; contact@zero-pos.app)"}
-        r = _req.get(url, timeout=5, headers=headers)
-        if r.status_code != 200:
-            return None
-        data = r.json()
+        req = _urllib.Request(url, headers={"User-Agent": "ZERO-POS/1.0"})
+        with _urllib.urlopen(req, timeout=3) as resp:
+            data = _json.loads(resp.read())
+
         if data.get("status") != 1:
             return None
         p = data.get("product", {})
+
         nombre = (
             p.get("product_name_es")
             or p.get("product_name")
             or p.get("generic_name_es")
             or p.get("generic_name")
-        )
+            or ""
+        ).strip()
         if not nombre:
             return None
 
-        # Primera categoría legible de categories_tags
-        cat_sugerida = None
-        for tag in p.get("categories_tags", []):
-            if ":" in tag:
-                tag = tag.split(":", 1)[1]
-            tag = tag.replace("-", " ").strip()
-            if tag:
-                cat_sugerida = tag.title()
-                break
+        marca = (p.get("brands") or "").split(",")[0].strip() or None
+        contenido = (p.get("quantity") or "").strip() or None
 
-        logger.info(f"OFF: '{nombre}' marca={p.get('brands')} cat={cat_sugerida}")
+        # Clasificar usando nombre + tags de OFF
+        cats_str = " ".join(
+            tag.split(":", 1)[-1].replace("-", " ")
+            for tag in p.get("categories_tags", [])
+        )
+        try:
+            from scripts.clasificar_productos import clasificar_producto
+            categoria, departamento = clasificar_producto(nombre + " " + cats_str)
+        except Exception:
+            categoria, departamento = "Sin categoría", "Alimentación"
+
+        logger.info(f"OFF: '{nombre}' marca={marca} cat={categoria}")
         return {
             "nombre": nombre,
-            "marca": p.get("brands") or None,
-            "contenido": p.get("quantity") or None,
-            "categoria_sugerida": cat_sugerida,
+            "marca": marca,
+            "contenido": contenido,
+            "categoria_sugerida": categoria if categoria != "Sin categoría" else None,
+            "departamento": departamento if departamento != "Otros" else "Alimentación",
             "imagen_url_externa": p.get("image_front_url") or None,
             "fuente": "open_food_facts",
         }
     except Exception as e:
-        logger.warning(f"OFF error: {e}")
+        logger.debug(f"OFF no disponible: {e}")
         return None
 
 
@@ -478,10 +486,10 @@ def _leer_etiqueta_ocr(imagen_bytes: bytes) -> dict | None:
         if not lineas:
             return None
 
-        # Preferir líneas con mayúsculas (suelen ser el nombre del producto)
-        candidatos_may = [l for l in lineas if sum(1 for c in l if c.isupper()) >= 2]
-        pool = candidatos_may if candidatos_may else lineas
-        nombre = max(pool, key=lambda l: sum(1 for c in l if c.isalpha()))[:60]
+        # Las primeras 5 líneas suelen contener el nombre del producto.
+        # Dentro de ellas, la más corta evita capturar texto legal largo.
+        primeras = lineas[:5]
+        nombre = min(primeras, key=lambda l: len(l))[:60]
 
         # Buscar peso/volumen
         _pat = re.compile(
@@ -563,11 +571,9 @@ def leer_producto():
         logger.info("leer_producto: sin resultado")
         return jsonify({"ok": False})
 
-    logger.info(
-        f"leer_producto: OK nombre='{producto.get('nombre')}' "
-        f"fuente={producto.get('fuente')}"
-    )
-    return jsonify({"ok": True, "producto": producto})
+    fuente = producto.get("fuente", "")
+    logger.info(f"leer_producto: OK nombre='{producto.get('nombre')}' fuente={fuente}")
+    return jsonify({"ok": True, "producto": producto, "fuente": fuente})
 
 
 # Alias para compatibilidad con versiones anteriores del frontend

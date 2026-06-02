@@ -1210,10 +1210,10 @@ function _bindNormBlur(id) {
 
 // ─── Flujo 4 pasos: Nuevo producto con IA ─────────────────────────────────────
 
-let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true };
+let estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null };
 
 function iniciarFlujoIA() {
-  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true };
+  estadoNuevoProd = { paso:1, fotos:[], fotoPrincipal:0, datosIA:{}, imagenUrl:null, codigoBarras:null, _form:{}, _usarFoto:true, _fuente:null };
   document.getElementById('flujoNuevoProd').style.display = 'block';
   renderPasoActual();
 }
@@ -1330,6 +1330,7 @@ async function _ejecutarAnalisisIA() {
     const fd = new FormData();
     estadoNuevoProd.fotos.forEach(f => fd.append('imagenes', f));
     fd.append('categorias', categorias.map(c=>c.nombre).join(', '));
+    if (estadoNuevoProd.codigoBarras) fd.append('codigo_barras', estadoNuevoProd.codigoBarras);
 
     const resp = await fetch('/api/inventario/leer-producto', {
       method: 'POST', credentials: 'include', body: fd,
@@ -1347,9 +1348,11 @@ async function _ejecutarAnalisisIA() {
     console.log('[ZERO] IA retornó:', data);
 
     if (data.ok && data.producto) {
-      estadoNuevoProd.datosIA  = data.producto;
+      estadoNuevoProd.datosIA   = data.producto;
       estadoNuevoProd.imagenUrl = data.producto.imagen_url || null;
+      estadoNuevoProd._fuente   = data.fuente || data.producto.fuente || null;
     } else {
+      estadoNuevoProd._fuente = null;
       showToast('IA no pudo leer el producto — rellena el formulario', 'error');
     }
   } catch(e) {
@@ -1366,6 +1369,7 @@ window.volverAPaso1 = function volverAPaso1() {
   estadoNuevoProd.codigoBarras = null;
   estadoNuevoProd._form = {};
   estadoNuevoProd._usarFoto = true;
+  estadoNuevoProd._fuente = null;
   estadoNuevoProd.paso = 1;
   renderPasoActual();
 };
@@ -1388,7 +1392,14 @@ function _rpFormulario(c) {
 
   c.innerHTML = `
     <h2 style="font-size:20px;margin-bottom:4px">✨ Revisar y completar</h2>
-    <p style="color:var(--text-dim);font-size:13px;margin-bottom:16px">${d.nombre?'IA detectó estos datos. Revisa y ajusta.':'Ingresa los datos del producto.'}</p>
+    <p style="color:var(--text-dim);font-size:13px;margin-bottom:10px">${d.nombre?'IA detectó estos datos. Revisa y ajusta.':'Ingresa los datos del producto.'}</p>
+
+    ${(() => {
+      const fuente = estadoNuevoProd._fuente;
+      if (fuente === 'open_food_facts') return `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.4);border-radius:20px;padding:4px 12px;font-size:12px;color:#86efac;margin-bottom:12px">✅ Open Food Facts — datos muy confiables</div>`;
+      if (fuente === 'ocr_local')       return `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(234,179,8,.10);border:1px solid rgba(234,179,8,.4);border-radius:20px;padding:4px 12px;font-size:12px;color:#fde047;margin-bottom:12px">📷 OCR Local — revisa el nombre</div>`;
+      return `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.3);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-dim);margin-bottom:12px">📝 Ingreso manual</div>`;
+    })()}
 
     ${!d.nombre ? `
       <div style="background:#1c0a0a;border:1px solid #ef4444;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;color:#fca5a5">
