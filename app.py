@@ -246,6 +246,136 @@ def create_app() -> Flask:
     return app
 
 
+def calcular_metricas_dia(app: Flask):
+    """Calcula y persiste métricas del día en metricas_diarias (corre a las 23:59)."""
+    from datetime import date
+    from database import db_session
+    with app.app_context():
+        try:
+            with db_session() as conn:
+                hoy = date.today().isoformat()
+
+                stats = conn.execute("""
+                    SELECT
+                        COUNT(*) as num_ventas,
+                        COALESCE(SUM(total), 0) as total,
+                        COALESCE(AVG(total), 0) as promedio,
+                        COALESCE(SUM(CASE WHEN metodo_pago='efectivo'      THEN total ELSE 0 END), 0) as efectivo,
+                        COALESCE(SUM(CASE WHEN metodo_pago='tarjeta'       THEN total ELSE 0 END), 0) as tarjeta,
+                        COALESCE(SUM(CASE WHEN metodo_pago='transferencia' THEN total ELSE 0 END), 0) as transferencia
+                    FROM ventas
+                    WHERE DATE(creado_en)=? AND estado='completada'
+                """, (hoy,)).fetchone()
+
+                top = conn.execute("""
+                    SELECT p.id, p.nombre, SUM(vi.cantidad) as total_cant
+                    FROM venta_items vi
+                    JOIN productos p ON p.id = vi.producto_id
+                    JOIN ventas v ON v.id = vi.venta_id
+                    WHERE DATE(v.creado_en)=? AND v.estado='completada'
+                    GROUP BY p.id ORDER BY total_cant DESC LIMIT 1
+                """, (hoy,)).fetchone()
+
+                conn.execute("""
+                    INSERT INTO metricas_diarias
+                        (fecha, total_ventas, num_ventas, ticket_promedio,
+                         producto_top_id, producto_top_nombre, producto_top_cant,
+                         metodo_efectivo, metodo_tarjeta, metodo_transferencia)
+                    VALUES (?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(fecha) DO UPDATE SET
+                        total_ventas         = excluded.total_ventas,
+                        num_ventas           = excluded.num_ventas,
+                        ticket_promedio      = excluded.ticket_promedio,
+                        producto_top_id      = excluded.producto_top_id,
+                        producto_top_nombre  = excluded.producto_top_nombre,
+                        producto_top_cant    = excluded.producto_top_cant,
+                        metodo_efectivo      = excluded.metodo_efectivo,
+                        metodo_tarjeta       = excluded.metodo_tarjeta,
+                        metodo_transferencia = excluded.metodo_transferencia,
+                        actualizado_en       = CURRENT_TIMESTAMP
+                """, (
+                    hoy,
+                    stats["total"], stats["num_ventas"], int(stats["promedio"]),
+                    top["id"] if top else None,
+                    top["nombre"] if top else None,
+                    top["total_cant"] if top else 0,
+                    stats["efectivo"], stats["tarjeta"], stats["transferencia"],
+                ))
+
+                # Métricas semanales
+                from datetime import date as _d, timedelta
+                hoy_d = _d.today()
+                anio, semana, _ = hoy_d.isocalendar()
+                lunes = hoy_d - timedelta(days=hoy_d.weekday())
+                domingo = lunes + timedelta(days=6)
+
+                sem_stats = conn.execute("""
+                    SELECT COUNT(*) as n, COALESCE(SUM(total),0) as t,
+                           COALESCE(AVG(total),0) as avg
+                    FROM ventas
+                    WHERE DATE(creado_en) BETWEEN ? AND ? AND estado='completada'
+                """, (lunes.isoformat(), domingo.isoformat())).fetchone()
+
+                dia_mejor = conn.execute("""
+                    SELECT DATE(creado_en) as d, COALESCE(SUM(total),0) as t
+                    FROM ventas
+                    WHERE DATE(creado_en) BETWEEN ? AND ? AND estado='completada'
+                    GROUP BY d ORDER BY t DESC LIMIT 1
+                """, (lunes.isoformat(), domingo.isoformat())).fetchone()
+
+                conn.execute("""
+                    INSERT INTO metricas_semanales
+                        (anio, semana, fecha_inicio, fecha_fin,
+                         total_ventas, num_ventas, ticket_promedio, dia_mejor, dia_mejor_total)
+                    VALUES (?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(anio, semana) DO UPDATE SET
+                        total_ventas    = excluded.total_ventas,
+                        num_ventas      = excluded.num_ventas,
+                        ticket_promedio = excluded.ticket_promedio,
+                        dia_mejor       = excluded.dia_mejor,
+                        dia_mejor_total = excluded.dia_mejor_total
+                """, (
+                    anio, semana, lunes.isoformat(), domingo.isoformat(),
+                    sem_stats["t"], sem_stats["n"], int(sem_stats["avg"]),
+                    dia_mejor["d"] if dia_mejor else None,
+                    dia_mejor["t"] if dia_mejor else 0,
+                ))
+
+                # Métricas mensuales
+                mes_str = hoy_d.strftime("%Y-%m")
+                mes_stats = conn.execute("""
+                    SELECT COUNT(*) as n, COALESCE(SUM(total),0) as t,
+                           COALESCE(AVG(total),0) as avg
+                    FROM ventas
+                    WHERE strftime('%Y-%m', creado_en)=? AND estado='completada'
+                """, (mes_str,)).fetchone()
+
+                mes_ant = (hoy_d.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+                mes_ant_total = conn.execute(
+                    "SELECT COALESCE(SUM(total),0) as t FROM ventas WHERE strftime('%Y-%m', creado_en)=? AND estado='completada'",
+                    (mes_ant,)
+                ).fetchone()["t"] or 0
+                crecimiento = round(
+                    (mes_stats["t"] - mes_ant_total) * 100.0 / mes_ant_total, 2
+                ) if mes_ant_total else 0.0
+
+                conn.execute("""
+                    INSERT INTO metricas_mensuales
+                        (anio, mes, total_ventas, num_ventas, ticket_promedio, crecimiento_pct)
+                    VALUES (?,?,?,?,?,?)
+                    ON CONFLICT(anio, mes) DO UPDATE SET
+                        total_ventas    = excluded.total_ventas,
+                        num_ventas      = excluded.num_ventas,
+                        ticket_promedio = excluded.ticket_promedio,
+                        crecimiento_pct = excluded.crecimiento_pct
+                """, (hoy_d.year, hoy_d.month, mes_stats["t"], mes_stats["n"],
+                      int(mes_stats["avg"]), crecimiento))
+
+                logger.info(f"Métricas calculadas: {stats['num_ventas']} ventas, ${stats['total']:,}")
+        except Exception as e:
+            logger.error(f"calcular_metricas_dia error: {e}")
+
+
 def _reset_stock_produccion():
     from database import get_connection
     try:
@@ -266,7 +396,8 @@ def start_backup_scheduler(app: Flask):
 
         schedule.every().day.at("03:00").do(run_scheduled_backup, app=app)
         schedule.every().day.at("06:00").do(_reset_stock_produccion)
-        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00)")
+        schedule.every().day.at("23:59").do(calcular_metricas_dia, app)
+        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00) + métricas (23:59)")
 
         def loop():
             while True:

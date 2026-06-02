@@ -18,40 +18,44 @@ def ventas_dia():
         return jsonify({"error": "No autenticado"}), 401
 
     fecha = request.args.get("fecha", datetime.now().strftime("%Y-%m-%d"))
+    sucursal_id = session.get("sucursal_id")
+
+    suc_filter = " AND sucursal_id=?" if sucursal_id else ""
+    suc_param  = [sucursal_id] if sucursal_id else []
 
     with db_session() as conn:
         resumen = conn.execute(
-            """SELECT
+            f"""SELECT
                 COUNT(*) as num_ventas,
                 COALESCE(SUM(total), 0) as total,
                 COALESCE(SUM(descuento), 0) as total_descuentos,
                 COALESCE(AVG(total), 0) as ticket_promedio,
                 metodo_pago, COUNT(*) as cnt
                FROM ventas
-               WHERE DATE(creado_en)=? AND estado='completada'
+               WHERE DATE(creado_en)=? AND estado='completada'{suc_filter}
                GROUP BY metodo_pago""",
-            (fecha,)
+            [fecha] + suc_param
         ).fetchall()
 
         por_hora = conn.execute(
-            """SELECT strftime('%H', creado_en) as hora,
+            f"""SELECT strftime('%H', creado_en) as hora,
                 COUNT(*) as ventas,
                 COALESCE(SUM(total), 0) as total
                FROM ventas
-               WHERE DATE(creado_en)=? AND estado='completada'
+               WHERE DATE(creado_en)=? AND estado='completada'{suc_filter}
                GROUP BY hora ORDER BY hora""",
-            (fecha,)
+            [fecha] + suc_param
         ).fetchall()
 
         top_productos = conn.execute(
-            """SELECT p.nombre, SUM(vi.cantidad) as unidades, SUM(vi.subtotal) as total
+            f"""SELECT p.nombre, SUM(vi.cantidad) as unidades, SUM(vi.subtotal) as total
                FROM venta_items vi
                JOIN ventas v ON vi.venta_id=v.id
                JOIN productos p ON vi.producto_id=p.id
-               WHERE DATE(v.creado_en)=? AND v.estado='completada'
+               WHERE DATE(v.creado_en)=? AND v.estado='completada'{suc_filter}
                GROUP BY vi.producto_id
                ORDER BY unidades DESC LIMIT 10""",
-            (fecha,)
+            [fecha] + suc_param
         ).fetchall()
 
         return jsonify({
@@ -191,6 +195,71 @@ Responde en español, de forma breve y útil (máximo 3 oraciones)."""
     except Exception as e:
         logger.warning(f"TinyLlama no disponible: {e}")
         return _analisis_sin_ia(contexto, pregunta)
+
+
+@reportes_bp.route("/metricas", methods=["GET"])
+def metricas_rapidas():
+    """Retorna métricas precalculadas. periodo=dia|semana|mes (default: dia)."""
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+
+    periodo = request.args.get("periodo", "dia")
+
+    with db_session() as conn:
+        if periodo == "semana":
+            rows = conn.execute(
+                "SELECT * FROM metricas_semanales ORDER BY anio DESC, semana DESC LIMIT 12"
+            ).fetchall()
+            return jsonify([dict(r) for r in rows])
+
+        if periodo == "mes":
+            rows = conn.execute(
+                "SELECT * FROM metricas_mensuales ORDER BY anio DESC, mes DESC LIMIT 13"
+            ).fetchall()
+            return jsonify([dict(r) for r in rows])
+
+        # dia (default)
+        fecha = request.args.get("fecha", datetime.now().strftime("%Y-%m-%d"))
+        row = conn.execute(
+            "SELECT * FROM metricas_diarias WHERE fecha=?", (fecha,)
+        ).fetchone()
+
+        if row:
+            return jsonify(dict(row))
+
+        # Si no hay precalculado, calcula on-demand (fallback)
+        stats = conn.execute("""
+            SELECT COUNT(*) as num_ventas,
+                   COALESCE(SUM(total),0) as total_ventas,
+                   COALESCE(AVG(total),0) as ticket_promedio,
+                   COALESCE(SUM(CASE WHEN metodo_pago='efectivo'      THEN total ELSE 0 END),0) as metodo_efectivo,
+                   COALESCE(SUM(CASE WHEN metodo_pago='tarjeta'       THEN total ELSE 0 END),0) as metodo_tarjeta,
+                   COALESCE(SUM(CASE WHEN metodo_pago='transferencia' THEN total ELSE 0 END),0) as metodo_transferencia
+            FROM ventas WHERE DATE(creado_en)=? AND estado='completada'
+        """, (fecha,)).fetchone()
+        top = conn.execute("""
+            SELECT p.id as producto_top_id, p.nombre as producto_top_nombre,
+                   SUM(vi.cantidad) as producto_top_cant
+            FROM venta_items vi
+            JOIN productos p ON p.id=vi.producto_id
+            JOIN ventas v ON v.id=vi.venta_id
+            WHERE DATE(v.creado_en)=? AND v.estado='completada'
+            GROUP BY p.id ORDER BY producto_top_cant DESC LIMIT 1
+        """, (fecha,)).fetchone()
+
+        return jsonify({
+            "fecha": fecha,
+            "num_ventas": stats["num_ventas"],
+            "total_ventas": stats["total_ventas"],
+            "ticket_promedio": int(stats["ticket_promedio"]),
+            "metodo_efectivo": stats["metodo_efectivo"],
+            "metodo_tarjeta": stats["metodo_tarjeta"],
+            "metodo_transferencia": stats["metodo_transferencia"],
+            "producto_top_id": top["producto_top_id"] if top else None,
+            "producto_top_nombre": top["producto_top_nombre"] if top else None,
+            "producto_top_cant": top["producto_top_cant"] if top else 0,
+            "_source": "live",
+        })
 
 
 def _analisis_sin_ia(contexto: dict, pregunta: str) -> str:

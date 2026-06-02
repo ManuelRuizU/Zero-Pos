@@ -279,6 +279,50 @@ CREATE TABLE IF NOT EXISTS voz_sinonimos_variante (
     UNIQUE(palabra, producto_id, variante_id)
 );
 
+-- ── Métricas precalculadas ───────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS metricas_diarias (
+    id                    INTEGER PRIMARY KEY,
+    fecha                 DATE NOT NULL UNIQUE,
+    total_ventas          INTEGER DEFAULT 0,
+    num_ventas            INTEGER DEFAULT 0,
+    ticket_promedio       INTEGER DEFAULT 0,
+    total_pedidos         INTEGER DEFAULT 0,
+    producto_top_id       INTEGER REFERENCES productos(id),
+    producto_top_nombre   TEXT,
+    producto_top_cant     INTEGER DEFAULT 0,
+    metodo_efectivo       INTEGER DEFAULT 0,
+    metodo_tarjeta        INTEGER DEFAULT 0,
+    metodo_transferencia  INTEGER DEFAULT 0,
+    creado_en             DATETIME DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en        DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS metricas_semanales (
+    id              INTEGER PRIMARY KEY,
+    anio            INTEGER NOT NULL,
+    semana          INTEGER NOT NULL,
+    fecha_inicio    DATE NOT NULL,
+    fecha_fin       DATE NOT NULL,
+    total_ventas    INTEGER DEFAULT 0,
+    num_ventas      INTEGER DEFAULT 0,
+    ticket_promedio INTEGER DEFAULT 0,
+    dia_mejor       TEXT,
+    dia_mejor_total INTEGER DEFAULT 0,
+    UNIQUE(anio, semana)
+);
+
+CREATE TABLE IF NOT EXISTS metricas_mensuales (
+    id              INTEGER PRIMARY KEY,
+    anio            INTEGER NOT NULL,
+    mes             INTEGER NOT NULL,
+    total_ventas    INTEGER DEFAULT 0,
+    num_ventas      INTEGER DEFAULT 0,
+    ticket_promedio INTEGER DEFAULT 0,
+    crecimiento_pct REAL DEFAULT 0,
+    UNIQUE(anio, mes)
+);
+
 CREATE TABLE IF NOT EXISTS geografia_local (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
     comuna                TEXT NOT NULL,

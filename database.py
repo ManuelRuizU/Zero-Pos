@@ -185,10 +185,64 @@ def _m003_indices_analiticos(conn):
             pass
 
 
+def _m004_metricas_agregadas(conn):
+    """Crea tablas de métricas precalculadas si no existen."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS metricas_diarias (
+        id                    INTEGER PRIMARY KEY,
+        fecha                 DATE NOT NULL UNIQUE,
+        total_ventas          INTEGER DEFAULT 0,
+        num_ventas            INTEGER DEFAULT 0,
+        ticket_promedio       INTEGER DEFAULT 0,
+        total_pedidos         INTEGER DEFAULT 0,
+        producto_top_id       INTEGER REFERENCES productos(id),
+        producto_top_nombre   TEXT,
+        producto_top_cant     INTEGER DEFAULT 0,
+        metodo_efectivo       INTEGER DEFAULT 0,
+        metodo_tarjeta        INTEGER DEFAULT 0,
+        metodo_transferencia  INTEGER DEFAULT 0,
+        creado_en             DATETIME DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en        DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS metricas_semanales (
+        id              INTEGER PRIMARY KEY,
+        anio            INTEGER NOT NULL,
+        semana          INTEGER NOT NULL,
+        fecha_inicio    DATE NOT NULL,
+        fecha_fin       DATE NOT NULL,
+        total_ventas    INTEGER DEFAULT 0,
+        num_ventas      INTEGER DEFAULT 0,
+        ticket_promedio INTEGER DEFAULT 0,
+        dia_mejor       TEXT,
+        dia_mejor_total INTEGER DEFAULT 0,
+        UNIQUE(anio, semana)
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS metricas_mensuales (
+        id              INTEGER PRIMARY KEY,
+        anio            INTEGER NOT NULL,
+        mes             INTEGER NOT NULL,
+        total_ventas    INTEGER DEFAULT 0,
+        num_ventas      INTEGER DEFAULT 0,
+        ticket_promedio INTEGER DEFAULT 0,
+        crecimiento_pct REAL DEFAULT 0,
+        UNIQUE(anio, mes)
+    )""")
+
+
+def _m005_usuarios_permisos_sucursal(conn):
+    """Agrega sucursal_id y permisos a usuarios."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(usuarios)").fetchall()}
+    if "sucursal_id" not in cols:
+        conn.execute("ALTER TABLE usuarios ADD COLUMN sucursal_id INTEGER REFERENCES sucursales(id)")
+    if "permisos" not in cols:
+        conn.execute("ALTER TABLE usuarios ADD COLUMN permisos TEXT DEFAULT NULL")
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
     (3, "índices analíticos para reportes y POS",                                _m003_indices_analiticos),
+    (4, "métricas precalculadas diarias/semanales/mensuales",                    _m004_metricas_agregadas),
+    (5, "usuarios: sucursal_id y permisos JSON",                                 _m005_usuarios_permisos_sucursal),
 ]
 
 
@@ -683,6 +737,102 @@ def _seed_defaults(conn: sqlite3.Connection):
         )
         conn.execute("DELETE FROM subcategorias WHERE categoria_id=?", (_orig["id"],))
         conn.execute("DELETE FROM categorias WHERE id=?", (_orig["id"],))
+
+
+_PERMISOS_ROL = {
+    "supervisor": {
+        "puede_anular_ventas":    True,
+        "puede_ver_reportes":     True,
+        "puede_editar_precios":   True,
+        "puede_gestionar_stock":  True,
+        "puede_hacer_descuentos": True,
+        "descuento_maximo_pct":   20,
+    },
+    "cajero": {
+        "puede_anular_ventas":    False,
+        "puede_ver_reportes":     False,
+        "puede_editar_precios":   False,
+        "puede_gestionar_stock":  False,
+        "puede_hacer_descuentos": True,
+        "descuento_maximo_pct":   5,
+    },
+    "vendedor": {
+        "puede_anular_ventas":    False,
+        "puede_ver_reportes":     False,
+        "puede_editar_precios":   False,
+        "puede_gestionar_stock":  False,
+        "puede_hacer_descuentos": False,
+        "descuento_maximo_pct":   0,
+    },
+    "bodega": {
+        "puede_anular_ventas":    False,
+        "puede_ver_reportes":     True,
+        "puede_editar_precios":   False,
+        "puede_gestionar_stock":  True,
+        "puede_hacer_descuentos": False,
+        "descuento_maximo_pct":   0,
+    },
+    "delivery": {
+        "puede_anular_ventas":    False,
+        "puede_ver_reportes":     False,
+        "puede_editar_precios":   False,
+        "puede_gestionar_stock":  False,
+        "puede_hacer_descuentos": False,
+        "descuento_maximo_pct":   0,
+    },
+    "cocina": {
+        "puede_anular_ventas":    False,
+        "puede_ver_reportes":     False,
+        "puede_editar_precios":   False,
+        "puede_gestionar_stock":  False,
+        "puede_hacer_descuentos": False,
+        "descuento_maximo_pct":   0,
+    },
+}
+
+ROLES_VALIDOS = ("admin", "supervisor", "cajero", "vendedor", "bodega", "delivery", "cocina")
+
+
+def tiene_permiso(session_data: dict, permiso: str):
+    """Verifica si el usuario de sesión tiene un permiso específico.
+
+    Los permisos JSON en la columna `permisos` sobreescriben los defaults del rol.
+    """
+    import json as _json
+    rol = session_data.get("usuario_rol", "")
+    if rol == "admin":
+        if permiso == "descuento_maximo_pct":
+            return 100
+        return True
+
+    permisos_base = _PERMISOS_ROL.get(rol, {})
+    permisos_custom = {}
+    raw = session_data.get("usuario_permisos")
+    if raw:
+        try:
+            permisos_custom = _json.loads(raw)
+        except Exception:
+            pass
+
+    merged = {**permisos_base, **permisos_custom}
+    return merged.get(permiso, False)
+
+
+def permisos_efectivos(session_data: dict) -> dict:
+    """Devuelve el dict completo de permisos para el usuario de sesión."""
+    import json as _json
+    rol = session_data.get("usuario_rol", "")
+    if rol == "admin":
+        return {k: True for k in next(iter(_PERMISOS_ROL.values()))} | {"descuento_maximo_pct": 100}
+
+    permisos_base = dict(_PERMISOS_ROL.get(rol, {}))
+    raw = session_data.get("usuario_permisos")
+    if raw:
+        try:
+            permisos_base.update(_json.loads(raw))
+        except Exception:
+            pass
+    return permisos_base
 
 
 def _seed_montos_chilenos(conn: sqlite3.Connection):
