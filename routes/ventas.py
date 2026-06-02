@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
-from database import db_session, pesos, registrar_movimiento_stock
+from database import db_session, pesos, registrar_movimiento_stock, tiene_permiso
 from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
@@ -41,6 +41,13 @@ def crear_venta():
 
     metodo_pago = data.get("metodo_pago", "efectivo")
     descuento_global = float(data.get("descuento", 0))
+
+    # Verificar descuento máximo permitido por rol
+    if descuento_global > 0:
+        max_desc_pct = tiene_permiso(dict(session), "descuento_maximo_pct")
+        if max_desc_pct is False or max_desc_pct == 0:
+            return jsonify({"error": "No tienes permiso para aplicar descuentos"}), 403
+
     cliente_nombre = data.get("cliente_nombre")
     cliente_rut = data.get("cliente_rut")
     notas = data.get("notas")
@@ -291,8 +298,8 @@ def detalle_venta(vid):
 
 @ventas_bp.route("/<int:vid>/anular", methods=["POST"])
 def anular_venta(vid):
-    if session.get("usuario_rol") not in ("admin",):
-        return jsonify({"error": "Sin permisos"}), 403
+    if not tiene_permiso(dict(session), "puede_anular_ventas"):
+        return jsonify({"error": "Sin permisos para anular ventas"}), 403
     uid = session.get("usuario_id")
 
     with db_session() as conn:

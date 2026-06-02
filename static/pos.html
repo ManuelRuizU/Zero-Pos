@@ -1647,10 +1647,14 @@ fetch('/api/config/sistema/sincronizar-hora', {
   body: JSON.stringify({timestamp: Math.floor(Date.now() / 1000)})
 }).catch(() => {});
 
+let _permisosPOS = {};
+
 async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
   document.getElementById('cajeroNombre').textContent = `👤 ${me.nombre}`;
+  _permisosPOS = me.permisos || {};
+  _aplicarPermisosPOS(me);
 
   const estado = await fetch('/api/onboarding/estado', {credentials:'include'})
     .then(r => r.json()).catch(() => ({completado: true}));
@@ -1678,6 +1682,28 @@ async function init() {
   verificarTurno(me);
   initVoz();
   iniciarPollCola();
+}
+
+function _aplicarPermisosPOS(me) {
+  const p = me.permisos || {};
+  // Ocultar botón Admin si no puede ver reportes y no es admin
+  if (me.rol !== 'admin' && !p.puede_ver_reportes) {
+    const btnAdmin = document.querySelector('[onclick*="admin.html"]');
+    if (btnAdmin) btnAdmin.style.display = 'none';
+  }
+  // Limitar input de descuento al máximo permitido
+  const descInput = document.getElementById('descuentoInput');
+  if (descInput) {
+    const maxPct = typeof p.descuento_maximo_pct === 'number' ? p.descuento_maximo_pct : 100;
+    if (!p.puede_hacer_descuentos) {
+      descInput.disabled = true;
+      descInput.placeholder = 'Sin permiso';
+      descInput.title = 'No tienes permiso para aplicar descuentos';
+    } else if (maxPct > 0) {
+      descInput.dataset.maxPct = maxPct;
+      descInput.title = `Descuento máximo: ${maxPct}%`;
+    }
+  }
 }
 
 async function verificarTurno(me) {
@@ -2570,6 +2596,20 @@ async function confirmarPago() {
   btn.disabled = true; btn.textContent = 'Procesando...';
 
   const desc = parseFloat(document.getElementById('descuentoInput').value) || 0;
+  // Validar descuento máximo por permisos
+  if (desc > 0) {
+    if (!_permisosPOS.puede_hacer_descuentos) {
+      showToast('No tienes permiso para aplicar descuentos', 'error');
+      btn.disabled = false; btn.textContent = 'Confirmar pago';
+      return;
+    }
+    const maxPct = typeof _permisosPOS.descuento_maximo_pct === 'number' ? _permisosPOS.descuento_maximo_pct : 100;
+    if (maxPct > 0 && total > 0 && (desc / total * 100) > maxPct) {
+      showToast(`Descuento máximo permitido: ${maxPct}%`, 'error');
+      btn.disabled = false; btn.textContent = 'Confirmar pago';
+      return;
+    }
+  }
   const itemsNormales = carrito.filter(i => !i._rapida && i.producto_id && !i._pedido_item);
   const itemsRapidosCarrito = carrito.filter(i => i._rapida);
   const pedidoItemsCarrito = carrito.filter(i => i._pedido_item);
