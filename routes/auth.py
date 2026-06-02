@@ -70,8 +70,9 @@ def login():
                 if not bcrypt.checkpw(pin.encode(), u["pin_hash"].encode()):
                     continue
 
-                # Admin siempre puede entrar — límite solo aplica a cajero/cocina
-                if u["rol"] != "admin":
+                # Límite de sesiones simultáneas solo para rol 'cajero'
+                ROLES_CON_LIMITE = ("cajero",)
+                if u["rol"] in ROLES_CON_LIMITE:
                     max_cfg = conn.execute(
                         "SELECT valor FROM config WHERE clave='max_cajeros'"
                     ).fetchone()
