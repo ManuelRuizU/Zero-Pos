@@ -623,6 +623,7 @@ def leer_producto():
     )
     codigo_manual = request.form.get("codigo_barras", "").strip() or None
 
+    solo_off = request.form.get("solo_off") == "1"
     imagen_bytes = archivo.read() if archivo else None
     imagen_url = None
 
@@ -658,6 +659,10 @@ def leer_producto():
                 "imagen_url": imagen_url,
                 "fuente": "open_food_facts",
             })
+
+    # Si solo_off=1, no intentar OCR
+    if solo_off:
+        return jsonify({"ok": False, "codigo_detectado": codigo, "imagen_url": imagen_url})
 
     # PASO 4: OCR como fallback
     if imagen_bytes:
