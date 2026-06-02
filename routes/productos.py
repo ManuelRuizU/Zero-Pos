@@ -168,6 +168,11 @@ def listar_completos():
             })
 
     result = list(productos.values())
+    for p in result:
+        if p["_variantes"]:
+            p["stock_real"] = sum(v["stock"] for v in p["_variantes"])
+        else:
+            p["stock_real"] = p["stock"]
     _cache_set(cache_key, result)
     return jsonify(result)
 

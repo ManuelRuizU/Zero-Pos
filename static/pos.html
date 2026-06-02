@@ -1980,14 +1980,14 @@ function agregarAlCarrito(prod) {
   const idx = carrito.findIndex(i => i.producto_id === prod.id && !i.variante_id);
   const modoStock = prod.modo_stock || 'normal';
   if (idx >= 0) {
-    if (modoStock !== 'sin_stock' && carrito[idx].cantidad >= prod.stock) {
+    if (modoStock !== 'sin_stock' && carrito[idx].cantidad >= (prod.stock_real ?? prod.stock)) {
       showToast('Stock máximo alcanzado', 'error'); return;
     }
     carrito[idx].cantidad++;
   } else {
     carrito.push({
       producto_id: prod.id, nombre: prod.nombre,
-      precio_unit: prod.precio, cantidad: 1, stock: prod.stock,
+      precio_unit: prod.precio, cantidad: 1, stock: prod.stock_real ?? prod.stock,
       modo_stock: modoStock,
     });
   }
@@ -3109,7 +3109,7 @@ function procesarCodigoGranel(codigo) {
       nombre_variante: '',
       precio_unit: Math.round((prod.precio || 0) * pesoGramos),
       cantidad: 1,
-      stock: prod.stock,
+      stock: prod.stock_real ?? prod.stock,
       modo_stock: prod.modo_stock || 'normal',
       _new: true,
     });
@@ -3145,7 +3145,7 @@ function agregarAlCarritoLocal(producto) {
   const varianteId = vSel ? vSel.id : null;
   const precio = vSel ? vSel.precio : producto.precio;
   const nombreFull = producto.nombre + (vSel ? ' ' + vSel.nombre : '');
-  const stockDisp = vSel ? (vSel.stock ?? 9999) : (producto.stock ?? 9999);
+  const stockDisp = vSel ? (vSel.stock ?? 9999) : (producto.stock_real ?? producto.stock ?? 9999);
   const modoStock = producto.modo_stock || 'normal';
 
   const idx = carrito.findIndex(i => i.producto_id === producto.id && i.variante_id === varianteId);

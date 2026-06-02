@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from flask import Blueprint, request, jsonify, session
-from database import db_session
+from database import db_session, registrar_movimiento_stock, actualizar_proveedor_producto
 
 inventario_bp = Blueprint("inventario", __name__, url_prefix="/api/inventario")
 logger = logging.getLogger("zero_pos.inventario")
@@ -296,10 +296,12 @@ def importar_factura():
                 ).fetchone()
                 if row:
                     producto_id = row["id"]
+                    registrar_movimiento_stock(
+                        conn, producto_id, None, "entrada", cantidad,
+                        "compra", uid, compra_id=compra_id)
                     conn.execute(
-                        "UPDATE productos SET precio_costo=?, stock=stock+?, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
-                        (precio_unit, cantidad, producto_id)
-                    )
+                        "UPDATE productos SET precio_costo=? WHERE id=?",
+                        (precio_unit, producto_id))
                     actualizados += 1
                     if not row["precio"]:
                         sin_precio.append(nombre)
@@ -311,6 +313,16 @@ def importar_factura():
                         (nombre, barras, precio_unit, cantidad)
                     )
                     producto_id = cur2.lastrowid
+                    try:
+                        conn.execute(
+                            """INSERT INTO stock_movimientos
+                               (producto_id, tipo, cantidad, motivo, usuario_id,
+                                stock_antes, stock_despues, compra_id)
+                               VALUES (?,?,?,?,?,0,?,?)""",
+                            (producto_id, "entrada", cantidad, "compra_nueva", uid,
+                             cantidad, compra_id))
+                    except Exception:
+                        pass
                     sin_precio.append(nombre)
                     creados += 1
             else:
@@ -321,6 +333,16 @@ def importar_factura():
                     (nombre, precio_unit, cantidad)
                 )
                 producto_id = cur2.lastrowid
+                try:
+                    conn.execute(
+                        """INSERT INTO stock_movimientos
+                           (producto_id, tipo, cantidad, motivo, usuario_id,
+                            stock_antes, stock_despues, compra_id)
+                           VALUES (?,?,?,?,?,0,?,?)""",
+                        (producto_id, "entrada", cantidad, "compra_nueva", uid,
+                         cantidad, compra_id))
+                except Exception:
+                    pass
                 sin_precio.append(nombre)
                 creados += 1
 
@@ -330,6 +352,10 @@ def importar_factura():
                    VALUES (?,?,?,?,?,?)""",
                 (compra_id, producto_id, nombre, cantidad, precio_unit, subtotal)
             )
+
+            if proveedor_id and producto_id and precio_unit:
+                actualizar_proveedor_producto(conn, proveedor_id, producto_id,
+                                              precio_unit, fecha)
 
         return jsonify({
             "ok": True,

@@ -14,6 +14,91 @@ def pesos(valor) -> int:
     return int(round(float(valor or 0)))
 
 
+def registrar_movimiento_stock(conn, producto_id, variante_id, tipo, cantidad,
+                                motivo, usuario_id=None, *, venta_id=None,
+                                pedido_id=None, compra_id=None, devolucion_id=None,
+                                notas=None):
+    """Actualiza stock Y registra trazabilidad en stock_movimientos.
+
+    tipo: 'salida' | 'entrada' | 'devolucion' | 'ajuste'
+    Para 'ajuste', cantidad es el nuevo stock absoluto.
+    """
+    if variante_id:
+        row = conn.execute(
+            "SELECT stock FROM producto_variantes WHERE id=?", (variante_id,)
+        ).fetchone()
+        stock_antes = int(row["stock"]) if row else 0
+        if tipo == "salida":
+            conn.execute("UPDATE producto_variantes SET stock=stock-? WHERE id=?",
+                         (cantidad, variante_id))
+            stock_despues = stock_antes - cantidad
+        elif tipo == "ajuste":
+            conn.execute("UPDATE producto_variantes SET stock=? WHERE id=?",
+                         (cantidad, variante_id))
+            stock_despues = cantidad
+            cantidad = abs(cantidad - stock_antes)
+        else:
+            conn.execute("UPDATE producto_variantes SET stock=stock+? WHERE id=?",
+                         (cantidad, variante_id))
+            stock_despues = stock_antes + cantidad
+    else:
+        row = conn.execute(
+            "SELECT stock FROM productos WHERE id=?", (producto_id,)
+        ).fetchone()
+        stock_antes = int(row["stock"]) if row else 0
+        if tipo == "salida":
+            conn.execute(
+                "UPDATE productos SET stock=stock-?, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+                (cantidad, producto_id))
+            stock_despues = stock_antes - cantidad
+        elif tipo == "ajuste":
+            conn.execute(
+                "UPDATE productos SET stock=?, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+                (cantidad, producto_id))
+            stock_despues = cantidad
+            cantidad = abs(cantidad - stock_antes)
+        else:
+            conn.execute(
+                "UPDATE productos SET stock=stock+?, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+                (cantidad, producto_id))
+            stock_despues = stock_antes + cantidad
+
+    try:
+        conn.execute("""
+            INSERT INTO stock_movimientos
+                (producto_id, variante_id, tipo, cantidad, motivo, usuario_id,
+                 stock_antes, stock_despues, venta_id, pedido_id, compra_id, devolucion_id, notas)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, (producto_id, variante_id, tipo, cantidad, motivo, usuario_id,
+              stock_antes, stock_despues, venta_id, pedido_id, compra_id, devolucion_id, notas))
+    except Exception:
+        conn.execute(
+            "INSERT INTO stock_movimientos (producto_id, tipo, cantidad, motivo, usuario_id)"
+            " VALUES (?,?,?,?,?)",
+            (producto_id, tipo, cantidad, motivo, usuario_id)
+        )
+
+
+def actualizar_proveedor_producto(conn, proveedor_id, producto_id, precio_compra, fecha=None):
+    """Upsert en proveedor_productos con el precio y fecha de la última compra."""
+    from datetime import date as _date
+    if fecha is None:
+        fecha = _date.today().isoformat()
+    try:
+        conn.execute("""
+            INSERT INTO proveedor_productos
+                (proveedor_id, producto_id, precio_ultima_compra, fecha_ultima_compra,
+                 precio_referencia)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(proveedor_id, producto_id) DO UPDATE SET
+                precio_ultima_compra = excluded.precio_ultima_compra,
+                fecha_ultima_compra  = excluded.fecha_ultima_compra,
+                precio_referencia    = COALESCE(precio_referencia, excluded.precio_ultima_compra)
+        """, (proveedor_id, producto_id, precio_compra, fecha, precio_compra))
+    except Exception as e:
+        logger.debug(f"actualizar_proveedor_producto: {e}")
+
+
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -37,6 +122,106 @@ def db_session():
         raise
     finally:
         conn.close()
+
+
+# ── P0.4: Sistema de migraciones versionado ───────────────────────────────────
+
+def _m001_stock_trazabilidad(conn):
+    """Añade columnas de trazabilidad a stock_movimientos."""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(stock_movimientos)").fetchall()}
+    for col, defn in [
+        ("variante_id",   "INTEGER"),
+        ("stock_antes",   "INTEGER"),
+        ("stock_despues", "INTEGER"),
+        ("venta_id",      "INTEGER"),
+        ("pedido_id",     "INTEGER"),
+        ("compra_id",     "INTEGER"),
+        ("devolucion_id", "INTEGER"),
+        ("notas",         "TEXT"),
+    ]:
+        if col not in cols:
+            conn.execute(f"ALTER TABLE stock_movimientos ADD COLUMN {col} {defn}")
+    try:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_smov_venta ON stock_movimientos(venta_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_smov_compra ON stock_movimientos(compra_id)")
+    except Exception:
+        pass
+
+
+def _m002_proveedor_productos(conn):
+    """Crea tabla proveedor_productos si no existe."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS proveedor_productos (
+        id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+        proveedor_id          INTEGER NOT NULL REFERENCES proveedores(id),
+        producto_id           INTEGER NOT NULL REFERENCES productos(id),
+        codigo_proveedor      TEXT,
+        precio_referencia     INTEGER,
+        precio_ultima_compra  INTEGER,
+        fecha_ultima_compra   DATE,
+        unidad_compra         TEXT DEFAULT 'unidad',
+        minimo_pedido         INTEGER DEFAULT 1,
+        activo                INTEGER NOT NULL DEFAULT 1,
+        UNIQUE(proveedor_id, producto_id)
+    )""")
+    try:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_pp_proveedor ON proveedor_productos(proveedor_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_pp_producto  ON proveedor_productos(producto_id)")
+    except Exception:
+        pass
+
+
+def _m003_indices_analiticos(conn):
+    """Índices para queries de reportes y analíticas."""
+    for name, tabla, defn in [
+        ("idx_ventas_fecha_total",   "ventas",           "(creado_en, total)"),
+        ("idx_vitems_producto",      "venta_items",      "(producto_id)"),
+        ("idx_productos_categoria",  "productos",        "(categoria_id) WHERE activo=1"),
+        ("idx_productos_stock_bajo", "productos",        "(stock, stock_minimo) WHERE activo=1"),
+        ("idx_smov_prod_fecha",      "stock_movimientos","(producto_id, creado_en)"),
+    ]:
+        try:
+            conn.execute(f"CREATE INDEX IF NOT EXISTS {name} ON {tabla}{defn}")
+        except Exception:
+            pass
+
+
+_MIGRACIONES = [
+    (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
+    (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
+    (3, "índices analíticos para reportes y POS",                                _m003_indices_analiticos),
+]
+
+
+def aplicar_migraciones(conn):
+    conn.execute("""CREATE TABLE IF NOT EXISTS schema_version (
+        version     INTEGER PRIMARY KEY,
+        descripcion TEXT,
+        aplicada_en DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    aplicadas = {r[0] for r in conn.execute("SELECT version FROM schema_version").fetchall()}
+    for version, descripcion, fn in _MIGRACIONES:
+        if version not in aplicadas:
+            try:
+                fn(conn)
+                conn.execute(
+                    "INSERT INTO schema_version (version, descripcion) VALUES (?,?)",
+                    (version, descripcion)
+                )
+                logger.info(f"Migración {version} aplicada: {descripcion}")
+            except Exception as e:
+                logger.error(f"Migración {version} falló: {e}")
+
+
+def _migrate_stock_model(conn):
+    """P0.1: Marca con stock=-1 los productos que tienen variantes activas."""
+    conn.execute("""
+        UPDATE productos
+        SET stock = -1
+        WHERE id IN (
+            SELECT DISTINCT producto_id FROM producto_variantes WHERE activo = 1
+        )
+        AND stock != -1
+    """)
 
 
 def init_db():
@@ -67,6 +252,8 @@ def init_db():
         with db_session() as conn:
             _migrate_montos(conn)
             _migrate_columns(conn)
+            aplicar_migraciones(conn)   # P0.4: migraciones versionadas
+            _migrate_stock_model(conn)  # P0.1: stock=-1 para productos con variantes
             _seed_defaults(conn)
     except Exception as e:
         logger.error(f"init_db migraciones/seeds: {e}")

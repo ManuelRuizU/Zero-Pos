@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
-from database import db_session, pesos
+from database import db_session, pesos, registrar_movimiento_stock
 from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
@@ -144,15 +144,13 @@ def crear_venta():
                  it["precio_unit"], it["descuento"], it["subtotal"])
             )
             if it.get("variante_id"):
-                conn.execute(
-                    "UPDATE producto_variantes SET stock = stock - ? WHERE id=?",
-                    (it["cantidad"], it["variante_id"])
-                )
+                registrar_movimiento_stock(
+                    conn, it["producto_id"], it["variante_id"],
+                    "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
             elif it.get("modo_stock") != "sin_stock":
-                conn.execute(
-                    "UPDATE productos SET stock = stock - ? WHERE id=?",
-                    (it["cantidad"], it["producto_id"])
-                )
+                registrar_movimiento_stock(
+                    conn, it["producto_id"], None,
+                    "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
             if it.get("modo_stock") != "sin_stock":
                 _check_stock_alerta(conn, it["producto_id"])
 
@@ -295,6 +293,7 @@ def detalle_venta(vid):
 def anular_venta(vid):
     if session.get("usuario_rol") not in ("admin",):
         return jsonify({"error": "Sin permisos"}), 403
+    uid = session.get("usuario_id")
 
     with db_session() as conn:
         venta = conn.execute(
@@ -304,13 +303,12 @@ def anular_venta(vid):
             return jsonify({"error": "Venta no encontrada o ya anulada"}), 404
 
         items = conn.execute(
-            "SELECT producto_id, cantidad FROM venta_items WHERE venta_id=?", (vid,)
+            "SELECT producto_id, variante_id, cantidad FROM venta_items WHERE venta_id=?", (vid,)
         ).fetchall()
         for it in items:
-            conn.execute(
-                "UPDATE productos SET stock = stock + ? WHERE id=?",
-                (it["cantidad"], it["producto_id"])
-            )
+            registrar_movimiento_stock(
+                conn, it["producto_id"], it["variante_id"],
+                "entrada", it["cantidad"], "anulacion", uid, venta_id=vid)
 
         conn.execute(
             "UPDATE ventas SET estado='anulada' WHERE id=?", (vid,)
@@ -346,11 +344,11 @@ def devolucion(vid):
             if not orig or orig["cantidad"] < qty:
                 return jsonify({"error": f"Cantidad de devolución inválida para producto {pid}"}), 400
             monto_devuelto += orig["precio_unit"] * qty
-            conn.execute(
-                "UPDATE productos SET stock = stock + ? WHERE id=?", (qty, pid)
-            )
+            registrar_movimiento_stock(
+                conn, pid, orig["variante_id"] if "variante_id" in orig.keys() else None,
+                "devolucion", qty, motivo or "devolucion", uid, venta_id=vid)
 
-        conn.execute(
+        cur_dev = conn.execute(
             "INSERT INTO devoluciones (venta_id, usuario_id, motivo, monto) VALUES (?,?,?,?)",
             (vid, uid, motivo, pesos(monto_devuelto))
         )
