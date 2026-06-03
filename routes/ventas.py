@@ -1,7 +1,8 @@
 import logging
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
-from database import db_session, pesos, registrar_movimiento_stock, tiene_permiso
+from database import (db_session, pesos, registrar_movimiento_stock, tiene_permiso,
+                       encolar_ticket, marcar_ticket_impreso, marcar_ticket_fallido)
 from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
@@ -181,27 +182,57 @@ def crear_venta():
 
 def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, config_imp,
                            pedido=None, empleado=""):
-    """Imprime en hilo separado para no bloquear la respuesta HTTP."""
+    """Encola el ticket PRIMERO (la venta ya está guardada), luego imprime en hilo separado.
+    Si la impresión falla, el ticket queda en cola para reintento automático.
+    La venta NUNCA se pierde aunque falle la impresora."""
     import threading
+    from utils.impresora import _formatear_texto, imprimir_comanda
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    venta_data = {
+        "id": venta_id, "total": total, "metodo_pago": metodo_pago,
+        "creado_en": now_str, "cajero": empleado,
+    }
+
+    # Generar contenido del ticket de forma síncrona antes del hilo
+    try:
+        contenido = _formatear_texto(venta_data, items, config_negocio, pedido)
+    except Exception as e:
+        logger.warning(f"Error al formatear ticket #{venta_id}: {e}")
+        contenido = f"Venta #{venta_id} — ${total:,}\n{now_str}\n"
+
+    # Guardar en cola ANTES de intentar imprimir
+    cola_id = None
+    try:
+        with db_session() as conn:
+            cola_id = encolar_ticket(conn, venta_id, contenido,
+                                     config_imp.get("ip") or config_imp.get("tipo"))
+    except Exception as e:
+        logger.warning(f"Error al encolar ticket #{venta_id}: {e}")
 
     def _print():
+        from utils.impresora import enviar_crudo
         try:
-            from utils.impresora import imprimir_recibo, imprimir_comanda
-            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            venta_data = {
-                "id": venta_id,
-                "total": total,
-                "metodo_pago": metodo_pago,
-                "creado_en": now_str,
-                "cajero": empleado,
-            }
-            resultado = imprimir_recibo(venta_data, items, config_negocio, config_imp, pedido)
+            resultado = enviar_crudo(config_imp, contenido)
             if resultado.get("ok"):
                 logger.info(f"Ticket venta #{venta_id} impreso OK")
+                if cola_id:
+                    try:
+                        with db_session() as conn:
+                            marcar_ticket_impreso(conn, cola_id)
+                    except Exception:
+                        pass
             else:
-                logger.warning(f"Impresión venta #{venta_id}: {resultado.get('error', 'error desconocido')}")
+                err = resultado.get("error", "error desconocido")
+                logger.warning(f"Impresión venta #{venta_id}: {err}")
+                if cola_id:
+                    try:
+                        with db_session() as conn:
+                            marcar_ticket_fallido(conn, cola_id, err)
+                    except Exception:
+                        pass
 
-            # Comanda de cocina si hay pedido delivery/retiro y hay impresora cocina configurada
+            # Comanda de cocina (no se encola, es best-effort)
             if pedido and pedido.get("tipo") in ("delivery", "retiro", "local"):
                 ip_cocina = config_negocio.get("impresora_cocina_ip", "")
                 if ip_cocina:
@@ -211,12 +242,16 @@ def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, 
                         "puerto": config_negocio.get("impresora_cocina_puerto", "9100"),
                     }
                     res_c = imprimir_comanda(venta_data, items, config_negocio, config_cocina, pedido)
-                    if res_c.get("ok"):
-                        logger.info(f"Comanda venta #{venta_id} impresa OK")
-                    else:
+                    if not res_c.get("ok"):
                         logger.warning(f"Comanda venta #{venta_id}: {res_c.get('error', '')}")
         except Exception as e:
             logger.warning(f"Error al imprimir ticket venta #{venta_id}: {e}")
+            if cola_id:
+                try:
+                    with db_session() as conn:
+                        marcar_ticket_fallido(conn, cola_id, str(e))
+                except Exception:
+                    pass
 
     threading.Thread(target=_print, daemon=True, name=f"ticket-{venta_id}").start()
 

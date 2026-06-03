@@ -185,6 +185,26 @@ def _m003_indices_analiticos(conn):
             pass
 
 
+def _m006_cola_impresion(conn):
+    """Crea tabla de cola de impresión persistente."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS cola_impresion (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        venta_id       INTEGER REFERENCES ventas(id),
+        contenido      TEXT NOT NULL,
+        intentos       INTEGER DEFAULT 0,
+        estado         TEXT DEFAULT 'pendiente'
+                       CHECK(estado IN ('pendiente','imprimiendo','completado','fallido')),
+        impresora_id   TEXT,
+        error_msg      TEXT,
+        creado_en      DATETIME DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    try:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_cola_estado ON cola_impresion(estado, creado_en)")
+    except Exception:
+        pass
+
+
 def _m004_metricas_agregadas(conn):
     """Crea tablas de métricas precalculadas si no existen."""
     conn.execute("""CREATE TABLE IF NOT EXISTS metricas_diarias (
@@ -243,6 +263,7 @@ _MIGRACIONES = [
     (3, "índices analíticos para reportes y POS",                                _m003_indices_analiticos),
     (4, "métricas precalculadas diarias/semanales/mensuales",                    _m004_metricas_agregadas),
     (5, "usuarios: sucursal_id y permisos JSON",                                 _m005_usuarios_permisos_sucursal),
+    (6, "cola_impresion: tickets persistentes con reintentos",                   _m006_cola_impresion),
 ]
 
 
@@ -737,6 +758,35 @@ def _seed_defaults(conn: sqlite3.Connection):
         )
         conn.execute("DELETE FROM subcategorias WHERE categoria_id=?", (_orig["id"],))
         conn.execute("DELETE FROM categorias WHERE id=?", (_orig["id"],))
+
+
+def encolar_ticket(conn, venta_id: int, contenido: str, impresora_id: str = None) -> int:
+    """Inserta un ticket en la cola de impresión. Retorna el id de la fila."""
+    cur = conn.execute(
+        """INSERT INTO cola_impresion (venta_id, contenido, impresora_id, estado)
+           VALUES (?, ?, ?, 'pendiente')""",
+        (venta_id, contenido, impresora_id)
+    )
+    return cur.lastrowid
+
+
+def marcar_ticket_impreso(conn, cola_id: int):
+    conn.execute(
+        "UPDATE cola_impresion SET estado='completado', actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+        (cola_id,)
+    )
+
+
+def marcar_ticket_fallido(conn, cola_id: int, error: str):
+    conn.execute(
+        """UPDATE cola_impresion
+           SET intentos = intentos + 1,
+               error_msg = ?,
+               estado = CASE WHEN intentos + 1 >= 3 THEN 'fallido' ELSE 'pendiente' END,
+               actualizado_en = CURRENT_TIMESTAMP
+           WHERE id=?""",
+        (error[:500], cola_id)
+    )
 
 
 _PERMISOS_ROL = {

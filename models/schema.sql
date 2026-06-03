@@ -279,6 +279,23 @@ CREATE TABLE IF NOT EXISTS voz_sinonimos_variante (
     UNIQUE(palabra, producto_id, variante_id)
 );
 
+-- ── Cola de impresión ────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS cola_impresion (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    venta_id       INTEGER REFERENCES ventas(id),
+    contenido      TEXT NOT NULL,
+    intentos       INTEGER DEFAULT 0,
+    estado         TEXT DEFAULT 'pendiente'
+                   CHECK(estado IN ('pendiente','imprimiendo','completado','fallido')),
+    impresora_id   TEXT,
+    error_msg      TEXT,
+    creado_en      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_cola_estado ON cola_impresion(estado, creado_en);
+
 -- ── Métricas precalculadas ───────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS metricas_diarias (

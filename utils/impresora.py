@@ -371,6 +371,78 @@ def imprimir_comanda(venta: dict, items: list, config: dict, config_imp: dict,
         return {"ok": False, "error": str(e)}
 
 
+def enviar_crudo(config_imp: dict, texto: str) -> dict:
+    """Envía texto pre-formateado a la impresora. Usa socket directo para red, escpos para USB/archivo."""
+    tipo = config_imp.get("tipo", "red")
+    if tipo == "red":
+        import socket as _sock
+        ip = config_imp.get("ip", "192.168.1.100")
+        puerto = int(config_imp.get("puerto", 9100))
+        try:
+            with _sock.create_connection((ip, puerto), timeout=5) as s:
+                payload = texto.encode("latin-1", errors="replace")
+                # ESC/POS: full cut
+                CUT = b"\x1d\x56\x00"
+                s.sendall(payload + CUT)
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+    else:
+        # Fallback escpos para USB/archivo
+        if not ESCPOS_OK:
+            return {"ok": False, "error": "python-escpos no instalado"}
+        try:
+            p = _get_printer(config_imp)
+            p.text(texto)
+            p.cut()
+            p.close()
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+
+def estado_impresora(config_imp: dict) -> dict:
+    """Verifica conectividad y estado de papel de la impresora."""
+    tipo = config_imp.get("tipo", "red")
+    resultado = {"conectada": False, "papel": "desconocido", "error": None}
+
+    if tipo == "red":
+        import socket as _sock
+        ip = config_imp.get("ip", "192.168.1.100")
+        puerto = int(config_imp.get("puerto", 9100))
+        try:
+            with _sock.create_connection((ip, puerto), timeout=3) as s:
+                resultado["conectada"] = True
+                # DLE EOT (1) — printer status (ESC/POS)
+                try:
+                    s.sendall(b"\x10\x04\x01")
+                    s.settimeout(1)
+                    resp = s.recv(1)
+                    if resp:
+                        b = resp[0]
+                        # Bit 5: paper near-end; Bit 3: no paper
+                        if b & 0x20:
+                            resultado["papel"] = "poco"
+                        elif b & 0x08:
+                            resultado["papel"] = "sin_papel"
+                        else:
+                            resultado["papel"] = "ok"
+                except Exception:
+                    resultado["papel"] = "ok"  # si no responde al status, asumimos ok
+        except Exception as e:
+            resultado["error"] = str(e)
+    elif ESCPOS_OK:
+        try:
+            p = _get_printer(config_imp)
+            p.close()
+            resultado["conectada"] = True
+            resultado["papel"] = "ok"
+        except Exception as e:
+            resultado["error"] = str(e)
+
+    return resultado
+
+
 def test_conexion() -> dict:
     if not ESCPOS_OK:
         return {"ok": False, "error": "python-escpos no instalado"}
