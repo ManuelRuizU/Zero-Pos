@@ -1,0 +1,66 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   ZERO POS — Design Tokens
+   Base: tema oscuro (default). Sobreescribir con [data-tema="claro"]
+   Color de acento: sobreescribir con [data-tema-color="verde|azul|..."]
+   ──────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* Fondos */
+  --bg:           #0a0a0f;
+  --surface:      rgba(255,255,255,0.05);
+  --surface2:     rgba(255,255,255,0.08);
+  --surface-hover:rgba(255,255,255,0.10);
+
+  /* Bordes */
+  --border:       rgba(255,255,255,0.10);
+
+  /* Acento primario (sobreescribible por paleta) */
+  --accent:       #6366f1;
+  --accent2:      #818cf8;
+
+  /* Texto */
+  --text:         #f1f5f9;
+  --text-dim:     #94a3b8;
+
+  /* Estado */
+  --danger:       #ef4444;
+  --success:      #22c55e;
+  --warning:      #f59e0b;
+
+  /* Misceláneos */
+  --radius:       14px;
+  --blur:         blur(20px);
+  --font:         -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+
+  /* Gradiente de fondo */
+  --bg-gradient:  radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.10) 0%, transparent 70%);
+}
+
+/* ── Tema claro ──────────────────────────────────────────────────────────── */
+[data-tema="claro"] {
+  --bg:           #f1f5f9;
+  --surface:      rgba(0,0,0,0.04);
+  --surface2:     rgba(0,0,0,0.07);
+  --surface-hover:rgba(0,0,0,0.09);
+  --border:       rgba(0,0,0,0.10);
+  --text:         #0f172a;
+  --text-dim:     #64748b;
+  --bg-gradient:  radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.06) 0%, transparent 70%);
+}
+
+[data-tema="claro"] .modal            { background: #fff; }
+[data-tema="claro"] .modal-variantes  { background: #fff; }
+[data-tema="claro"] .modal-rapida     { background: #fff; }
+[data-tema="claro"] body              { background-color: #f1f5f9; }
+[data-tema="claro"] .topbar           { background: rgba(241,245,249,0.9); }
+[data-tema="claro"] .carrito-panel    { background: #fff; }
+[data-tema="claro"] select option,
+[data-tema="claro"] .campo-group select option { background: #fff; color: #0f172a; }
+
+/* ── Paleta de colores de acento ─────────────────────────────────────────── */
+[data-tema-color="verde"]   { --accent: #22c55e; --accent2: #4ade80; }
+[data-tema-color="azul"]    { --accent: #3b82f6; --accent2: #60a5fa; }
+[data-tema-color="rojo"]    { --accent: #ef4444; --accent2: #f87171; }
+[data-tema-color="naranja"] { --accent: #f97316; --accent2: #fb923c; }
+[data-tema-color="rosa"]    { --accent: #ec4899; --accent2: #f472b6; }
+[data-tema-color="negro"]   { --accent: #f8fafc; --accent2: #e2e8f0; }

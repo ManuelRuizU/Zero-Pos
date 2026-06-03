@@ -1,0 +1,77 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   ZERO POS — Themes
+   Estilos visuales para el panel de apariencia y preview en admin
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* ── Sección apariencia en admin ─────────────────────────────────────────── */
+.apariencia-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px; margin-bottom: 24px;
+}
+.apariencia-section h3 {
+  font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .6px;
+  color: var(--text-dim); margin-bottom: 12px;
+  margin-top: 18px;
+}
+.apariencia-section h3:first-child { margin-top: 0; }
+
+/* Selector de tema claro/oscuro */
+.selector-tema {
+  display: flex; gap: 10px; margin-bottom: 4px;
+}
+.btn-tema {
+  flex: 1; padding: 12px 8px;
+  background: var(--surface2); border: 2px solid var(--border);
+  border-radius: 12px; color: var(--text-dim);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all .15s; text-align: center;
+}
+.btn-tema:hover  { border-color: var(--accent); color: var(--text); }
+.btn-tema.activo { background: rgba(99,102,241,.18); border-color: var(--accent); color: var(--accent2); }
+
+/* Paleta de colores */
+.paleta-colores {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  align-items: center; margin-bottom: 4px;
+}
+.circulo-color {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid transparent; cursor: pointer;
+  transition: all .15s; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.circulo-color:hover  { transform: scale(1.1); }
+.circulo-color.activo { border-color: var(--text) !important; box-shadow: 0 0 0 2px var(--bg); }
+.circulo-custom {
+  background: conic-gradient(#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#8b5cf6,#ec4899,#ef4444);
+}
+
+/* Preview de tema en tiempo real */
+.preview-tema { margin-top: 16px; }
+.preview-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden; max-width: 220px;
+}
+.preview-topbar {
+  background: rgba(10,10,15,.9);
+  padding: 8px 12px; font-size: 11px;
+  font-weight: 700; color: var(--accent);
+  border-bottom: 1px solid var(--border);
+}
+.preview-producto {
+  display: flex; justify-content: space-between;
+  padding: 10px 12px; font-size: 12px;
+}
+.preview-producto span { color: var(--success); font-weight: 700; }
+.preview-btn {
+  margin: 8px 12px 12px; display: block; width: calc(100% - 24px);
+  background: var(--accent); border: none; border-radius: 10px;
+  color: #fff; padding: 9px; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: filter .15s;
+}
+.preview-btn:hover { filter: brightness(1.1); }

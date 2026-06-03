@@ -10,19 +10,12 @@
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>ZERO POS — Inventario</title>
+<link rel="stylesheet" href="/static/css/zero-tokens.css">
+<link rel="stylesheet" href="/static/css/zero-base.css">
+<link rel="stylesheet" href="/static/css/zero-components.css">
+<link rel="stylesheet" href="/static/css/zero-layout.css">
 <style>
-:root{
-  --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
-  --border:rgba(255,255,255,0.1);--accent:#6366f1;--accent2:#818cf8;
-  --text:#f1f5f9;--text-dim:#94a3b8;
-  --success:#22c55e;--danger:#ef4444;--warning:#f59e0b;
-  --radius:14px;--blur:blur(20px);
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
-  min-height:100vh;
-  background-image:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(99,102,241,0.1) 0%,transparent 70%);}
+body{ min-height:100vh; }
 .topbar{display:flex;align-items:center;gap:12px;padding:12px 20px;
   background:rgba(10,10,15,0.8);backdrop-filter:var(--blur);
   border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}

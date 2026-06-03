@@ -1,0 +1,37 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   ZERO POS — Base Styles
+   Reset, tipografía, scrollbar, animaciones globales
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Tipografía base ─────────────────────────────────────────────────────── */
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-tap-highlight-color: transparent;
+  background-image: var(--bg-gradient);
+}
+
+/* ── Scrollbar personalizado ─────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 4px; height: 4px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: var(--border); border-radius: 2px; }
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+/* ── Animaciones globales ─────────────────────────────────────────────────── */
+@keyframes fadeIn   { from{opacity:0;}                                   to{opacity:1;} }
+@keyframes slideUp  { from{transform:translateY(20px);opacity:0;}       to{transform:translateY(0);opacity:1;} }
+@keyframes slideR   { from{transform:translateX(16px);opacity:0;}       to{transform:none;opacity:1;} }
+@keyframes spin     { to{transform:rotate(360deg)} }
+@keyframes pulse    { 0%,100%{opacity:.25;} 50%{opacity:1;} }
+@keyframes cartFadeIn { from{opacity:0;transform:translateY(-4px);}     to{opacity:1;transform:none;} }
+@keyframes prodFlash  { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 3px #22c55e;} }
+@keyframes fabPulse   { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+@keyframes shake      { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-8px);} 75%{transform:translateX(8px);} }

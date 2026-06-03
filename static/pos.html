@@ -10,33 +10,16 @@
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ZERO POS — Caja</title>
+<link rel="stylesheet" href="/static/css/zero-tokens.css">
+<link rel="stylesheet" href="/static/css/zero-base.css">
+<link rel="stylesheet" href="/static/css/zero-components.css">
+<link rel="stylesheet" href="/static/css/zero-layout.css">
 <style>
-:root {
-  --bg: #0a0a0f;
-  --surface: rgba(255,255,255,0.05);
-  --surface2: rgba(255,255,255,0.08);
-  --surface-hover: rgba(255,255,255,0.1);
-  --border: rgba(255,255,255,0.1);
-  --accent: #6366f1;
-  --accent2: #818cf8;
-  --text: #f1f5f9;
-  --text-dim: #94a3b8;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --radius: 14px;
-  --blur: blur(20px);
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
   height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.12) 0%, transparent 70%);
 }
 
 /* ── Topbar ───────────────────────────────── */
