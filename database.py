@@ -318,6 +318,37 @@ def _m008_vocabulario_local(conn):
     )
 
 
+def _m009_modificadores(conn):
+    """Modificadores (toppings, salsas, puntos cocción) para sushi/food trucks."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS modificadores (
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre    TEXT NOT NULL,
+        tipo      TEXT NOT NULL DEFAULT 'opcional' CHECK(tipo IN ('opcional','obligatorio')),
+        seleccion TEXT NOT NULL DEFAULT 'unico'    CHECK(seleccion IN ('unico','multiple')),
+        activo    INTEGER NOT NULL DEFAULT 1,
+        creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS modificador_opciones (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        modificador_id INTEGER NOT NULL REFERENCES modificadores(id) ON DELETE CASCADE,
+        nombre         TEXT NOT NULL,
+        precio_extra   INTEGER NOT NULL DEFAULT 0
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS producto_modificadores (
+        producto_id    INTEGER NOT NULL REFERENCES productos(id)    ON DELETE CASCADE,
+        modificador_id INTEGER NOT NULL REFERENCES modificadores(id) ON DELETE CASCADE,
+        PRIMARY KEY (producto_id, modificador_id)
+    )""")
+    # Columna tiene_modificadores en productos para evitar join en listado POS
+    cols_p = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
+    if "tiene_modificadores" not in cols_p:
+        conn.execute("ALTER TABLE productos ADD COLUMN tiene_modificadores INTEGER NOT NULL DEFAULT 0")
+    # Columna modificadores_desc en venta_items para persistir selecciones en ticket
+    cols_vi = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
+    if "modificadores_desc" not in cols_vi:
+        conn.execute("ALTER TABLE venta_items ADD COLUMN modificadores_desc TEXT")
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -327,6 +358,7 @@ _MIGRACIONES = [
     (6, "cola_impresion: tickets persistentes con reintentos",                   _m006_cola_impresion),
     (7, "lotes y mermas: control opcional de vencimientos por producto",          _m007_lotes_vencimientos),
     (8, "vocabulario_local: expresiones coloquiales aprendidas sin TinyLlama",   _m008_vocabulario_local),
+    (9, "modificadores: toppings y opciones para sushi/food trucks",             _m009_modificadores),
 ]
 
 

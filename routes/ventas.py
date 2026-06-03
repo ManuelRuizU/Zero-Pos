@@ -137,6 +137,7 @@ def crear_venta():
                 "modo_stock": modo_stock,
                 "lote_id": lote_id,
                 "lote_info": lote_info,
+                "modificadores_desc": item.get("modificadores_desc") or None,
             })
 
         total = pesos(total - descuento_global)
@@ -173,11 +174,12 @@ def crear_venta():
             conn.execute(
                 """INSERT INTO venta_items
                    (venta_id, producto_id, variante_id, nombre_variante,
-                    cantidad, precio_unit, descuento, subtotal, lote_id)
-                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                    cantidad, precio_unit, descuento, subtotal, lote_id, modificadores_desc)
+                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
                 (venta_id, it["producto_id"], it.get("variante_id"),
                  it.get("nombre_variante"), it["cantidad"],
-                 it["precio_unit"], it["descuento"], it["subtotal"], it.get("lote_id"))
+                 it["precio_unit"], it["descuento"], it["subtotal"],
+                 it.get("lote_id"), it.get("modificadores_desc"))
             )
             if it.get("variante_id"):
                 registrar_movimiento_stock(

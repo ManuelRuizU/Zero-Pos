@@ -411,6 +411,20 @@ select option{background:#13131a;}
     <div style="font-size:12px;color:var(--text-dim);margin-top:4px">Este producto siempre estará disponible.</div>
   </div>
 
+  <!-- Modificadores (solo visible al editar) -->
+  <div id="seccionModificadores" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+    <div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:10px">🎛️ Modificadores (toppings, salsas, puntos cocción...)</div>
+    <div id="listaModificadoresAsignados" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+    <div id="panelAgregarModif" style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px">
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Agregar grupo de modificadores:</div>
+      <select id="selectModifDisponibles" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:8px">
+        <option value="">— Seleccionar grupo —</option>
+      </select>
+      <button type="button" class="btn" style="width:100%;font-size:12px" onclick="asignarModificador()">+ Asignar</button>
+    </div>
+    <button type="button" class="btn" style="width:100%;font-size:12px;margin-top:8px" onclick="abrirModalNuevoModificador()">+ Crear nuevo grupo de modificadores</button>
+  </div>
+
   <!-- Control de lotes (solo visible al editar) -->
   <div id="seccionLotes" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -462,6 +476,41 @@ select option{background:#13131a;}
   <div class="modal-btns" id="loteModalBtns">
     <button class="btn" style="flex:1" onclick="cerrarModalNuevoLote()">Cancelar</button>
     <button class="btn primary" style="flex:2" onclick="guardarNuevoLote()">Guardar y generar etiquetas</button>
+  </div>
+</div>
+</div>
+
+<!-- Modal nuevo modificador -->
+<div class="modal-overlay" id="modalNuevoModificador">
+<div class="modal" style="max-width:420px">
+  <div class="modal-title">Nuevo grupo de modificadores</div>
+  <div class="form-group">
+    <label>Nombre del grupo *</label>
+    <input type="text" id="modifNombre" placeholder="Ej: Nivel de picante, Salsas, Toppings">
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="form-group">
+      <label>Tipo</label>
+      <select id="modifTipo" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+        <option value="opcional">Opcional</option>
+        <option value="obligatorio">Obligatorio</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Selección</label>
+      <select id="modifSeleccion" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px">
+        <option value="unico">Solo 1</option>
+        <option value="multiple">Múltiple</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Opciones <span style="color:var(--text-dim);font-size:11px">(una por línea, +precio con :100)</span></label>
+    <textarea id="modifOpciones" rows="5" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;resize:vertical" placeholder="Sin picante&#10;Picante medio&#10;Muy picante&#10;Extra picante:500"></textarea>
+  </div>
+  <div class="modal-btns">
+    <button class="btn" style="flex:1" onclick="cerrarModalNuevoModificador()">Cancelar</button>
+    <button class="btn primary" style="flex:2" onclick="guardarNuevoModificador()">Guardar</button>
   </div>
 </div>
 </div>
@@ -970,6 +1019,7 @@ function abrirModalProd() {
   document.getElementById('seccionLotes').style.display = 'none';
   document.getElementById('panelLotes').style.display = 'none';
   document.getElementById('chkTieneLotes').checked = false;
+  document.getElementById('seccionModificadores').style.display = 'none';
   document.getElementById('modalProd').classList.add('active');
 }
 
@@ -1010,6 +1060,9 @@ async function editarProd(id) {
   document.getElementById('chkTieneLotes').checked = tieneLotes;
   document.getElementById('panelLotes').style.display = tieneLotes ? '' : 'none';
   if (tieneLotes) cargarLotesProducto(p.id);
+  // Modificadores
+  document.getElementById('seccionModificadores').style.display = '';
+  cargarModificadoresDeProducto(p.id);
   document.getElementById('modalProd').classList.add('active');
 }
 
@@ -1113,6 +1166,124 @@ function toggleLotes(activo) {
   document.getElementById('panelLotes').style.display = activo ? '' : 'none';
   const prodId = document.getElementById('prodId').value;
   if (activo && prodId) cargarLotesProducto(parseInt(prodId));
+}
+
+// ── Modificadores ─────────────────────────────────────────────────────────────
+let _modifAsignados = [];   // [{id, nombre, tipo, seleccion, opciones}]
+let _todosModificadores = [];
+
+async function _cargarTodosModificadores() {
+  try {
+    _todosModificadores = await fetch('/api/modificadores',{credentials:'include'}).then(r=>r.json());
+  } catch(e) { _todosModificadores = []; }
+}
+
+async function cargarModificadoresDeProducto(prodId) {
+  await _cargarTodosModificadores();
+  try {
+    _modifAsignados = await fetch(`/api/modificadores/por-producto/${prodId}`,{credentials:'include'}).then(r=>r.json());
+  } catch(e) { _modifAsignados = []; }
+  _renderModifAsignados();
+  _poblarSelectModif();
+}
+
+function _renderModifAsignados() {
+  const cont = document.getElementById('listaModificadoresAsignados');
+  if (!_modifAsignados.length) {
+    cont.innerHTML = '<div style="font-size:12px;color:var(--text-dim)">Sin modificadores asignados</div>';
+    return;
+  }
+  cont.innerHTML = _modifAsignados.map(m => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+      <div>
+        <div style="font-size:13px;font-weight:600">${m.nombre} <span style="font-size:11px;color:var(--text-dim)">${m.tipo === 'obligatorio' ? '★ oblig.' : 'opcional'} · ${m.seleccion === 'unico' ? 'solo 1' : 'múltiple'}</span></div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:3px">${(m.opciones||[]).map(o=>o.nombre+(o.precio_extra?` +$${o.precio_extra.toLocaleString('es-CL')}`:'`')).join(', ')}</div>
+      </div>
+      <button onclick="quitarModificador(${m.id})" style="background:none;border:none;color:#ef4444;font-size:18px;cursor:pointer;padding:4px">✕</button>
+    </div>`).join('');
+}
+
+function _poblarSelectModif() {
+  const sel = document.getElementById('selectModifDisponibles');
+  const asignadosIds = new Set(_modifAsignados.map(m=>m.id));
+  sel.innerHTML = '<option value="">— Seleccionar grupo —</option>';
+  _todosModificadores.filter(m=>!asignadosIds.has(m.id)).forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.nombre + (m.tipo==='obligatorio' ? ' ★' : '');
+    sel.appendChild(opt);
+  });
+}
+
+async function asignarModificador() {
+  const prodId = document.getElementById('prodId').value;
+  if (!prodId) { alert('Guarda el producto primero'); return; }
+  const mid = parseInt(document.getElementById('selectModifDisponibles').value);
+  if (!mid) return;
+  const ya = _modifAsignados.find(m=>m.id===mid);
+  if (ya) return;
+  const nuevo = _todosModificadores.find(m=>m.id===mid);
+  if (!nuevo) return;
+  _modifAsignados.push(nuevo);
+  await _guardarModifAsignados(parseInt(prodId));
+}
+
+async function quitarModificador(mid) {
+  const prodId = document.getElementById('prodId').value;
+  if (!prodId) return;
+  _modifAsignados = _modifAsignados.filter(m=>m.id!==mid);
+  await _guardarModifAsignados(parseInt(prodId));
+}
+
+async function _guardarModifAsignados(prodId) {
+  await fetch(`/api/modificadores/por-producto/${prodId}`, {
+    method: 'PUT', credentials: 'include',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({modificador_ids: _modifAsignados.map(m=>m.id)}),
+  });
+  _renderModifAsignados();
+  _poblarSelectModif();
+}
+
+function abrirModalNuevoModificador() {
+  document.getElementById('modifNombre').value = '';
+  document.getElementById('modifTipo').value = 'opcional';
+  document.getElementById('modifSeleccion').value = 'unico';
+  document.getElementById('modifOpciones').value = '';
+  document.getElementById('modalNuevoModificador').classList.add('active');
+}
+
+function cerrarModalNuevoModificador() {
+  document.getElementById('modalNuevoModificador').classList.remove('active');
+}
+
+async function guardarNuevoModificador() {
+  const nombre = document.getElementById('modifNombre').value.trim();
+  if (!nombre) { alert('El nombre es requerido'); return; }
+  const tipo      = document.getElementById('modifTipo').value;
+  const seleccion = document.getElementById('modifSeleccion').value;
+  const lineas    = document.getElementById('modifOpciones').value.split('\n').map(l=>l.trim()).filter(Boolean);
+  const opciones  = lineas.map(l => {
+    const [nom, precio] = l.split(':');
+    return {nombre: nom.trim(), precio_extra: parseInt(precio?.trim()) || 0};
+  });
+  const r = await fetch('/api/modificadores', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({nombre, tipo, seleccion, opciones}),
+  });
+  if (!r.ok) { alert('Error al crear modificador'); return; }
+  const d = await r.json();
+  cerrarModalNuevoModificador();
+  await _cargarTodosModificadores();
+  // Auto-asignar al producto actual
+  const prodId = parseInt(document.getElementById('prodId').value);
+  if (prodId) {
+    const nuevo = _todosModificadores.find(m=>m.id===d.id);
+    if (nuevo) { _modifAsignados.push(nuevo); await _guardarModifAsignados(prodId); }
+  } else {
+    _poblarSelectModif();
+  }
 }
 
 function abrirModalNuevoLote() {

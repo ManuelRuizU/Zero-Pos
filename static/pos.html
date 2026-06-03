@@ -954,6 +954,21 @@ body {
   </div>
 </div>
 
+<!-- Modal modificadores -->
+<div class="modal-overlay" id="modalModificadores" style="display:none;align-items:flex-end;padding:0">
+  <div class="modal" style="max-width:480px;width:100%;border-radius:20px 20px 0 0;padding:24px 20px 32px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div id="modifProdNombre" style="font-size:16px;font-weight:700;color:#f1f5f9"></div>
+      <button onclick="cerrarModalModificadores()" style="background:none;border:none;color:#64748b;font-size:20px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="modifGrupos"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button onclick="cerrarModalModificadores()" style="flex:1;padding:14px;background:#2d2d44;border:none;border-radius:12px;color:#94a3b8;font-size:14px;cursor:pointer">Cancelar</button>
+      <button id="btnConfirmarModif" onclick="confirmarModificadores()" style="flex:2;padding:14px;background:#6366f1;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Agregar al carrito</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal cobro -->
 <div class="modal-overlay" id="modalCobro">
   <div class="modal">
@@ -2159,26 +2174,140 @@ async function confirmarPrecioRapido() {
   agregarAlCarrito(prod);
 }
 
-// ── Carrito ───────────────────────────────────────────────────
-function agregarAlCarrito(prod) {
+// ── Modificadores ─────────────────────────────────────────────
+let _modifProd      = null;   // producto pendiente de modificadores
+let _modifGrupos    = [];     // grupos cargados
+let _modifSelec     = {};     // {modificador_id: [opcion_id, ...]}
+
+async function agregarAlCarrito(prod) {
   if (!prod.precio || prod.precio === 0) { abrirModalPrecio(prod); return; }
-  const idx = carrito.findIndex(i => i.producto_id === prod.id && !i.variante_id);
-  const modoStock = prod.modo_stock || 'normal';
-  if (idx >= 0) {
-    if (modoStock !== 'sin_stock' && carrito[idx].cantidad >= (prod.stock_real ?? prod.stock)) {
-      showToast('Stock máximo alcanzado', 'error'); return;
-    }
-    carrito[idx].cantidad++;
-  } else {
-    carrito.push({
-      producto_id: prod.id, nombre: prod.nombre,
-      precio_unit: prod.precio, cantidad: 1, stock: prod.stock_real ?? prod.stock,
-      modo_stock: modoStock,
-    });
+  if (prod.tiene_modificadores) {
+    try {
+      const grupos = await fetch(`/api/modificadores/por-producto/${prod.id}`, {credentials:'include'}).then(r=>r.json());
+      if (grupos && grupos.length) { abrirModalModificadores(prod, grupos); return; }
+    } catch(e) { /* continuar sin modificadores */ }
   }
+  _agregarProdAlCarrito(prod, null, 0);
+}
+
+function abrirModalModificadores(prod, grupos) {
+  _modifProd   = prod;
+  _modifGrupos = grupos;
+  _modifSelec  = {};
+  document.getElementById('modifProdNombre').textContent = prod.nombre;
+
+  const container = document.getElementById('modifGrupos');
+  container.innerHTML = '';
+  grupos.forEach(g => {
+    _modifSelec[g.id] = [];
+    const esObl = g.tipo === 'obligatorio';
+    const esUnico = g.seleccion === 'unico';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'margin-bottom:18px';
+    wrap.innerHTML = `<div style="font-size:13px;font-weight:700;color:${esObl ? '#f59e0b' : '#94a3b8'};margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">${g.nombre}${esObl ? ' *' : ''}</div>`;
+    const optsDiv = document.createElement('div');
+    optsDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px';
+    g.opciones.forEach(op => {
+      const btn = document.createElement('button');
+      btn.dataset.gid = g.id;
+      btn.dataset.oid = op.id;
+      btn.dataset.precio = op.precio_extra;
+      btn.dataset.nombre = op.nombre;
+      btn.style.cssText = 'padding:8px 14px;border-radius:20px;border:1.5px solid #2d2d44;background:#1e1e2e;color:#94a3b8;font-size:13px;cursor:pointer;transition:all .12s;user-select:none';
+      btn.textContent = op.nombre + (op.precio_extra > 0 ? ` +$${op.precio_extra.toLocaleString('es-CL')}` : '');
+      btn.onclick = () => _toggleModifOpcion(g.id, op.id, esUnico, btn);
+      optsDiv.appendChild(btn);
+    });
+    wrap.appendChild(optsDiv);
+    container.appendChild(wrap);
+  });
+
+  document.getElementById('modalModificadores').style.display = 'flex';
+}
+
+function _toggleModifOpcion(gid, oid, esUnico, btn) {
+  const sel = _modifSelec[gid];
+  const idx = sel.indexOf(oid);
+  if (esUnico) {
+    // deselect all in group
+    document.querySelectorAll(`[data-gid="${gid}"]`).forEach(b => {
+      b.style.background = '#1e1e2e';
+      b.style.color = '#94a3b8';
+      b.style.borderColor = '#2d2d44';
+    });
+    _modifSelec[gid] = (idx >= 0) ? [] : [oid];
+  } else {
+    if (idx >= 0) sel.splice(idx, 1); else sel.push(oid);
+  }
+  // refresh styles for this group
+  document.querySelectorAll(`[data-gid="${gid}"]`).forEach(b => {
+    const activo = _modifSelec[gid].includes(parseInt(b.dataset.oid));
+    b.style.background    = activo ? '#6366f1' : '#1e1e2e';
+    b.style.color         = activo ? '#fff'    : '#94a3b8';
+    b.style.borderColor   = activo ? '#6366f1' : '#2d2d44';
+  });
+}
+
+function confirmarModificadores() {
+  // Validate mandatory groups
+  for (const g of _modifGrupos) {
+    if (g.tipo === 'obligatorio' && _modifSelec[g.id].length === 0) {
+      showToast(`Selecciona "${g.nombre}"`, 'error'); return;
+    }
+  }
+  // Build desc string and price extra
+  const partes = [];
+  let precioExtra = 0;
+  _modifGrupos.forEach(g => {
+    const oids = _modifSelec[g.id];
+    if (!oids.length) return;
+    oids.forEach(oid => {
+      const btn = document.querySelector(`[data-gid="${g.id}"][data-oid="${oid}"]`);
+      if (btn) {
+        partes.push(btn.dataset.nombre);
+        precioExtra += parseInt(btn.dataset.precio || 0);
+      }
+    });
+  });
+  const modifDesc = partes.length ? partes.join(', ') : null;
+  cerrarModalModificadores();
+  _agregarProdAlCarrito(_modifProd, modifDesc, precioExtra);
+}
+
+function cerrarModalModificadores() {
+  document.getElementById('modalModificadores').style.display = 'none';
+  _modifProd = null;
+}
+
+function _agregarProdAlCarrito(prod, modifDesc, precioExtra) {
+  const modoStock = prod.modo_stock || 'normal';
+  const precioFinal = prod.precio + (precioExtra || 0);
+  // Items with modificadores are never merged (each selection is unique)
+  if (!modifDesc) {
+    const idx = carrito.findIndex(i => i.producto_id === prod.id && !i.variante_id && !i.modificadores_desc);
+    if (idx >= 0) {
+      if (modoStock !== 'sin_stock' && carrito[idx].cantidad >= (prod.stock_real ?? prod.stock)) {
+        showToast('Stock máximo alcanzado', 'error'); return;
+      }
+      carrito[idx].cantidad++;
+      renderCarrito();
+      showToast('+ ' + prod.nombre, 'success');
+      return;
+    }
+  }
+  carrito.push({
+    producto_id: prod.id, nombre: prod.nombre,
+    precio_unit: precioFinal, cantidad: 1,
+    stock: prod.stock_real ?? prod.stock,
+    modo_stock: modoStock,
+    modificadores_desc: modifDesc || null,
+    _new: true,
+  });
   renderCarrito();
   showToast('+ ' + prod.nombre, 'success');
 }
+
+// ── Carrito ───────────────────────────────────────────────────
 
 function cambiarCantidad(idx, delta) {
   carrito[idx].cantidad += delta;
@@ -2215,8 +2344,11 @@ function renderCarrito() {
     const loteTag = item.lote_id
       ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px">📦 ${item.lote_numero || 'L-'+item.lote_id}${item.vencimiento ? ' · ' + item.vencimiento.slice(5).replace('-','/') : ''}</div>`
       : '';
+    const modifTag = item.modificadores_desc
+      ? `<div style="font-size:10px;color:#8b5cf6;margin-top:2px">└ ${item.modificadores_desc}</div>`
+      : '';
     div.innerHTML = `
-      <div class="item-nombre">${item.nombre}${loteTag}</div>
+      <div class="item-nombre">${item.nombre}${loteTag}${modifTag}</div>
       <div class="item-controles">
         <button class="qty-btn" onclick="cambiarCantidad(${idx},-1)">−</button>
         <span class="qty-num">${item.cantidad}</span>
@@ -2842,6 +2974,7 @@ async function confirmarPago() {
           variante_id: i.variante_id || null,
           nombre_variante: i.nombre_variante || '',
           cantidad: i.cantidad,
+          modificadores_desc: i.modificadores_desc || null,
         })),
         metodo_pago: metodoPago,
         descuento: itemsRapidosCarrito.length ? 0 : desc,
