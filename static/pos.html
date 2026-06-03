@@ -260,6 +260,43 @@ body {
   letter-spacing: -0.5px;
 }
 
+/* ── Modo lista ────────────────────────────────────────────── */
+.productos-grid.modo-lista {
+  display: flex; flex-direction: column; gap: 0; padding: 0 0 90px;
+}
+.prod-fila {
+  display: flex; align-items: center;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background .12s;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.prod-fila:active, .prod-fila:hover { background: var(--surface-hover); }
+.prod-fila .fila-img {
+  width: 40px; height: 40px; border-radius: 50%; overflow: hidden;
+  flex-shrink: 0; margin-right: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.prod-fila .fila-img img {
+  width: 100%; height: 100%; object-fit: cover;
+}
+.prod-fila .fila-info { flex: 1; min-width: 0; }
+.prod-fila .fila-nombre {
+  font-size: 14px; font-weight: 600; color: #f1f5f9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prod-fila .fila-sub {
+  font-size: 12px; color: var(--text-dim); margin-top: 1px;
+}
+.prod-fila .fila-sub.variante { color: #6366f1; }
+.prod-fila .fila-precio {
+  font-size: 15px; font-weight: 700; flex-shrink: 0; margin-left: 12px;
+}
+.prod-fila.sin-stock { opacity: .45; cursor: not-allowed; }
+.prod-fila.sin-stock .fila-precio { color: var(--text-dim); }
+
 /* Inline variant pills */
 .prod-variantes {
   display: flex; flex-wrap: wrap; gap: 5px;
@@ -677,6 +714,9 @@ body {
       <button class="cat-btn active" data-id="" onclick="selCat(this,'')">Todos</button>
     </div>
     <div class="subcategorias-row" id="subcatRow"></div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;padding:4px 12px 0;gap:4px">
+      <button id="btnVista" class="btn-vista-toggle" onclick="toggleVista()" title="Cambiar vista" style="background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;color:var(--text-dim);font-size:18px;transition:color .15s" onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-dim)'">⊞</button>
+    </div>
     <div class="productos-grid" id="productosGrid"></div>
   </div>
 
@@ -1025,6 +1065,7 @@ const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
 let productos = [];
 let carrito = [];
 let cfgApp = {};  // config del negocio cargada al inicio
+let modoVista = localStorage.getItem('modo_vista') || 'grid';
 let categoriaActual = '';
 let subcatActual = '';
 let catIconoMap = {};
@@ -1694,6 +1735,7 @@ async function init() {
   // Mostrar botón cola si es minimarket (sin módulo mesas ni delivery)
   document.getElementById('btnColaEspera').style.display = '';
 
+  _initVista();
   await cargarCategorias();
   await cargarProductos();
   verificarAlertas();
@@ -1921,8 +1963,20 @@ function renderProductos(lista) {
   grid.innerHTML = '';
   productoMap = {};
 
+  // Sync list/grid class
+  if (modoVista === 'lista') {
+    grid.classList.add('modo-lista');
+  } else {
+    grid.classList.remove('modo-lista');
+  }
+
   if (!lista.length) {
     grid.innerHTML = '<p style="color:var(--text-dim);font-size:13px;grid-column:1/-1;padding:20px;text-align:center">Sin productos</p>';
+    return;
+  }
+
+  if (modoVista === 'lista') {
+    _renderProductosLista(lista, grid);
     return;
   }
 
@@ -3338,6 +3392,58 @@ function agregarAlCarritoLocal(producto) {
   limpiarYEnfocarBusqueda();
 }
 
+function _renderProductosLista(lista, grid) {
+  const _COLORES_LISTA = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899'];
+  lista.forEach((p, idx) => {
+    productoMap[p.id] = p;
+    const modoStock = p.modo_stock || 'normal';
+    const sinStock = !p.tiene_variantes && modoStock !== 'sin_stock' && p.stock <= 0;
+    const color = _COLORES_LISTA[idx % _COLORES_LISTA.length];
+    const nombreSafe = (p.nombre || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    const fila = document.createElement('div');
+    fila.className = 'prod-fila' + (sinStock ? ' sin-stock' : '');
+    fila.setAttribute('data-producto-id', p.id);
+
+    let imgHtml;
+    if (p.imagen_url) {
+      imgHtml = `<div class="fila-img" style="background:${color}20"><img src="${p.imagen_url}" onerror="this.parentElement.innerHTML='${getProductEmoji(p)}'"></div>`;
+    } else {
+      imgHtml = `<div class="fila-img" style="background:${color}20">${getProductEmoji(p)}</div>`;
+    }
+
+    let subHtml, precio;
+    if (p.tiene_variantes) {
+      const nVar = p._variantes ? p._variantes.length : '?';
+      subHtml = `<div class="fila-sub variante">${nVar} variantes</div>`;
+      precio = p._variantes && p._variantes.length ? fmt(Math.min(...p._variantes.map(v => v.precio))) : '—';
+    } else {
+      const bajo = p.stock > 0 && p.stock <= p.stock_minimo;
+      const stockTxt = modoStock === 'sin_stock' ? '' : `Stock: ${p.stock}${bajo ? ' ⚠️':''}`;
+      subHtml = stockTxt ? `<div class="fila-sub">${stockTxt}</div>` : '';
+      precio = fmt(p.precio);
+    }
+
+    const precioColor = p.precio > 0 ? '#22c55e' : 'var(--text-dim)';
+    fila.innerHTML = `
+      ${imgHtml}
+      <div class="fila-info">
+        <div class="fila-nombre">${nombreSafe}</div>
+        ${subHtml}
+      </div>
+      <div class="fila-precio" style="color:${precioColor}">${precio}</div>`;
+
+    if (!sinStock) {
+      if (p.tiene_variantes) {
+        fila.onclick = () => abrirVariantes(p);
+      } else {
+        fila.onclick = () => agregarAlCarrito(p);
+      }
+    }
+    grid.appendChild(fila);
+  });
+}
+
 function flashProducto(productoId) {
   const card = document.querySelector(`[data-producto-id="${productoId}"]`);
   if (!card) return;
@@ -3360,7 +3466,25 @@ function medirScan(ms) {
   }
 }
 
-// ── Impresora ────────────────────────────────────────────────────
+// ── Vista grid/lista ─────────────────────────────────────────────
+function toggleVista() {
+  modoVista = modoVista === 'grid' ? 'lista' : 'grid';
+  localStorage.setItem('modo_vista', modoVista);
+  const btn = document.getElementById('btnVista');
+  if (btn) btn.textContent = modoVista === 'lista' ? '⊞' : '≡';
+  // Re-render con la vista actual (filtrar re-llama renderProductos)
+  filtrar();
+}
+
+function _initVista() {
+  const btn = document.getElementById('btnVista');
+  if (btn) btn.textContent = modoVista === 'lista' ? '⊞' : '≡';
+  if (modoVista === 'lista') {
+    document.getElementById('productosGrid').classList.add('modo-lista');
+  }
+}
+
+// ── Impresora ─────────────────────────────────────────────────────
 let _impEstado = null;
 
 async function verificarEstadoImpresora() {
