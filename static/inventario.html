@@ -411,9 +411,57 @@ select option{background:#13131a;}
     <div style="font-size:12px;color:var(--text-dim);margin-top:4px">Este producto siempre estará disponible.</div>
   </div>
 
+  <!-- Control de lotes (solo visible al editar) -->
+  <div id="seccionLotes" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;font-size:13px">
+        <input type="checkbox" id="chkTieneLotes" onchange="toggleLotes(this.checked)">
+        📦 Activar control de lotes y vencimientos
+      </label>
+    </div>
+    <div id="panelLotes" style="display:none">
+      <div id="listaLotes" style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px"></div>
+      <button type="button" class="btn" style="width:100%;font-size:12px" onclick="abrirModalNuevoLote()">+ Agregar nuevo lote</button>
+    </div>
+  </div>
+
   <div class="modal-btns">
     <button class="btn" style="flex:1" onclick="cerrarModalProd()">Cancelar</button>
     <button class="btn primary" style="flex:2" onclick="guardarProd()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- Modal nuevo lote -->
+<div class="modal-overlay" id="modalNuevoLote">
+<div class="modal" style="max-width:400px">
+  <div class="modal-title">Nuevo lote</div>
+  <input type="hidden" id="loteProductoId">
+  <div class="form-group">
+    <label>Número de lote <span style="color:var(--text-dim);font-size:11px">(opcional — se genera automático)</span></label>
+    <input type="text" id="loteNumero" placeholder="Ej: L-001-001">
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div class="form-group">
+      <label>Cantidad *</label>
+      <input type="number" id="loteCantidad" min="1" value="1">
+    </div>
+    <div class="form-group">
+      <label>Fecha de vencimiento</label>
+      <input type="date" id="loteFechaVenc">
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Notas</label>
+    <input type="text" id="loteNotas" placeholder="Proveedor, lote fabricante, etc.">
+  </div>
+  <div id="loteBtnsImprimir" style="display:none;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="font-size:13px;font-weight:600;color:var(--success);margin-bottom:8px">✅ Lote creado</div>
+    <button type="button" class="btn primary" style="width:100%;font-size:13px" id="btnImprimirEtiquetas" onclick="imprimirEtiquetasLote()">🖨️ Imprimir etiquetas</button>
+  </div>
+  <div class="modal-btns" id="loteModalBtns">
+    <button class="btn" style="flex:1" onclick="cerrarModalNuevoLote()">Cancelar</button>
+    <button class="btn primary" style="flex:2" onclick="guardarNuevoLote()">Guardar y generar etiquetas</button>
   </div>
 </div>
 </div>
@@ -919,6 +967,9 @@ function abrirModalProd() {
   selModoStock('normal');
   _bindNormBlur('prodNombre');
   calcularFinanciero();
+  document.getElementById('seccionLotes').style.display = 'none';
+  document.getElementById('panelLotes').style.display = 'none';
+  document.getElementById('chkTieneLotes').checked = false;
   document.getElementById('modalProd').classList.add('active');
 }
 
@@ -953,6 +1004,12 @@ async function editarProd(id) {
   _bindNormBlur('prodNombre');
   selModoStock(p.modo_stock || 'normal');
   calcularFinanciero();
+  // Lotes
+  const tieneLotes = p.tiene_lotes === 1 || p.tiene_lotes === true;
+  document.getElementById('seccionLotes').style.display = '';
+  document.getElementById('chkTieneLotes').checked = tieneLotes;
+  document.getElementById('panelLotes').style.display = tieneLotes ? '' : 'none';
+  if (tieneLotes) cargarLotesProducto(p.id);
   document.getElementById('modalProd').classList.add('active');
 }
 
@@ -976,6 +1033,7 @@ async function guardarProd() {
     hora_reset_stock: document.getElementById('prodHoraReset').value || '06:00',
     tiene_impuesto_adicional: document.getElementById('prodImpAdic').checked ? 1 : 0,
     tasa_impuesto_adicional:  parseFloat(document.getElementById('prodTasaImp').value) || 0,
+    tiene_lotes: document.getElementById('chkTieneLotes').checked ? 1 : 0,
     ...(skuVal ? {sku: skuVal} : {}),
     ...(document.getElementById('prodMarcaId').value ? {marca_id: parseInt(document.getElementById('prodMarcaId').value)} : {}),
   };
@@ -1028,6 +1086,89 @@ async function guardarProduccion() {
 
 function cerrarModalProduccion() { document.getElementById('modalProduccion').classList.remove('active'); }
 function cerrarModalProd() { document.getElementById('modalProd').classList.remove('active'); }
+
+// ── Lotes ────────────────────────────────────────────────────────
+let _loteUltimoId = null;
+
+async function cargarLotesProducto(productoId) {
+  const r = await fetch(`/api/inventario/lotes?producto_id=${productoId}`, {credentials:'include'});
+  if (!r.ok) return;
+  const lotes = await r.json();
+  const lista = document.getElementById('listaLotes');
+  if (!lotes.length) { lista.innerHTML = '<div style="font-size:12px;color:var(--text-dim)">Sin lotes registrados</div>'; return; }
+  const estadoEmoji = {activo:'🟢', agotado:'⚫', vencido:'🔴', retirado:'⚪'};
+  lista.innerHTML = lotes.map(l => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:13px">
+      <div>
+        <span style="font-weight:600">${l.numero_lote || `L-${l.id}`}</span>
+        <span style="color:var(--text-dim);margin-left:8px">${l.cantidad_actual} uds</span>
+        ${l.fecha_vencimiento ? `<span style="color:var(--text-dim);margin-left:8px">· vence ${l.fecha_vencimiento}</span>` : ''}
+      </div>
+      <span title="${l.estado}">${estadoEmoji[l.estado] || '●'}</span>
+    </div>
+  `).join('');
+}
+
+function toggleLotes(activo) {
+  document.getElementById('panelLotes').style.display = activo ? '' : 'none';
+  const prodId = document.getElementById('prodId').value;
+  if (activo && prodId) cargarLotesProducto(parseInt(prodId));
+}
+
+function abrirModalNuevoLote() {
+  const prodId = document.getElementById('prodId').value;
+  if (!prodId) { alert('Guarda el producto primero'); return; }
+  document.getElementById('loteProductoId').value = prodId;
+  document.getElementById('loteNumero').value = '';
+  document.getElementById('loteCantidad').value = '1';
+  document.getElementById('loteFechaVenc').value = '';
+  document.getElementById('loteNotas').value = '';
+  document.getElementById('loteBtnsImprimir').style.display = 'none';
+  document.getElementById('loteModalBtns').style.display = 'flex';
+  _loteUltimoId = null;
+  document.getElementById('modalNuevoLote').classList.add('active');
+}
+
+function cerrarModalNuevoLote() {
+  document.getElementById('modalNuevoLote').classList.remove('active');
+  const prodId = document.getElementById('prodId').value;
+  if (prodId) cargarLotesProducto(parseInt(prodId));
+}
+
+async function guardarNuevoLote() {
+  const prodId = parseInt(document.getElementById('loteProductoId').value);
+  const cantidad = parseInt(document.getElementById('loteCantidad').value) || 0;
+  if (!cantidad) { alert('Ingresa una cantidad'); return; }
+  const body = {
+    producto_id:       prodId,
+    cantidad:          cantidad,
+    fecha_vencimiento: document.getElementById('loteFechaVenc').value || null,
+    numero_lote:       document.getElementById('loteNumero').value.trim() || null,
+    notas:             document.getElementById('loteNotas').value.trim() || null,
+  };
+  const r = await fetch('/api/inventario/lotes', {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) { const e = await r.json(); alert(e.error || 'Error al crear lote'); return; }
+  const d = await r.json();
+  _loteUltimoId = d.id;
+  document.getElementById('btnImprimirEtiquetas').dataset.loteId = d.id;
+  document.getElementById('btnImprimirEtiquetas').dataset.cantidad = cantidad;
+  document.getElementById('btnImprimirEtiquetas').textContent = `🖨️ Imprimir ${cantidad} etiqueta(s)`;
+  document.getElementById('loteBtnsImprimir').style.display = '';
+  document.getElementById('loteModalBtns').style.display = 'none';
+  cargarProductos();
+}
+
+function imprimirEtiquetasLote() {
+  const btn = document.getElementById('btnImprimirEtiquetas');
+  const loteId = btn.dataset.loteId;
+  const cant = btn.dataset.cantidad || 1;
+  if (!loteId) return;
+  window.open(`/api/inventario/lotes/${loteId}/etiquetas/pdf?cantidad=${cant}`, '_blank');
+}
 
 async function eliminarProd(id, nombre) {
   if (!confirm(`¿Eliminar "${nombre}"? El producto quedará inactivo.`)) return;
@@ -1972,6 +2113,7 @@ document.addEventListener('keydown', e => {
     cerrarModalProv();
     cerrarModalProduccion();
     cerrarModalFactura();
+    document.getElementById('modalNuevoLote').classList.remove('active');
   }
 });
 

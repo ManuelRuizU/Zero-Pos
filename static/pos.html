@@ -651,6 +651,9 @@ body {
   <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"></span>
   <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Consulta por voz — ventas, stock, proveedores">🎤 <span class="voz-kw-label">ZERO</span></button>
   <button class="btn-top" onclick="window.open('cliente.html','pantalla-cliente')" title="Pantalla cliente">📺</button>
+  <button class="btn-top" id="btnImpresora" onclick="mostrarAlertaImpresora()" title="Estado impresora" style="position:relative">
+    🖨️<span id="impDot" style="position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#6b7280"></span>
+  </button>
   <button class="btn-top" onclick="abrirVentaRapida()" title="Venta rápida">⚡</button>
   <button class="btn-top" onclick="cerrarSesion()">Salir</button>
 </div>
@@ -917,6 +920,21 @@ body {
 </div>
 
 <!-- Modal variantes -->
+<!-- Modal producto vencido -->
+<div class="modal-overlay" id="modalVencido" onclick="if(event.target===this)this.style.display='none'">
+  <div class="modal" style="max-width:340px;text-align:center">
+    <div style="font-size:40px;margin-bottom:8px">⛔</div>
+    <div class="modal-title" style="color:#ef4444">PRODUCTO VENCIDO</div>
+    <div id="vencidoNombre" style="font-size:16px;font-weight:600;margin:10px 0"></div>
+    <div id="vencidoFecha" style="color:var(--text-dim);font-size:14px;margin-bottom:16px"></div>
+    <p style="color:var(--text-dim);font-size:13px;margin-bottom:20px">No se puede vender. ¿Deseas registrarlo como merma?</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn primary" style="background:#dc2626" onclick="_registrarMermaVencido()">Registrar como merma</button>
+      <button class="btn" onclick="document.getElementById('modalVencido').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalVariantes">
   <div class="modal-variantes">
     <div class="modal-title" id="variantesTitulo" style="font-size:17px;font-weight:700;margin-bottom:4px;"></div>
@@ -1682,6 +1700,31 @@ async function init() {
   verificarTurno(me);
   initVoz();
   iniciarPollCola();
+  verificarEstadoImpresora();
+  _verificarTicketsPendientes();
+}
+
+async function _verificarTicketsPendientes() {
+  try {
+    const r = await fetch('/api/impresora/estado', {credentials: 'include'});
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.pendientes > 0) {
+      mostrarToastPersistente(`🖨️ Hay ${d.pendientes} ticket(s) sin imprimir de la sesión anterior. Toca aquí para reintentar.`, 'warning');
+      if (_toastPersistente) {
+        _toastPersistente.onclick = async () => {
+          _toastPersistente.remove();
+          try {
+            await fetch('/api/impresora/reimprimir', {
+              method: 'POST', credentials: 'include',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({accion: 'procesar_pendientes'}),
+            });
+          } catch(e) {}
+        };
+      }
+    }
+  } catch(e) {}
 }
 
 function _aplicarPermisosPOS(me) {
@@ -2053,8 +2096,11 @@ function renderCarrito() {
     const esNuevo = item._new;
     if (esNuevo) item._new = false;
     div.className = 'carrito-item' + (esNuevo ? ' carrito-item-new' : '');
+    const loteTag = item.lote_id
+      ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px">📦 ${item.lote_numero || 'L-'+item.lote_id}${item.vencimiento ? ' · ' + item.vencimiento.slice(5).replace('-','/') : ''}</div>`
+      : '';
     div.innerHTML = `
-      <div class="item-nombre">${item.nombre}</div>
+      <div class="item-nombre">${item.nombre}${loteTag}</div>
       <div class="item-controles">
         <button class="qty-btn" onclick="cambiarCantidad(${idx},-1)">−</button>
         <span class="qty-num">${item.cantidad}</span>
@@ -3111,6 +3157,12 @@ function procesarCodigo(codigo) {
   if (!codigo) return;
   const inicio = performance.now();
 
+  // QR de lote ZERO (JSON {t:'L',...})
+  if (codigo.startsWith('{')) {
+    buscarCodigo(codigo, inicio);
+    return;
+  }
+
   // Granel EAN-13 (prefijo 2)
   if (codigo.startsWith('2') && /^\d{13}$/.test(codigo)) {
     procesarCodigoGranel(codigo);
@@ -3129,6 +3181,77 @@ function procesarCodigo(codigo) {
 
   // Fallback: servidor
   buscarEnServidor(codigo, inicio);
+}
+
+async function buscarCodigo(codigo, inicioMs) {
+  try {
+    const r = await fetch('/api/productos/buscar-codigo', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({codigo}),
+    });
+    const data = await r.json();
+
+    if (r.status === 400 && data.vencido) {
+      mostrarAlertaVencido(data);
+      return;
+    }
+    if (!r.ok) { showToast(data.error || 'Código no encontrado', 'error'); return; }
+
+    if (data.id) {
+      // Agregar con info de lote si aplica
+      agregarAlCarritoLocal({
+        ...data,
+        _lote_id:     data.lote_id     || null,
+        _lote_numero: data.lote_numero || null,
+        _vencimiento: data.vencimiento || null,
+      });
+      const ms = performance.now() - (inicioMs || performance.now());
+      console.log(`[ZERO] QR lote escaneado en ${ms.toFixed(1)}ms`);
+    } else {
+      showToast('Producto no encontrado', 'error');
+    }
+  } catch(e) {
+    showToast('Error buscando código', 'error');
+  }
+}
+
+let _vencidoDatos = null;
+
+function mostrarAlertaVencido(data) {
+  _vencidoDatos = data;
+  document.getElementById('vencidoNombre').textContent = data.nombre || 'Producto vencido';
+  const fecha = data.vencimiento ? `Venció el ${data.vencimiento}` : 'Fecha de vencimiento desconocida';
+  document.getElementById('vencidoFecha').textContent = fecha;
+  document.getElementById('modalVencido').style.display = 'flex';
+}
+
+async function _registrarMermaVencido() {
+  if (!_vencidoDatos) return;
+  try {
+    const body = {
+      lote_id:    _vencidoDatos.lote_id    || null,
+      producto_id: _vencidoDatos.id,
+      cantidad:   1,
+      motivo:     'vencimiento',
+    };
+    const r = await fetch('/api/inventario/mermas', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (r.ok) {
+      showToast('Merma registrada', 'success');
+    } else {
+      const d = await r.json();
+      showToast(d.error || 'Error al registrar merma', 'error');
+    }
+  } catch(e) {
+    showToast('Error al registrar merma', 'error');
+  } finally {
+    document.getElementById('modalVencido').style.display = 'none';
+    _vencidoDatos = null;
+  }
 }
 
 function procesarCodigoGranel(codigo) {
@@ -3204,6 +3327,9 @@ function agregarAlCarritoLocal(producto) {
       cantidad: 1,
       stock: stockDisp,
       modo_stock: modoStock,
+      lote_id:     producto._lote_id     || null,
+      lote_numero: producto._lote_numero || null,
+      vencimiento: producto._vencimiento || null,
       _new: true,
     });
   }
@@ -3233,6 +3359,57 @@ function medirScan(ms) {
     console.log(`[ZERO] Promedio últimos 10 scans: ${promedio.toFixed(1)}ms`);
   }
 }
+
+// ── Impresora ────────────────────────────────────────────────────
+let _impEstado = null;
+
+async function verificarEstadoImpresora() {
+  try {
+    const r = await fetch('/api/impresora/estado', {credentials: 'include'});
+    if (!r.ok) { _setImpDot('gris'); return; }
+    const d = await r.json();
+    _impEstado = d;
+    if (!d.conectada) { _setImpDot('rojo'); return; }
+    if (d.sin_papel || d.poco_papel) { _setImpDot('amarillo'); return; }
+    _setImpDot('verde');
+    if (d.pendientes > 0) mostrarToastPersistente(`🖨️ ${d.pendientes} ticket(s) pendientes`, 'warning');
+  } catch(e) {
+    _setImpDot('gris');
+  }
+}
+
+function _setImpDot(color) {
+  const dot = document.getElementById('impDot');
+  if (!dot) return;
+  const map = {verde:'#22c55e', amarillo:'#f59e0b', rojo:'#ef4444', gris:'#6b7280'};
+  dot.style.background = map[color] || map.gris;
+}
+
+let _toastPersistente = null;
+function mostrarToastPersistente(msg, tipo) {
+  if (_toastPersistente) _toastPersistente.remove();
+  const el = document.createElement('div');
+  el.style.cssText = `position:fixed;bottom:80px;right:16px;z-index:9999;padding:12px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;max-width:280px;box-shadow:0 4px 12px rgba(0,0,0,.3)`;
+  el.style.background = tipo === 'warning' ? '#f59e0b' : '#3b82f6';
+  el.style.color = '#000';
+  el.textContent = msg;
+  el.onclick = () => el.remove();
+  document.body.appendChild(el);
+  _toastPersistente = el;
+}
+
+function mostrarAlertaImpresora() {
+  if (!_impEstado) { showToast('Sin datos de impresora', 'info'); return; }
+  const d = _impEstado;
+  let msg = d.conectada ? '✅ Conectada' : '❌ Sin conexión';
+  if (d.sin_papel)  msg += ' · Sin papel';
+  if (d.poco_papel) msg += ' · Poco papel';
+  if (d.pendientes > 0) msg += ` · ${d.pendientes} pendiente(s)`;
+  showToast(msg, d.conectada ? 'success' : 'error');
+}
+
+// Verificar estado cada 30 segundos
+setInterval(verificarEstadoImpresora, 30000);
 
 // Auto-foco en el campo de búsqueda cuando no se interactúa con otro elemento
 document.addEventListener('click', e => {
