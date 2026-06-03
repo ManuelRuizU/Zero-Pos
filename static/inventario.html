@@ -2320,20 +2320,62 @@ function mostrarModalFactura(datos, fuente) {
   const nuevos = prods.filter(x => !x.existe).length;
   const exist  = prods.filter(x => x.existe).length;
   document.getElementById('facResumen').textContent =
-    `${nuevos} nuevo${nuevos !== 1 ? 's' : ''} · ${exist} existente${exist !== 1 ? 's' : ''}`;
+    prods.length ? `${nuevos} nuevo${nuevos !== 1 ? 's' : ''} · ${exist} existente${exist !== 1 ? 's' : ''}` : '';
 
-  document.getElementById('facProductos').innerHTML = prods.map((prod, i) => `
-    <div class="factura-prod-row">
-      <input type="checkbox" id="fchk${i}" checked style="cursor:pointer;accent-color:var(--accent)">
-      <input class="finput" id="fnombre${i}" value="${escH(prod.nombre)}" style="min-width:0">
-      <input class="finput" id="fbarras${i}" value="${escH(prod.codigo_barras)}" placeholder="—">
-      <input class="finput" id="fcant${i}"   type="number" value="${prod.cantidad||1}" min="1">
-      <input class="finput" id="fpunit${i}"  type="number" value="${prod.precio_unitario||0}" min="0">
-      <span class="${prod.existe ? 'badge-existe' : 'badge-nuevo'}">${prod.existe ? '✅ Existe' : '✨ Nuevo'}</span>
-    </div>
-  `).join('');
+  const facProds = document.getElementById('facProductos');
+  if (!prods.length) {
+    facProds.innerHTML = `
+      <div style="text-align:center;padding:20px 0;color:var(--text-dim)">
+        <div style="font-size:28px;margin-bottom:8px">📋</div>
+        <div style="font-size:13px;margin-bottom:12px">No se detectaron productos automáticamente</div>
+        <button class="btn primary sm" onclick="_agregarFilaFactura()">+ Agregar manualmente</button>
+      </div>`;
+  } else {
+    facProds.innerHTML = prods.map((prod, i) => `
+      <div class="factura-prod-row" id="fprow${i}">
+        <input type="checkbox" id="fchk${i}" checked style="cursor:pointer;accent-color:var(--accent)">
+        <input class="finput" id="fnombre${i}" value="${escH(prod.nombre)}" style="min-width:0">
+        <input class="finput" id="fbarras${i}" value="${escH(prod.codigo_barras || '')}" placeholder="—">
+        <input class="finput" id="fcant${i}"   type="number" value="${prod.cantidad||1}" min="1">
+        <input class="finput" id="fpunit${i}"  type="number" value="${prod.precio_unitario||0}" min="0">
+        <span class="${prod.existe ? 'badge-existe' : 'badge-nuevo'}">${prod.existe ? '✅ Existe' : '✨ Nuevo'}</span>
+      </div>
+    `).join('');
+    // Botón para añadir más filas
+    facProds.insertAdjacentHTML('beforeend',
+      `<div style="text-align:right;margin-top:6px"><button class="btn sm" onclick="_agregarFilaFactura()">+ Agregar producto</button></div>`
+    );
+  }
 
   document.getElementById('modalFactura').classList.add('active');
+}
+
+function _agregarFilaFactura() {
+  const facProds = document.getElementById('facProductos');
+  // Limpiar el mensaje de "no detectados" si existe
+  const placeholder = facProds.querySelector('[style*="text-align:center"]');
+  if (placeholder) placeholder.remove();
+  // Quitar botón de agregar al final si existe, para reinsertarlo después
+  const btnAgregar = facProds.querySelector('[style*="text-align:right"]');
+  if (btnAgregar) btnAgregar.remove();
+
+  const i = facProds.querySelectorAll('.factura-prod-row').length;
+  const fila = document.createElement('div');
+  fila.className = 'factura-prod-row';
+  fila.id = `fprow${i}`;
+  fila.innerHTML = `
+    <input type="checkbox" id="fchk${i}" checked style="cursor:pointer;accent-color:var(--accent)">
+    <input class="finput" id="fnombre${i}" placeholder="Nombre producto" style="min-width:0">
+    <input class="finput" id="fbarras${i}" placeholder="Código barras">
+    <input class="finput" id="fcant${i}"   type="number" value="1" min="1">
+    <input class="finput" id="fpunit${i}"  type="number" value="0" min="0">
+    <span class="badge-nuevo">✨ Nuevo</span>
+  `;
+  facProds.appendChild(fila);
+  facProds.insertAdjacentHTML('beforeend',
+    `<div style="text-align:right;margin-top:6px"><button class="btn sm" onclick="_agregarFilaFactura()">+ Agregar producto</button></div>`
+  );
+  fila.querySelector(`#fnombre${i}`).focus();
 }
 
 function cerrarModalFactura() {
@@ -2343,16 +2385,18 @@ function cerrarModalFactura() {
 
 async function importarFactura() {
   if (!_facturaData) return;
-  const prods = _facturaData.productos || [];
   const selectedProds = [];
-  prods.forEach((prod, i) => {
-    if (!document.getElementById(`fchk${i}`)?.checked) return;
-    const barras = (document.getElementById(`fbarras${i}`)?.value || '').trim();
+  // Recorre todas las filas del DOM (incluye filas manuales)
+  document.querySelectorAll('#facProductos .factura-prod-row').forEach((row, i) => {
+    if (!row.querySelector(`#fchk${i}`)?.checked) return;
+    const nombre = (row.querySelector(`#fnombre${i}`)?.value || '').trim();
+    if (!nombre) return;
+    const barras = (row.querySelector(`#fbarras${i}`)?.value || '').trim();
     selectedProds.push({
-      nombre:          document.getElementById(`fnombre${i}`)?.value || prod.nombre,
+      nombre,
       codigo_barras:   barras || null,
-      cantidad:        parseInt(document.getElementById(`fcant${i}`)?.value)  || 1,
-      precio_unitario: parseInt(document.getElementById(`fpunit${i}`)?.value) || 0,
+      cantidad:        parseInt(row.querySelector(`#fcant${i}`)?.value)  || 1,
+      precio_unitario: parseInt(row.querySelector(`#fpunit${i}`)?.value) || 0,
     });
   });
 

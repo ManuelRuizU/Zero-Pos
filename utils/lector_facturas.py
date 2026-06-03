@@ -65,6 +65,7 @@ def _texto_pdf(data: bytes) -> str:
 
 def _texto_ocr(data: bytes) -> str:
     try:
+        import numpy as np
         import pytesseract
         from PIL import Image as _PIL, ImageOps, ImageEnhance, ImageFilter
 
@@ -77,18 +78,26 @@ def _texto_ocr(data: bytes) -> str:
             img = img.convert("RGB")
 
         gris = img.convert("L")
-        gris = ImageEnhance.Contrast(gris).enhance(2.0)
+        gris = ImageEnhance.Contrast(gris).enhance(3.0)
         gris = gris.filter(ImageFilter.SHARPEN)
+
+        # Escalar a 2000px de ancho si es menor
         w, h = gris.size
-        if w < 1000:
-            gris = gris.resize((w * 2, h * 2), _PIL.LANCZOS)
+        if w < 2000:
+            scale = 2000 / w
+            gris = gris.resize((2000, int(h * scale)), _PIL.LANCZOS)
+
+        # Binarización con numpy (umbral 128)
+        arr = np.array(gris)
+        arr = np.where(arr >= 128, 255, 0).astype(np.uint8)
+        gris = _PIL.fromarray(arr)
 
         try:
             return pytesseract.image_to_string(gris, lang="spa", config="--oem 3 --psm 6")
         except Exception:
             return pytesseract.image_to_string(gris, config="--oem 3 --psm 6")
     except ImportError:
-        logger.warning("pytesseract no instalado")
+        logger.warning("pytesseract/numpy no instalado")
         return ""
     except Exception as e:
         logger.error(f"_texto_ocr: {e}")
@@ -104,7 +113,7 @@ def llamar_tinyllama(texto: str) -> dict | None:
             OLLAMA_URL,
             json={"model": TINYLLAMA_MODEL, "prompt": prompt, "stream": False,
                   "options": {"temperature": 0.05, "num_predict": 1024}},
-            timeout=90,
+            timeout=30,
         )
         if resp.status_code != 200:
             logger.warning(f"Ollama HTTP {resp.status_code}: {resp.text[:200]}")
@@ -122,8 +131,8 @@ def llamar_tinyllama(texto: str) -> dict | None:
         return None
 
 
-def parsear_heuristico(texto: str) -> dict:
-    """Fallback regex cuando TinyLlama no está disponible."""
+def extraer_con_regex(texto: str) -> dict:
+    """Fallback regex mejorado para facturas chilenas cuando TinyLlama no está disponible."""
     datos: dict = {
         "proveedor": {"nombre": None, "rut": None, "vendedor_nombre": None, "vendedor_telefono": None},
         "folio": None,
@@ -132,10 +141,12 @@ def parsear_heuristico(texto: str) -> dict:
         "productos": [],
     }
 
-    folio_m = re.search(r"(?:N[°º]|Folio|Número)\s*:?\s*(\d+)", texto, re.IGNORECASE)
+    # Folio — soporta N°, Nº, FOLIO:, etc.
+    folio_m = re.search(r"(?:N[°º\s]*|FOLIO[:\s]+)(\d+)", texto, re.IGNORECASE)
     if folio_m:
         datos["folio"] = folio_m.group(1)
 
+    # Fecha DD/MM/YYYY o DD-MM-YYYY
     fecha_m = re.search(r"(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})", texto)
     if fecha_m:
         d, mo, y = fecha_m.group(1), fecha_m.group(2), fecha_m.group(3)
@@ -143,6 +154,7 @@ def parsear_heuristico(texto: str) -> dict:
             y = "20" + y
         datos["fecha"] = f"{y}-{mo.zfill(2)}-{d.zfill(2)}"
 
+    # Total
     total_m = re.search(r"(?:Total|TOTAL)\s*:?\s*\$?\s*([\d\.,]+)", texto)
     if total_m:
         val = total_m.group(1).replace(".", "").replace(",", "")
@@ -151,28 +163,52 @@ def parsear_heuristico(texto: str) -> dict:
         except ValueError:
             pass
 
-    rut_m = re.search(r"\b(\d{1,2}[.\d]*\d{3}-[\dkK])\b", texto)
+    # RUT chileno: 12.345.678-9 o 12-345-678-K
+    rut_m = re.search(r"\d{1,2}[\.\-]\d{3}[\.\-]\d{3}[\-]\w", texto)
     if rut_m:
-        datos["proveedor"]["rut"] = rut_m.group(1)
+        datos["proveedor"]["rut"] = rut_m.group(0)
 
-    # Intentar extraer líneas de productos (cantidad · descripción · precio)
+    # Productos: código · descripción · cantidad · precio_unitario
+    # Formato facturas chilenas con columna de código alfanumérico
     for linea in texto.split("\n"):
         linea = linea.strip()
-        m = re.match(r"^(\d+)\s+(.{5,50}?)\s+(\d[\d\.]{2,})\s*$", linea)
+        # Línea con código de producto al inicio (ej: "ABC-123  Descripción largo  5  1.890")
+        m = re.match(r"^([A-Z0-9\-/]+)\s+(.{5,50}?)\s+(\d+)\s+(\d[\d\.]+)\s*$", linea)
         if m:
             try:
-                precio = int(m.group(3).replace(".", ""))
+                precio = int(m.group(4).replace(".", ""))
+                cant = int(m.group(3))
                 datos["productos"].append({
                     "nombre": m.group(2).strip(),
-                    "codigo_barras": None,
-                    "cantidad": int(m.group(1)),
+                    "codigo_barras": m.group(1).strip(),
+                    "cantidad": cant,
                     "precio_unitario": precio,
-                    "subtotal": precio * int(m.group(1)),
+                    "subtotal": precio * cant,
+                })
+                continue
+            except ValueError:
+                pass
+        # Fallback: cantidad · descripción · precio (sin código)
+        m2 = re.match(r"^(\d+)\s+(.{5,50}?)\s+(\d[\d\.]{2,})\s*$", linea)
+        if m2:
+            try:
+                precio = int(m2.group(3).replace(".", ""))
+                cant = int(m2.group(1))
+                datos["productos"].append({
+                    "nombre": m2.group(2).strip(),
+                    "codigo_barras": None,
+                    "cantidad": cant,
+                    "precio_unitario": precio,
+                    "subtotal": precio * cant,
                 })
             except ValueError:
                 pass
 
     return datos
+
+
+# Alias para compatibilidad
+parsear_heuristico = extraer_con_regex
 
 
 def procesar_factura(archivo_bytes: bytes, content_type: str) -> dict:
@@ -193,8 +229,8 @@ def procesar_factura(archivo_bytes: bytes, content_type: str) -> dict:
     fuente = "tinyllama"
 
     if not datos:
-        logger.info("TinyLlama no disponible, usando heurística regex")
-        datos = parsear_heuristico(texto)
+        logger.info("TinyLlama no disponible, usando regex mejorado")
+        datos = extraer_con_regex(texto)
         fuente = "heuristico"
 
     datos["_fuente"] = fuente
