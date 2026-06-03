@@ -11,252 +11,303 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZERO POS — Acceso</title>
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: rgba(255,255,255,0.05);
-    --surface-hover: rgba(255,255,255,0.09);
-    --border: rgba(255,255,255,0.1);
-    --accent: #6366f1;
-    --accent-dim: rgba(99,102,241,0.2);
-    --text: #f1f5f9;
-    --text-dim: #94a3b8;
-    --danger: #ef4444;
-    --success: #22c55e;
-    --radius: 16px;
-    --blur: blur(20px);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.15) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 40% at 80% 80%, rgba(139,92,246,0.08) 0%, transparent 60%);
-  }
-  .card {
-    background: var(--surface);
-    backdrop-filter: var(--blur);
-    -webkit-backdrop-filter: var(--blur);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 48px 40px;
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-    box-shadow: 0 32px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05);
-  }
-  .logo {
-    font-size: 42px;
-    margin-bottom: 8px;
-  }
-  h1 {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: -0.5px;
-  }
-  .tagline {
-    color: var(--text-dim);
-    font-size: 13px;
-    margin: 6px 0 36px;
-  }
-  .pin-display {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 32px;
-  }
-  .pin-dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    background: transparent;
-    transition: all 0.2s;
-  }
-  .pin-dot.filled {
-    background: var(--accent);
-    border-color: var(--accent);
-    box-shadow: 0 0 12px rgba(99,102,241,0.5);
-    transform: scale(1.1);
-  }
-  .numpad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-  .key {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px 0;
-    font-size: 22px;
-    font-weight: 600;
-    color: var(--text);
-    cursor: pointer;
-    transition: all 0.15s;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .key:hover { background: var(--surface-hover); transform: scale(1.03); }
-  .key:active { transform: scale(0.96); }
-  .key.del { font-size: 18px; }
-  .key.enter {
-    background: var(--accent);
-    border-color: var(--accent);
-    grid-column: span 3;
-    padding: 16px 0;
-  }
-  .key.enter:hover { filter: brightness(1.15); }
-  .error-msg {
-    color: var(--danger);
-    font-size: 13px;
-    min-height: 20px;
-    margin-top: -10px;
-    margin-bottom: 10px;
-    animation: shake 0.35s ease;
-  }
-  @keyframes shake {
-    0%,100% { transform: translateX(0); }
-    25% { transform: translateX(-8px); }
-    75% { transform: translateX(8px); }
-  }
-  .footer { color: var(--text-dim); font-size: 11px; margin-top: 24px; }
-  .user-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 28px;
-  }
-  .user-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-dim);
-    cursor: pointer;
-    transition: all 0.15s;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .user-btn:hover { background: var(--surface-hover); color: var(--text); }
-  .user-btn.selected {
-    background: var(--accent-dim);
-    border-color: var(--accent);
-    color: var(--text);
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  background: #1a1a2e;
+  min-height: 100vh;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Pantalla 1: selección de usuario ───────────────────────── */
+#pantallaUsuarios {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: #1a1a2e;
+  transition: opacity .25s;
+}
+.logo-top {
+  font-size: 28px; font-weight: 900; letter-spacing: -1px;
+  margin-bottom: 8px;
+}
+.logo-top .zero { color: #fff; }
+.logo-top .pos  { color: #6366f1; }
+.login-subtitle {
+  color: #64748b; font-size: 14px; margin-bottom: 40px;
+}
+.usuarios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  width: min(480px, 90vw);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.usuario-card {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  padding: 24px 12px 20px;
+  background: #24243e;
+  border: 1px solid #2d2d44;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all .15s;
+  user-select: none;
+}
+.usuario-card:active  { transform: scale(.96); }
+.usuario-card:hover   { border-color: #6366f1; background: #2a2a4a; }
+.usuario-avatar {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: #fff;
+}
+.usuario-nombre {
+  font-size: 14px; font-weight: 600; color: #e2e8f0;
+  text-align: center; word-break: break-word;
+}
+.usuario-rol {
+  font-size: 11px; color: #64748b; text-transform: capitalize;
+}
+
+/* ── Pantalla 2: teclado PIN ────────────────────────────────── */
+#pantallaPin {
+  position: fixed; inset: 0;
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: #1a1a2e;
+}
+#pantallaPin.activa { display: flex; }
+
+#pinAvatar {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; color: #fff;
+  margin-bottom: 14px;
+}
+#pinNombreUsuario {
+  color: #e2e8f0; font-size: 18px; font-weight: 600;
+  margin-bottom: 4px;
+}
+#pinSubtitulo {
+  color: #64748b; font-size: 13px; margin-bottom: 32px;
+}
+
+/* Círculos de dígitos */
+.pin-circulos {
+  display: flex; gap: 18px; margin-bottom: 40px;
+}
+.circulo-pin {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid #6366f1;
+  transition: background .12s;
+}
+.circulo-pin.activo { background: #6366f1; }
+
+/* Teclado */
+.teclado-pin {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px; width: min(280px, 85vw);
+}
+.btn-pin {
+  height: 72px;
+  background: #2d2d44;
+  color: #f1f5f9;
+  border: none; border-radius: 12px;
+  font-size: 24px; font-weight: 500;
+  cursor: pointer;
+  transition: background .1s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.btn-pin:active { background: #6366f1; }
+.btn-pin.btn-borrar {
+  font-size: 20px; background: #1e1e2e; color: #94a3b8;
+}
+.btn-pin.btn-volver {
+  font-size: 12px; background: #1e1e2e; color: #64748b;
+  height: 40px; margin-top: 20px;
+  grid-column: 1 / -1;
+}
+.btn-pin.btn-volver:active { background: #2d2d44; color: #94a3b8; }
+
+/* Error */
+#pinError {
+  height: 20px; font-size: 13px; color: #ef4444;
+  margin-top: 16px; text-align: center;
+  animation: shake .35s ease;
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25%      { transform: translateX(-8px); }
+  75%      { transform: translateX(8px); }
+}
+.pin-footer {
+  position: fixed; bottom: 16px;
+  color: #2d2d44; font-size: 11px;
+}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">🛍️</div>
-  <h1>ZERO POS</h1>
-  <p class="tagline">Sin internet. Sin comisiones. Solo tú y tus ventas.</p>
 
-  <div class="user-list" id="userList"></div>
+<!-- ── Pantalla 1: usuarios ─────────────────────────────────── -->
+<div id="pantallaUsuarios">
+  <div class="logo-top">
+    <span class="zero">ZERO</span><span class="pos">POS</span>
+  </div>
+  <div class="login-subtitle">¿Quién eres?</div>
+  <div class="usuarios-grid" id="usuariosGrid"></div>
+  <p class="pin-footer">ZERO POS v1.0</p>
+</div>
 
-  <div class="pin-display">
-    <div class="pin-dot" id="d0"></div>
-    <div class="pin-dot" id="d1"></div>
-    <div class="pin-dot" id="d2"></div>
-    <div class="pin-dot" id="d3"></div>
+<!-- ── Pantalla 2: PIN ──────────────────────────────────────── -->
+<div id="pantallaPin">
+  <div class="logo-top">
+    <span class="zero">ZERO</span><span class="pos">POS</span>
   </div>
 
-  <div class="error-msg" id="err"></div>
+  <div id="pinAvatar"></div>
+  <div id="pinNombreUsuario">Introduce tu PIN</div>
+  <div id="pinSubtitulo">4 dígitos</div>
 
-  <div class="numpad">
-    <button class="key" onclick="addDigit('1')">1</button>
-    <button class="key" onclick="addDigit('2')">2</button>
-    <button class="key" onclick="addDigit('3')">3</button>
-    <button class="key" onclick="addDigit('4')">4</button>
-    <button class="key" onclick="addDigit('5')">5</button>
-    <button class="key" onclick="addDigit('6')">6</button>
-    <button class="key" onclick="addDigit('7')">7</button>
-    <button class="key" onclick="addDigit('8')">8</button>
-    <button class="key" onclick="addDigit('9')">9</button>
-    <button class="key del" onclick="delDigit()">⌫</button>
-    <button class="key" onclick="addDigit('0')">0</button>
-    <button class="key" onclick="clearPin()">✕</button>
-    <button class="key enter" onclick="submitPin()">Entrar →</button>
+  <div class="pin-circulos">
+    <div class="circulo-pin" id="pc0"></div>
+    <div class="circulo-pin" id="pc1"></div>
+    <div class="circulo-pin" id="pc2"></div>
+    <div class="circulo-pin" id="pc3"></div>
   </div>
 
-  <p class="footer">ZERO POS v1.0 — datos solo en este dispositivo</p>
+  <div class="teclado-pin">
+    <button class="btn-pin" onclick="presionarPin('1')">1</button>
+    <button class="btn-pin" onclick="presionarPin('2')">2</button>
+    <button class="btn-pin" onclick="presionarPin('3')">3</button>
+    <button class="btn-pin" onclick="presionarPin('4')">4</button>
+    <button class="btn-pin" onclick="presionarPin('5')">5</button>
+    <button class="btn-pin" onclick="presionarPin('6')">6</button>
+    <button class="btn-pin" onclick="presionarPin('7')">7</button>
+    <button class="btn-pin" onclick="presionarPin('8')">8</button>
+    <button class="btn-pin" onclick="presionarPin('9')">9</button>
+    <div></div>
+    <button class="btn-pin" onclick="presionarPin('0')">0</button>
+    <button class="btn-pin btn-borrar" onclick="borrarPin()">⌫</button>
+    <button class="btn-pin btn-volver" onclick="volverUsuarios()">← Cambiar usuario</button>
+  </div>
+
+  <div id="pinError"></div>
 </div>
 
 <script>
+const _COLORES = [
+  '#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#0ea5e9'
+];
 let pin = '';
 let usuarioSeleccionado = null;
 
+function _avatarColor(nombre) {
+  let h = 0;
+  for (let i = 0; i < (nombre||'').length; i++) h = (h * 31 + nombre.charCodeAt(i)) & 0xFFFFFF;
+  return _COLORES[Math.abs(h) % _COLORES.length];
+}
+
 async function cargarUsuarios() {
   try {
-    const usuarios = await fetch('/api/auth/usuarios/publico', {credentials: 'include'})
+    const usuarios = await fetch('/api/auth/usuarios/publico', {credentials:'include'})
       .then(r => r.json());
-    const lista = document.getElementById('userList');
-    if (!usuarios.length) return;
+    const grid = document.getElementById('usuariosGrid');
+    grid.innerHTML = '';
+    if (!usuarios || !usuarios.length) {
+      // Sin usuarios → ir directo al PIN genérico
+      mostrarPin(null);
+      return;
+    }
     usuarios.forEach(u => {
-      const btn = document.createElement('button');
-      btn.className = 'user-btn';
-      btn.textContent = u.nombre;
-      btn.onclick = () => seleccionarUsuario(u, btn);
-      lista.appendChild(btn);
+      const inicial = (u.nombre || '?')[0].toUpperCase();
+      const color   = _avatarColor(u.nombre);
+      const card = document.createElement('div');
+      card.className = 'usuario-card';
+      card.innerHTML = `
+        <div class="usuario-avatar" style="background:${color}">${inicial}</div>
+        <div class="usuario-nombre">${u.nombre}</div>
+        <div class="usuario-rol">${u.rol || ''}</div>`;
+      card.onclick = () => mostrarPin(u);
+      grid.appendChild(card);
     });
-    if (usuarios.length === 1) seleccionarUsuario(usuarios[0], lista.firstChild);
-  } catch(e) {}
+    if (usuarios.length === 1) mostrarPin(usuarios[0]);
+  } catch(e) {
+    mostrarPin(null);
+  }
 }
 
-function seleccionarUsuario(u, btn) {
+function mostrarPin(u) {
   usuarioSeleccionado = u;
-  document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  setError('');
-}
-
-function updateDisplay() {
-  for (let i = 0; i < 4; i++) {
-    document.getElementById('d' + i).classList.toggle('filled', i < pin.length);
-  }
-}
-
-function addDigit(d) {
-  if (pin.length < 4) {
-    pin += d;
-    updateDisplay();
-    if (pin.length === 4) setTimeout(submitPin, 150);
-  }
-}
-
-function delDigit() {
-  pin = pin.slice(0, -1);
-  updateDisplay();
-  setError('');
-}
-
-function clearPin() {
   pin = '';
-  updateDisplay();
+  actualizarCirculos();
+  setError('');
+
+  if (u) {
+    const inicial = (u.nombre || '?')[0].toUpperCase();
+    const color   = _avatarColor(u.nombre);
+    document.getElementById('pinAvatar').textContent = inicial;
+    document.getElementById('pinAvatar').style.background = color;
+    document.getElementById('pinNombreUsuario').textContent = u.nombre;
+    document.getElementById('pinSubtitulo').textContent = u.rol || 'Introduce tu PIN';
+  } else {
+    document.getElementById('pinAvatar').textContent = '🔑';
+    document.getElementById('pinAvatar').style.background = '#2d2d44';
+    document.getElementById('pinNombreUsuario').textContent = 'Introduce tu PIN';
+    document.getElementById('pinSubtitulo').textContent = '4 dígitos';
+  }
+
+  document.getElementById('pantallaUsuarios').style.opacity = '0';
+  document.getElementById('pantallaUsuarios').style.pointerEvents = 'none';
+  document.getElementById('pantallaPin').classList.add('activa');
+}
+
+function volverUsuarios() {
+  pin = '';
+  actualizarCirculos();
+  setError('');
+  document.getElementById('pantallaPin').classList.remove('activa');
+  document.getElementById('pantallaUsuarios').style.opacity = '1';
+  document.getElementById('pantallaUsuarios').style.pointerEvents = '';
+}
+
+function actualizarCirculos() {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('pc' + i).classList.toggle('activo', i < pin.length);
+  }
+}
+
+function presionarPin(digito) {
+  if (pin.length >= 4) return;
+  pin += digito;
+  actualizarCirculos();
+  if (navigator.vibrate) navigator.vibrate(30);
+  if (pin.length === 4) setTimeout(intentarLogin, 200);
+}
+
+function borrarPin() {
+  if (!pin.length) return;
+  pin = pin.slice(0, -1);
+  actualizarCirculos();
   setError('');
 }
 
 function setError(msg) {
-  const el = document.getElementById('err');
+  const el = document.getElementById('pinError');
   el.textContent = msg;
   if (msg) {
     el.style.animation = 'none';
-    el.offsetHeight;
-    el.style.animation = 'shake 0.35s ease';
+    void el.offsetHeight;
+    el.style.animation = 'shake .35s ease';
   }
 }
 
-async function submitPin() {
-  if (pin.length !== 4) { setError('Ingresa tu PIN de 4 dígitos'); return; }
+async function intentarLogin() {
+  if (pin.length !== 4) return;
   try {
     const body = {pin};
     if (usuarioSeleccionado) body.usuario_id = usuarioSeleccionado.id;
@@ -273,28 +324,24 @@ async function submitPin() {
                     : 'pos.html';
       window.location.href = destino;
     } else if (data.upgrade) {
-      setError('');
-      document.getElementById('err').innerHTML =
-        `<span style="color:#f59e0b">Límite de cajeros alcanzado.<br>Pide al administrador que cierre una sesión activa.</span>`;
-      pin = '';
-      updateDisplay();
+      setError('Límite de sesiones alcanzado. Pide al admin que cierre una.');
+      pin = ''; actualizarCirculos();
     } else {
       setError(data.error || 'PIN incorrecto');
-      pin = '';
-      updateDisplay();
+      pin = ''; actualizarCirculos();
+      if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
     }
   } catch(e) {
     setError('Error de conexión');
-    pin = '';
-    updateDisplay();
+    pin = ''; actualizarCirculos();
   }
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key >= '0' && e.key <= '9') addDigit(e.key);
-  else if (e.key === 'Backspace') delDigit();
-  else if (e.key === 'Enter') submitPin();
-  else if (e.key === 'Escape') clearPin();
+  if (!document.getElementById('pantallaPin').classList.contains('activa')) return;
+  if (e.key >= '0' && e.key <= '9') presionarPin(e.key);
+  else if (e.key === 'Backspace') borrarPin();
+  else if (e.key === 'Escape') volverUsuarios();
 });
 
 cargarUsuarios();
