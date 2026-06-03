@@ -694,3 +694,201 @@ def leer_producto():
 @inventario_bp.route("/leer-producto-ia", methods=["POST"])
 def leer_producto_ia():
     return leer_producto()
+
+
+# ── Control de Lotes ──────────────────────────────────────────────────────────
+
+def _generar_qr_lote(lote_id: int, producto_id: int, vencimiento: str | None):
+    """Genera imagen PIL con el QR del lote."""
+    import qrcode, json as _json
+    datos = _json.dumps({"t": "L", "l": lote_id, "p": producto_id, "v": vencimiento or ""},
+                        separators=(',', ':'))
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.ERROR_CORRECT_M, box_size=4, border=1)
+    qr.add_data(datos)
+    qr.make(fit=True)
+    return qr.make_image(fill_color="black", back_color="white")
+
+
+def _generar_pdf_etiquetas(lote: dict, producto: dict, cantidad: int):
+    """Genera PDF con etiquetas 30×20 mm listas para imprimir."""
+    import io
+    from reportlab.pdfgen import canvas as rl_canvas
+    from reportlab.lib.units import mm
+    from reportlab.lib.utils import ImageReader
+
+    ANCHO, ALTO = 30 * mm, 20 * mm
+    PAG_W, PAG_H = 210 * mm, 297 * mm
+    COLS = int(PAG_W / ANCHO)
+
+    buffer = io.BytesIO()
+    c = rl_canvas.Canvas(buffer, pagesize=(PAG_W, PAG_H))
+    c.setTitle(f"Etiquetas Lote L-{lote['id']:03d}")
+
+    qr_img = _generar_qr_lote(lote["id"], lote["producto_id"], lote.get("fecha_vencimiento"))
+    qr_buf = io.BytesIO()
+    qr_img.save(qr_buf, "PNG")
+
+    col, fila = 0, 0
+    for i in range(cantidad):
+        x = col * ANCHO
+        y = PAG_H - (fila + 1) * ALTO
+
+        qr_buf.seek(0)
+        c.drawImage(ImageReader(qr_buf), x + 1 * mm, y + 1 * mm, width=12 * mm, height=12 * mm)
+
+        nombre = (producto.get("nombre") or "")[:15]
+        c.setFont("Helvetica-Bold", 5)
+        c.drawString(x + 14 * mm, y + 14 * mm, nombre)
+
+        c.setFont("Helvetica", 4)
+        if lote.get("fecha_vencimiento"):
+            c.drawString(x + 14 * mm, y + 9 * mm, f"Vence: {lote['fecha_vencimiento']}")
+        c.drawString(x + 14 * mm, y + 5 * mm, f"Lote: L-{lote['id']:03d}")
+
+        # Marco sutil
+        c.setStrokeColorRGB(0.8, 0.8, 0.8)
+        c.rect(x, y, ANCHO, ALTO)
+
+        col += 1
+        if col >= COLS:
+            col = 0
+            fila += 1
+            if fila * ALTO >= PAG_H:
+                c.showPage()
+                fila = 0
+
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
+@inventario_bp.route("/lotes", methods=["GET"])
+def listar_lotes():
+    if not _auth():
+        return jsonify({"error": "No autenticado"}), 401
+    producto_id = request.args.get("producto_id")
+    with db_session() as conn:
+        q = "SELECT * FROM lotes WHERE 1=1"
+        p = []
+        if producto_id:
+            q += " AND producto_id=?"
+            p.append(int(producto_id))
+        q += " ORDER BY estado='activo' DESC, fecha_vencimiento ASC NULLS LAST"
+        rows = conn.execute(q, p).fetchall()
+        return jsonify([dict(r) for r in rows])
+
+
+@inventario_bp.route("/lotes", methods=["POST"])
+def crear_lote():
+    if not _auth():
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    producto_id = data.get("producto_id")
+    cantidad = int(data.get("cantidad", 0))
+    if not producto_id or cantidad <= 0:
+        return jsonify({"error": "producto_id y cantidad son requeridos"}), 400
+
+    with db_session() as conn:
+        # Verificar producto existe
+        prod = conn.execute("SELECT id, nombre FROM productos WHERE id=?", (producto_id,)).fetchone()
+        if not prod:
+            return jsonify({"error": "Producto no encontrado"}), 404
+
+        # Auto-numerar el lote
+        total_lotes = conn.execute(
+            "SELECT COUNT(*) FROM lotes WHERE producto_id=?", (producto_id,)
+        ).fetchone()[0]
+        num = data.get("numero_lote") or f"L-{prod['id']:03d}-{total_lotes + 1:03d}"
+
+        cur = conn.execute(
+            """INSERT INTO lotes (producto_id, numero_lote, cantidad_inicial, cantidad_actual,
+                                  fecha_vencimiento, notas)
+               VALUES (?,?,?,?,?,?)""",
+            (producto_id, num, cantidad, cantidad,
+             data.get("fecha_vencimiento") or None,
+             data.get("notas") or None)
+        )
+        lote_id = cur.lastrowid
+
+        # Activar control de lotes en el producto si no estaba
+        conn.execute("UPDATE productos SET tiene_lotes=1, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+                     (producto_id,))
+
+        # También sumar al stock del producto
+        conn.execute(
+            "UPDATE productos SET stock=stock+?, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
+            (cantidad, producto_id)
+        )
+        registrar_movimiento_stock(conn, producto_id, None, "entrada", cantidad, "lote_nuevo",
+                                   _auth(), notas=f"Lote {num}")
+
+    return jsonify({"ok": True, "lote_id": lote_id, "numero_lote": num}), 201
+
+
+@inventario_bp.route("/lotes/<int:lote_id>", methods=["GET"])
+def obtener_lote(lote_id):
+    if not _auth():
+        return jsonify({"error": "No autenticado"}), 401
+    with db_session() as conn:
+        lote = conn.execute("SELECT * FROM lotes WHERE id=?", (lote_id,)).fetchone()
+        if not lote:
+            return jsonify({"error": "Lote no encontrado"}), 404
+        return jsonify(dict(lote))
+
+
+@inventario_bp.route("/lotes/<int:lote_id>/etiquetas/pdf", methods=["GET"])
+def etiquetas_pdf(lote_id):
+    if not _auth():
+        return jsonify({"error": "No autenticado"}), 401
+    cantidad = int(request.args.get("cantidad", 1))
+    cantidad = max(1, min(cantidad, 500))
+
+    with db_session() as conn:
+        lote = conn.execute("SELECT * FROM lotes WHERE id=?", (lote_id,)).fetchone()
+        if not lote:
+            return jsonify({"error": "Lote no encontrado"}), 404
+        prod = conn.execute("SELECT id, nombre FROM productos WHERE id=?",
+                            (lote["producto_id"],)).fetchone()
+
+    from flask import send_file
+    pdf_buf = _generar_pdf_etiquetas(dict(lote), dict(prod), cantidad)
+    filename = f"etiquetas_L{lote_id:03d}.pdf"
+    return send_file(pdf_buf, mimetype="application/pdf",
+                     as_attachment=True, download_name=filename)
+
+
+@inventario_bp.route("/mermas", methods=["POST"])
+def registrar_merma():
+    if not _auth():
+        return jsonify({"error": "No autenticado"}), 401
+    uid = _auth()
+    data = request.get_json(silent=True) or {}
+    lote_id    = data.get("lote_id")
+    producto_id = data.get("producto_id")
+    cantidad   = int(data.get("cantidad", 1))
+    motivo     = data.get("motivo", "vencimiento")
+
+    if not producto_id or cantidad <= 0:
+        return jsonify({"error": "producto_id y cantidad son requeridos"}), 400
+
+    with db_session() as conn:
+        # Descontar del lote si aplica
+        if lote_id:
+            lote = conn.execute("SELECT * FROM lotes WHERE id=?", (lote_id,)).fetchone()
+            if lote:
+                nueva_cant = max(0, lote["cantidad_actual"] - cantidad)
+                nuevo_estado = "agotado" if nueva_cant == 0 else lote["estado"]
+                conn.execute(
+                    "UPDATE lotes SET cantidad_actual=?, estado=? WHERE id=?",
+                    (nueva_cant, nuevo_estado, lote_id)
+                )
+
+        cur = conn.execute(
+            "INSERT INTO mermas (lote_id, producto_id, cantidad, motivo, usuario_id, notas) VALUES (?,?,?,?,?,?)",
+            (lote_id, producto_id, cantidad, motivo, uid, data.get("notas"))
+        )
+        # Descontar stock del producto
+        registrar_movimiento_stock(conn, producto_id, None, "salida", cantidad, f"merma_{motivo}", uid,
+                                   notas=f"Lote {lote_id}" if lote_id else None)
+
+    return jsonify({"ok": True, "merma_id": cur.lastrowid}), 201

@@ -504,7 +504,7 @@ def actualizar(pid):
                   "imagen_url", "activo", "es_granel", "unidad_medida", "precio_por",
                   "modo_stock", "hora_reset_stock", "sku",
                   "pendiente_verificar", "tiene_impuesto_adicional", "tasa_impuesto_adicional",
-                  "marca_id")
+                  "marca_id", "tiene_lotes")
     for campo in permitidos:
         if campo in data:
             campos[campo] = data[campo]

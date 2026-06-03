@@ -185,6 +185,51 @@ def _m003_indices_analiticos(conn):
             pass
 
 
+def _m007_lotes_vencimientos(conn):
+    """Crea tablas de lotes y mermas; agrega columnas de soporte en productos y venta_items."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS lotes (
+        id                INTEGER PRIMARY KEY AUTOINCREMENT,
+        producto_id       INTEGER NOT NULL REFERENCES productos(id),
+        numero_lote       TEXT,
+        cantidad_inicial  INTEGER NOT NULL DEFAULT 0,
+        cantidad_actual   INTEGER NOT NULL DEFAULT 0,
+        fecha_vencimiento DATE,
+        estado            TEXT NOT NULL DEFAULT 'activo'
+                          CHECK(estado IN ('activo','agotado','vencido','retirado')),
+        notas             TEXT,
+        creado_en         DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS mermas (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        lote_id     INTEGER REFERENCES lotes(id),
+        producto_id INTEGER NOT NULL REFERENCES productos(id),
+        cantidad    INTEGER NOT NULL DEFAULT 1,
+        motivo      TEXT NOT NULL DEFAULT 'vencimiento',
+        usuario_id  INTEGER REFERENCES usuarios(id),
+        notas       TEXT,
+        creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    for idx, sql in [
+        ("idx_lotes_producto", "CREATE INDEX IF NOT EXISTS idx_lotes_producto ON lotes(producto_id, estado)"),
+        ("idx_lotes_venc",     "CREATE INDEX IF NOT EXISTS idx_lotes_venc ON lotes(fecha_vencimiento)"),
+        ("idx_mermas_producto","CREATE INDEX IF NOT EXISTS idx_mermas_producto ON mermas(producto_id)"),
+    ]:
+        try:
+            conn.execute(sql)
+        except Exception:
+            pass
+
+    # Columna tiene_lotes en productos (0 = sin control de lotes, 1 = activado)
+    cols_p = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
+    if "tiene_lotes" not in cols_p:
+        conn.execute("ALTER TABLE productos ADD COLUMN tiene_lotes INTEGER NOT NULL DEFAULT 0")
+
+    # Columna lote_id en venta_items para trazabilidad
+    cols_vi = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
+    if "lote_id" not in cols_vi:
+        conn.execute("ALTER TABLE venta_items ADD COLUMN lote_id INTEGER REFERENCES lotes(id)")
+
+
 def _m006_cola_impresion(conn):
     """Crea tabla de cola de impresión persistente."""
     conn.execute("""CREATE TABLE IF NOT EXISTS cola_impresion (
@@ -264,6 +309,7 @@ _MIGRACIONES = [
     (4, "métricas precalculadas diarias/semanales/mensuales",                    _m004_metricas_agregadas),
     (5, "usuarios: sucursal_id y permisos JSON",                                 _m005_usuarios_permisos_sucursal),
     (6, "cola_impresion: tickets persistentes con reintentos",                   _m006_cola_impresion),
+    (7, "lotes y mermas: control opcional de vencimientos por producto",          _m007_lotes_vencimientos),
 ]
 
 

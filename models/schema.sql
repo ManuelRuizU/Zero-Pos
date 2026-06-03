@@ -279,6 +279,37 @@ CREATE TABLE IF NOT EXISTS voz_sinonimos_variante (
     UNIQUE(palabra, producto_id, variante_id)
 );
 
+-- ── Control de lotes y vencimientos (opcional por producto) ──
+
+CREATE TABLE IF NOT EXISTS lotes (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    producto_id       INTEGER NOT NULL REFERENCES productos(id),
+    numero_lote       TEXT,
+    cantidad_inicial  INTEGER NOT NULL DEFAULT 0,
+    cantidad_actual   INTEGER NOT NULL DEFAULT 0,
+    fecha_vencimiento DATE,
+    estado            TEXT NOT NULL DEFAULT 'activo'
+                      CHECK(estado IN ('activo','agotado','vencido','retirado')),
+    notas             TEXT,
+    creado_en         DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_lotes_producto ON lotes(producto_id, estado);
+CREATE INDEX IF NOT EXISTS idx_lotes_venc     ON lotes(fecha_vencimiento) WHERE estado='activo';
+
+CREATE TABLE IF NOT EXISTS mermas (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    lote_id     INTEGER REFERENCES lotes(id),
+    producto_id INTEGER NOT NULL REFERENCES productos(id),
+    cantidad    INTEGER NOT NULL DEFAULT 1,
+    motivo      TEXT NOT NULL DEFAULT 'vencimiento',
+    usuario_id  INTEGER REFERENCES usuarios(id),
+    notas       TEXT,
+    creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_mermas_producto ON mermas(producto_id);
+
 -- ── Cola de impresión ────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS cola_impresion (
