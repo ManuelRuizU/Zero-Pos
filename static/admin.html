@@ -264,6 +264,7 @@ input:checked + .slider:before{transform:translateX(20px);}
     <button class="nav-btn" onclick="showTab('ia',this)">🤖 IA</button>
     <button class="nav-btn" onclick="showTab('config',this)">⚙️ Config</button>
     <button class="nav-btn" onclick="showTab('voz',this)">🎤 Voz</button>
+    <button class="nav-btn" onclick="showTab('apariencia',this)">🎨 Apariencia</button>
     <button class="nav-btn" onclick="showTab('categorias',this)">🗂️ Categorías</button>
     <button class="nav-btn" onclick="showTab('equipo',this)">👥 Equipo</button>
     <button class="nav-btn" onclick="location.href='inventario.html'">📦 Inventario</button>
@@ -1796,6 +1797,57 @@ async function toggleUsuario(id, activo) {
   cargarEquipo();
 }
 
+function _initApariencia() {
+  // Sync toggle buttons to current state
+  const temaActual  = localStorage.getItem('zero-tema')  || 'oscuro';
+  const colorActual = localStorage.getItem('zero-color') || 'zero';
+  document.querySelectorAll('.btn-tema').forEach(b => b.classList.toggle('activo', b.dataset.tema === temaActual));
+  document.querySelectorAll('.circulo-color[data-color]').forEach(b => b.classList.toggle('activo', b.dataset.color === colorActual));
+}
+
+</script>
+<script src="/static/js/zero-temas.js"></script>
+<script>
+// Append apariencia tab HTML dynamically to keep file structure clean
+(function() {
+  const div = document.createElement('div');
+  div.className = 'tab-content';
+  div.id = 'tab-apariencia';
+  div.innerHTML = `
+    <h2>🎨 Apariencia</h2>
+    <div class="apariencia-section">
+      <h3>Tema</h3>
+      <div class="selector-tema">
+        <button class="btn-tema" data-tema="oscuro" onclick="aplicarTema('oscuro')">🌙 Oscuro</button>
+        <button class="btn-tema" data-tema="claro"  onclick="aplicarTema('claro')">☀️ Claro</button>
+      </div>
+
+      <h3>Color principal</h3>
+      <div class="paleta-colores">
+        <button class="circulo-color" data-color="zero"    style="background:#6366f1" onclick="aplicarColor('zero')"    title="ZERO (morado)"></button>
+        <button class="circulo-color" data-color="verde"   style="background:#22c55e" onclick="aplicarColor('verde')"   title="Verde"></button>
+        <button class="circulo-color" data-color="azul"    style="background:#3b82f6" onclick="aplicarColor('azul')"    title="Azul"></button>
+        <button class="circulo-color" data-color="rojo"    style="background:#ef4444" onclick="aplicarColor('rojo')"    title="Rojo"></button>
+        <button class="circulo-color" data-color="naranja" style="background:#f97316" onclick="aplicarColor('naranja')" title="Naranja"></button>
+        <button class="circulo-color" data-color="rosa"    style="background:#ec4899" onclick="aplicarColor('rosa')"    title="Rosa"></button>
+        <label class="circulo-color circulo-custom" title="Color personalizado" style="cursor:pointer">
+          🎨<input type="color" value="#6366f1" style="display:none" oninput="aplicarColor(this.value)">
+        </label>
+      </div>
+
+      <h3>Preview</h3>
+      <div class="preview-tema">
+        <div class="preview-card">
+          <div class="preview-topbar">ZERO<span style="color:var(--accent)">POS</span></div>
+          <div class="preview-producto">Coca-Cola 1.5L <span>$1.890</span></div>
+          <button class="preview-btn">Cobrar $1.890</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.querySelector('.content').appendChild(div);
+  _initApariencia();
+})();
 </script>
 <script>
 if ('serviceWorker' in navigator) {
