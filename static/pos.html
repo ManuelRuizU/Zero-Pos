@@ -677,6 +677,7 @@ body {
 
 <!-- Topbar -->
 <div class="topbar">
+  <button class="btn-top" onclick="abrirDrawerMenu()" title="Menú" style="font-size:18px">☰</button>
   <div class="logo">ZERO<span>POS</span></div>
   <button class="btn-top" onclick="location.href='admin.html'" title="Admin">📊 <span class="btn-admin-label">Admin</span></button>
   <button class="btn-top" onclick="location.href='inventario.html'" title="Inventario">📦</button>
@@ -888,6 +889,67 @@ body {
     <div class="modal-acciones-col">
       <button class="btn-confirmar" onclick="confirmarVerificacion()">Confirmar y pagar →</button>
       <button class="btn-atras" onclick="volverDeVerificacion()">← Corregir</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Drawer historial ─────────────────────────────────────── -->
+<div id="drawerHistorial" style="position:fixed;inset:0;z-index:1200;display:none">
+  <div onclick="cerrarHistorial()" style="position:absolute;inset:0;background:rgba(0,0,0,.55)"></div>
+  <div style="position:absolute;right:0;top:0;bottom:0;width:min(420px,100vw);background:#13131f;display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,.5)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border)">
+      <div style="font-size:16px;font-weight:700">Ventas recientes</div>
+      <button onclick="cerrarHistorial()" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="historialLista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
+  </div>
+</div>
+
+<!-- ── Modal detalle venta ──────────────────────────────────── -->
+<div class="modal-overlay" id="modalDetalleVenta" onclick="if(event.target===this)this.style.display='none'" style="display:none">
+  <div class="modal" style="max-width:400px;padding:0;overflow:hidden">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <button onclick="document.getElementById('modalDetalleVenta').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">←</button>
+      <div id="dvNumero" style="font-size:14px;font-weight:600;color:var(--text-dim)"></div>
+      <div style="display:flex;gap:8px">
+        <button id="dvBtnAnular" onclick="_anularVentaDetalle()" style="background:#ef444420;border:1px solid #ef4444;color:#ef4444;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer">ANULAR</button>
+        <button onclick="_reimprimirVentaDetalle()" style="background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:4px">🖨️</button>
+      </div>
+    </div>
+    <!-- Total grande -->
+    <div style="text-align:center;padding:24px 16px 16px;border-bottom:1px solid var(--border)">
+      <div id="dvTotal" style="font-size:36px;font-weight:900;color:#22c55e;letter-spacing:-1px"></div>
+      <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Total</div>
+    </div>
+    <!-- Metadata -->
+    <div id="dvMeta" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:8px"></div>
+    <!-- Items -->
+    <div id="dvItems" style="padding:14px 16px;border-bottom:1px solid var(--border)"></div>
+    <!-- Totales -->
+    <div id="dvTotales" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:6px"></div>
+    <!-- Footer fecha/id -->
+    <div id="dvFooter" style="padding:12px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim)"></div>
+  </div>
+</div>
+
+<!-- ── Drawer menú / versión ────────────────────────────────── -->
+<div id="drawerMenu" style="position:fixed;inset:0;z-index:1200;display:none">
+  <div onclick="cerrarDrawerMenu()" style="position:absolute;inset:0;background:rgba(0,0,0,.55)"></div>
+  <div style="position:absolute;left:0;top:0;bottom:0;width:min(280px,85vw);background:#13131f;display:flex;flex-direction:column;box-shadow:8px 0 32px rgba(0,0,0,.5)">
+    <div style="padding:20px 18px;border-bottom:1px solid var(--border)">
+      <div style="font-size:22px;font-weight:900;letter-spacing:-1px"><span style="color:#fff">ZERO</span><span style="color:#6366f1">POS</span></div>
+      <div id="menuCajeroNombre" style="font-size:13px;color:var(--text-dim);margin-top:4px"></div>
+    </div>
+    <div style="flex:1;padding:12px 0">
+      <a href="admin.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface-hover)'" onmouseleave="this.style.background='none'">📊 <span>Reportes y Admin</span></a>
+      <a href="inventario.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface-hover)'" onmouseleave="this.style.background='none'">📦 <span>Inventario</span></a>
+      <a href="pedidos.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface-hover)'" onmouseleave="this.style.background='none'">🛵 <span>Pedidos</span></a>
+      <div onclick="abrirHistorial()" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);font-size:14px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--surface-hover)'" onmouseleave="this.style.background='none'">🕐 <span>Historial de ventas</span></div>
+    </div>
+    <div style="padding:16px 18px;border-top:1px solid var(--border)">
+      <div id="menuVersion" style="font-size:11px;color:#2d3748;margin-bottom:10px">ZERO POS</div>
+      <button onclick="cerrarSesion()" style="width:100%;padding:10px;background:#ef444420;border:1px solid #ef4444;color:#ef4444;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600">Cerrar sesión</button>
     </div>
   </div>
 </div>
@@ -3464,6 +3526,194 @@ function medirScan(ms) {
     const promedio = scanTiempos.slice(-10).reduce((a, b) => a + b, 0) / 10;
     console.log(`[ZERO] Promedio últimos 10 scans: ${promedio.toFixed(1)}ms`);
   }
+}
+
+// ── Drawer menú ──────────────────────────────────────────────────
+function abrirDrawerMenu() {
+  const nombre = document.getElementById('cajeroNombre')?.textContent || '';
+  document.getElementById('menuCajeroNombre').textContent = nombre;
+  document.getElementById('drawerMenu').style.display = '';
+}
+function cerrarDrawerMenu() {
+  document.getElementById('drawerMenu').style.display = 'none';
+}
+async function _cargarVersion() {
+  try {
+    const d = await fetch('/api/sistema/version', {credentials:'include'}).then(r=>r.json());
+    const el = document.getElementById('menuVersion');
+    if (el) el.textContent = `ZERO POS v${d.version || '1.0.0'}`;
+  } catch(e) {}
+}
+
+// ── Historial de ventas agrupado por fecha ────────────────────────
+let _detalleVentaActual = null;
+
+async function abrirHistorial() {
+  cerrarDrawerMenu();
+  document.getElementById('drawerHistorial').style.display = '';
+  document.getElementById('historialLista').innerHTML =
+    '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">Cargando...</div>';
+
+  try {
+    const rows = await fetch('/api/reportes/ventas/dia?fecha=' + new Date().toISOString().slice(0,10),
+      {credentials:'include'}).then(r => r.json());
+
+    // Fetch raw ventas for today + yesterday
+    const hoy   = new Date().toISOString().slice(0,10);
+    const ayerD = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    const [vHoy, vAyer] = await Promise.all([
+      fetch(`/api/ventas?fecha=${hoy}&limit=50`, {credentials:'include'}).then(r=>r.json()).catch(()=>[]),
+      fetch(`/api/ventas?fecha=${ayerD}&limit=30`, {credentials:'include'}).then(r=>r.json()).catch(()=>[]),
+    ]);
+    const todasVentas = [...(Array.isArray(vHoy)?vHoy:[]), ...(Array.isArray(vAyer)?vAyer:[])];
+    _renderHistorial(todasVentas);
+  } catch(e) {
+    document.getElementById('historialLista').innerHTML =
+      '<div style="padding:20px;text-align:center;color:var(--text-dim)">Error cargando historial</div>';
+  }
+}
+
+function cerrarHistorial() {
+  document.getElementById('drawerHistorial').style.display = 'none';
+}
+
+function _renderHistorial(ventas) {
+  const container = document.getElementById('historialLista');
+  if (!ventas.length) {
+    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">Sin ventas registradas</div>';
+    return;
+  }
+
+  // Agrupar por fecha
+  const grupos = {};
+  ventas.forEach(v => {
+    const fecha = (v.creado_en || '').slice(0, 10);
+    if (!grupos[fecha]) grupos[fecha] = [];
+    grupos[fecha].push(v);
+  });
+
+  const _DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const _MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  let html = '';
+  Object.keys(grupos).sort().reverse().forEach(fecha => {
+    const dt = new Date(fecha + 'T12:00:00');
+    const label = `${_DIAS[dt.getDay()]}, ${dt.getDate()} ${_MESES[dt.getMonth()]} ${dt.getFullYear()}`;
+    html += `<div style="padding:8px 16px;background:#0f0f1a;color:#6366f1;font-size:12px;font-weight:700;position:sticky;top:0;text-transform:capitalize;border-bottom:1px solid var(--border)">${label}</div>`;
+    grupos[fecha].forEach(v => {
+      const estadoColor = v.estado === 'anulada' ? '#ef4444' : v.estado === 'completada' ? '#22c55e' : '#94a3b8';
+      const hora = (v.creado_en || '').slice(11, 16);
+      const metodoIcon = {'efectivo':'💵','tarjeta':'💳','transferencia':'📲'}[v.metodo_pago] || '💰';
+      html += `<div onclick="abrirDetalleVenta(${v.id})" style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseenter="this.style.background='var(--surface-hover)'" onmouseleave="this.style.background='none'">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600;color:${v.estado==='anulada'?'#ef444480':'var(--text)'}">
+            ${v.estado==='anulada'?'<s>':''}#${v.id}${v.estado==='anulada'?'</s>':''} ${metodoIcon}
+          </div>
+          <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${hora} · ${v.cajero||v.usuario||'—'}</div>
+        </div>
+        <div style="font-size:15px;font-weight:700;color:${estadoColor};text-decoration:${v.estado==='anulada'?'line-through':'none'}">${fmt(v.total)}</div>
+      </div>`;
+    });
+  });
+  container.innerHTML = html;
+}
+
+async function abrirDetalleVenta(id) {
+  document.getElementById('modalDetalleVenta').style.display = 'flex';
+  document.getElementById('dvNumero').textContent = `#${id}`;
+  document.getElementById('dvTotal').textContent = '...';
+  document.getElementById('dvMeta').innerHTML = '';
+  document.getElementById('dvItems').innerHTML = '<div style="color:var(--text-dim);font-size:13px">Cargando...</div>';
+
+  try {
+    const v = await fetch(`/api/ventas/${id}`, {credentials:'include'}).then(r=>r.json());
+    _detalleVentaActual = v;
+    _renderDetalleVenta(v);
+  } catch(e) {
+    document.getElementById('dvItems').innerHTML = '<div style="color:#ef4444;font-size:13px">Error cargando venta</div>';
+  }
+}
+
+function _renderDetalleVenta(v) {
+  document.getElementById('dvNumero').textContent = `#${v.id||'—'}`;
+  document.getElementById('dvTotal').textContent = fmt(v.total || 0);
+  if (v.estado === 'anulada') {
+    document.getElementById('dvTotal').style.color = '#ef4444';
+    document.getElementById('dvTotal').style.textDecoration = 'line-through';
+  } else {
+    document.getElementById('dvTotal').style.color = '#22c55e';
+    document.getElementById('dvTotal').style.textDecoration = 'none';
+  }
+
+  // Ocultar botón anular si ya está anulada
+  document.getElementById('dvBtnAnular').style.display = v.estado === 'anulada' ? 'none' : '';
+
+  // Meta
+  const tipoIcon = {'delivery':'🛵','retiro':'🏠','local':'🏪'}[v.tipo||'local'] || '🏪';
+  const meta = [];
+  if (v.cajero || v.usuario) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Cajero</span><span>${v.cajero||v.usuario}</span></div>`);
+  if (v.metodo_pago) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Pago</span><span>${v.metodo_pago}</span></div>`);
+  if (v.cliente_nombre) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Cliente</span><span>${v.cliente_nombre}</span></div>`);
+  if (v.tipo && v.tipo !== 'local') meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Tipo</span><span>${tipoIcon} ${v.tipo}</span></div>`);
+  if (v.direccion) meta.push(`<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-dim);flex-shrink:0">Dirección</span><span style="text-align:right">${v.direccion}</span></div>`);
+  document.getElementById('dvMeta').innerHTML = meta.join('');
+
+  // Items
+  const items = v.items || [];
+  let itemsHtml = `<div style="font-size:11px;font-weight:700;color:var(--text-dim);display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px"><span>Producto</span><span style="text-align:center">Cant</span><span style="text-align:right">Precio</span></div>`;
+  items.forEach(i => {
+    itemsHtml += `<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)20">
+      <div>
+        <div style="font-size:13px;font-weight:600">${(i.nombre||i.producto_nombre||'').replace(/&/g,'&amp;')}</div>
+        ${i.modificadores_desc ? `<div style="font-size:11px;color:var(--text-dim)">└─ ${i.modificadores_desc}</div>` : ''}
+        ${i.notas ? `<div style="font-size:11px;color:var(--text-dim)">📝 ${i.notas}</div>` : ''}
+      </div>
+      <div style="text-align:center;font-size:13px;color:var(--text-dim)">×${i.cantidad}</div>
+      <div style="text-align:right;font-size:13px;font-weight:700;color:#f1f5f9">${fmt(i.subtotal||i.precio_unit*i.cantidad)}</div>
+    </div>`;
+  });
+  document.getElementById('dvItems').innerHTML = itemsHtml;
+
+  // Totales
+  const totales = [];
+  if (v.descuento > 0) totales.push(`<div style="display:flex;justify-content:space-between;color:#f59e0b"><span>Descuento</span><span>-${fmt(v.descuento)}</span></div>`);
+  if (v.costo_delivery > 0) totales.push(`<div style="display:flex;justify-content:space-between"><span>Despacho</span><span>${fmt(v.costo_delivery)}</span></div>`);
+  totales.push(`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px"><span>Total</span><span>${fmt(v.total)}</span></div>`);
+  totales.push(`<div style="display:flex;justify-content:space-between;color:var(--text-dim)"><span style="text-transform:capitalize">${v.metodo_pago||'—'}</span><span>${fmt(v.total)}</span></div>`);
+  document.getElementById('dvTotales').innerHTML = totales.join('');
+
+  // Footer
+  const fecha = v.creado_en ? new Date(v.creado_en).toLocaleString('es-CL', {dateStyle:'short', timeStyle:'short'}) : '—';
+  document.getElementById('dvFooter').innerHTML = `<span>${fecha}</span><span>#${v.id}</span>`;
+}
+
+async function _anularVentaDetalle() {
+  if (!_detalleVentaActual) return;
+  const motivo = prompt('Motivo de anulación:');
+  if (motivo === null) return;
+  const r = await fetch(`/api/ventas/${_detalleVentaActual.id}/anular`, {
+    method: 'POST', credentials: 'include',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({motivo}),
+  });
+  if (r.ok) {
+    showToast('Venta anulada', 'success');
+    document.getElementById('modalDetalleVenta').style.display = 'none';
+    cargarProductos();
+  } else {
+    const d = await r.json();
+    showToast(d.error || 'Error al anular', 'error');
+  }
+}
+
+async function _reimprimirVentaDetalle() {
+  if (!_detalleVentaActual) return;
+  await fetch('/api/impresora/reimprimir', {
+    method:'POST', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({venta_id: _detalleVentaActual.id}),
+  });
+  showToast('Reimprimiendo...', 'info');
 }
 
 // ── Vista grid/lista ─────────────────────────────────────────────

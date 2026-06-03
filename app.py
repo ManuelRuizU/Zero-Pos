@@ -222,6 +222,10 @@ def create_app() -> Flask:
     def health():
         return {"status": "ok", "version": "1.0.0"}
 
+    @app.route("/api/sistema/version")
+    def sistema_version():
+        return {"version": "1.0.0"}
+
     @app.route("/manifest.json")
     def manifest():
         return send_from_directory("static", "manifest.json",
