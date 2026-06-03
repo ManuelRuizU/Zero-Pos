@@ -7,6 +7,17 @@ from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from flask import Blueprint, request, jsonify, session
 from database import db_session
+from utils.consultas_rapidas import (
+    ventas_hoy as _cq_ventas_hoy,
+    ventas_ayer as _cq_ventas_ayer,
+    ventas_semana as _cq_ventas_semana,
+    mejor_cajero_hoy as _cq_cajero,
+    hora_pico_hoy as _cq_hora_pico,
+    stock_bajo as _cq_stock_bajo,
+    vencimientos_proximos as _cq_vencimientos,
+    prediccion_agotamiento as _cq_prediccion,
+    producto_mas_vendido as _cq_top_prod,
+)
 
 voz_bp = Blueprint("voz", __name__, url_prefix="/api/voz")
 logger = logging.getLogger("zero_pos.voz")
@@ -113,6 +124,62 @@ _PAT_VENTAS = re.compile(
 _PAT_STOCK = re.compile(
     r'\b(cuanto\s+queda|cuantos\s+quedan|quedan\s+de|hay\s+de|stock\s+de)\b', re.I
 )
+
+# ── Keywords para detección rápida de intents (sin TinyLlama) ────────────────
+# Queries SIMPLES → respuesta SQL directa, sin narrativa de IA
+KEYWORDS_VENTAS  = {'vendí', 'vendi', 'ventas', 'vendiste', 'cuánto', 'cuanto', 'total',
+                    'hoy', 'ayer', 'semana', 'mes'}
+KEYWORDS_STOCK   = {'queda', 'quedan', 'stock', 'tengo', 'hay', 'inventario', 'quedan'}
+KEYWORDS_PRODUCTO = {'más vendido', 'mas vendido', 'popular', 'estrella', 'top', 'mejor producto'}
+KEYWORDS_CAJERO  = {'cajero', 'vendedor', 'empleado', 'quien vendió', 'quien vendio',
+                    'quién vendió', 'quien vendio'}
+KEYWORDS_HORA    = {'hora', 'momento', 'horario', 'pico', 'movido', 'concurrido'}
+
+# Queries COMPLEJAS → requieren narrativa de TinyLlama
+_QUERIES_COMPLEJAS = {
+    'comparado', 'comparar', 'comparación', 'comparacion',
+    'buen día', 'buen dia', 'fue bueno', 'estuvo bueno',
+    'debería pedir', 'deberia pedir', 'qué pedir', 'que pedir',
+    'debería comprar', 'deberia comprar',
+    'cómo voy', 'como voy', 'cómo estamos', 'como estamos',
+}
+
+
+def _es_consulta_compleja(texto: str) -> bool:
+    t = texto.lower()
+    return any(k in t for k in _QUERIES_COMPLEJAS)
+
+
+def _buscar_vocabulario_local(texto_norm: str, conn) -> dict | None:
+    """Busca expresión aprendida en vocabulario_local. Retorna producto_id si existe."""
+    try:
+        for row in conn.execute(
+            "SELECT expresion, producto_id, consulta_tipo FROM vocabulario_local ORDER BY usos DESC"
+        ).fetchall():
+            if row['expresion'] in texto_norm:
+                conn.execute(
+                    "UPDATE vocabulario_local SET usos=usos+1 WHERE expresion=?",
+                    (row['expresion'],)
+                )
+                return dict(row)
+    except Exception:
+        pass
+    return None
+
+
+def _guardar_vocabulario_local(expresion: str, producto_id: int | None,
+                                consulta_tipo: str | None, conn) -> None:
+    if not expresion or len(expresion) < 4:
+        return
+    try:
+        conn.execute(
+            "INSERT INTO vocabulario_local(expresion, producto_id, consulta_tipo, usos) "
+            "VALUES(?,?,?,1) ON CONFLICT(expresion) DO UPDATE SET usos=usos+1",
+            (expresion, producto_id, consulta_tipo)
+        )
+    except Exception:
+        pass
+
 
 # Flat keyword → accion map — used for difflib similarity matching on unknown words
 _ALL_KEYWORDS: dict[str, str] = {
@@ -346,7 +413,7 @@ def _match_productos(t_norm: str, conn) -> list[dict]:
                 })
             matches.sort(key=lambda x: -len(x['nombre']))
 
-    # Learned product synonym fallback
+    # Learned product synonym fallback (voz_sinonimos_producto)
     if not matches:
         try:
             seen_ids = set()
@@ -368,6 +435,22 @@ def _match_productos(t_norm: str, conn) -> list[dict]:
                         })
         except Exception:
             pass
+
+    # vocabulario_local fallback — multi-word colloquial expressions ("la grande de coca")
+    if not matches:
+        vocab = _buscar_vocabulario_local(t_norm, conn)
+        if vocab and vocab.get('producto_id'):
+            p = conn.execute(
+                "SELECT id, nombre, precio, tiene_variantes FROM productos WHERE id=? AND activo=1",
+                (vocab['producto_id'],)
+            ).fetchone()
+            if p:
+                matches.append({
+                    'id': p['id'], 'nombre': p['nombre'],
+                    'precio': float(p['precio']),
+                    'tiene_variantes': bool(p['tiene_variantes']),
+                    'score': 0.95,
+                })
 
     return matches
 
@@ -956,8 +1039,22 @@ def interpretar():
                     llm = json.loads(m.group())
                     if llm.get('accion') and llm['accion'] != 'desconocido':
                         resultado['accion'] = llm['accion']
-                    if not resultado['producto']:
-                        resultado['producto'] = llm.get('producto', '')
+                    prod_nombre_llm = llm.get('producto', '')
+                    if not resultado['producto'] and prod_nombre_llm:
+                        resultado['producto'] = prod_nombre_llm
+                        # Intentar hallar producto en DB y guardar en vocabulario_local
+                        try:
+                            with db_session() as _vc:
+                                p_row = _vc.execute(
+                                    "SELECT id FROM productos WHERE activo=1 AND nombre LIKE ? LIMIT 1",
+                                    (f"%{prod_nombre_llm}%",)
+                                ).fetchone()
+                                if p_row:
+                                    resultado['producto_id'] = p_row['id']
+                                    t_norm_orig = _normalizar(texto)
+                                    _guardar_vocabulario_local(t_norm_orig, p_row['id'], None, _vc)
+                        except Exception:
+                            pass
                     if not resultado['variante']:
                         resultado['variante'] = llm.get('variante', '')
                 except Exception:
@@ -1203,17 +1300,23 @@ def consulta():
 
     datos = _consultar_db(texto, ctx_prod)
     template = datos.pop("template", "No tengo esa información ahora.")
+    es_complejo = datos.pop("es_complejo", False)
 
-    if _ollama_ok() and datos.get("datos"):
+    # TinyLlama solo para consultas complejas que requieren narrativa comparativa
+    if es_complejo and _ollama_ok() and datos.get("datos"):
         system = (
             "Eres ZERO, el asistente del punto de venta. "
-            "Responde en español, breve y natural (1-2 oraciones). "
-            "Solo usa los datos dados, no inventes."
+            "Responde en español, breve y natural (máximo 3 oraciones). "
+            "Solo usa los datos dados, no inventes. Tono amigable y directo."
         )
         datos_str = json.dumps(datos.get("datos"), ensure_ascii=False)
-        raw = _ollama(f'Pregunta: "{texto}"\nDatos: {datos_str}\nRespuesta breve:', system, 80)
+        raw = _ollama(
+            f'Pregunta: "{texto}"\nDatos: {datos_str}\nResumen breve en 3 líneas:',
+            system, 120
+        )
         respuesta = raw if raw else template
     else:
+        # Consulta simple → respuesta SQL directa, sin esperar a TinyLlama
         respuesta = template
 
     uid = session.get("usuario_id")
@@ -1228,41 +1331,35 @@ def consulta():
 
 def _consultar_db(texto: str, ctx: str) -> dict:
     t = texto.lower()
+    complejo = _es_consulta_compleja(texto)
 
     with db_session() as conn:
         cfg = {r["clave"]: r["valor"]
                for r in conn.execute("SELECT clave, valor FROM config").fetchall()}
-        moneda = cfg.get("moneda", "CLP")
+
+        # ── vocabulario_local: expresiones coloquiales aprendidas ─────
+        t_norm_vc = _normalizar(texto)
+        vocab_hit = _buscar_vocabulario_local(t_norm_vc, conn)
+        if vocab_hit and vocab_hit.get('consulta_tipo'):
+            t = vocab_hit['consulta_tipo'] + ' ' + t  # enrich query with learned type
 
         # ── Ventas de hoy ─────────────────────────────────────────────
         if any(k in t for k in ["hoy", "vendí hoy", "vendi hoy", "cuánto hoy", "cuanto hoy"]):
-            row = conn.execute(
-                "SELECT COUNT(*) as n, COALESCE(SUM(total),0) as tot "
-                "FROM ventas WHERE DATE(creado_en)=DATE('now') AND estado='completada'"
-            ).fetchone()
-            t_, n_ = int(row["tot"]), row["n"]
+            row = _cq_ventas_hoy(conn)
+            t_, n_ = int(row["total"]), row["num_ventas"]
             resp = f"Hoy llevas ${t_:,.0f} en {n_} {'venta' if n_==1 else 'ventas'}.".replace(",", ".")
-            return {"datos": {"total": t_, "num_ventas": n_}, "template": resp}
+            return {"datos": {"total": t_, "num_ventas": n_}, "template": resp, "es_complejo": False}
 
         # ── Stock bajo ────────────────────────────────────────────────
         if any(k in t for k in ["agotarse", "agotar", "stock bajo", "poco stock", "por agotarse",
                                   "crítico", "critico", "bajos"]):
-            rows = conn.execute(
-                "SELECT nombre, stock, stock_minimo FROM productos "
-                "WHERE activo=1 AND tiene_variantes=0 AND stock<=stock_minimo LIMIT 8"
-            ).fetchall()
-            vrows = conn.execute(
-                "SELECT p.nombre||' '||pv.nombre as nombre, pv.stock, pv.stock_minimo "
-                "FROM producto_variantes pv JOIN productos p ON pv.producto_id=p.id "
-                "WHERE pv.activo=1 AND pv.stock<=pv.stock_minimo LIMIT 8"
-            ).fetchall()
-            todos = [dict(r) for r in rows] + [dict(r) for r in vrows]
+            todos = _cq_stock_bajo(conn)
             if not todos:
                 resp = "Todos los productos tienen stock suficiente."
             else:
                 nombres = ", ".join(r["nombre"] for r in todos[:4])
                 resp = f"Hay {len(todos)} producto{'s' if len(todos)>1 else ''} con stock bajo: {nombres}."
-            return {"datos": todos, "template": resp}
+            return {"datos": todos, "template": resp, "es_complejo": False}
 
         # ── Ventas semanales de un producto ───────────────────────────
         if any(k in t for k in ["cuánto vendo", "cuántos vendo", "por semana", "a la semana",
@@ -1284,7 +1381,30 @@ def _consultar_db(texto: str, ctx: str) -> dict:
                 if row:
                     prom = round(row["tot"] / 4)
                     resp = f"Vendes en promedio {prom} {row['nombre']} por semana."
-                    return {"datos": dict(row), "template": resp}
+                    return {"datos": dict(row), "template": resp, "es_complejo": False}
+
+        # ── Ayer ──────────────────────────────────────────────────────
+        if any(k in t for k in ["ayer", "vendí ayer", "vendi ayer", "cuánto ayer", "cuanto ayer"]):
+            row = _cq_ventas_ayer(conn)
+            t_, n_ = int(row["total"]), row["num_ventas"]
+            resp = f"Ayer vendiste ${t_:,.0f} en {n_} {'venta' if n_==1 else 'ventas'}.".replace(",", ".")
+            return {"datos": {"total": t_, "num_ventas": n_}, "template": resp, "es_complejo": False}
+
+        # ── Mejor cajero ──────────────────────────────────────────────
+        if any(k in t for k in KEYWORDS_CAJERO):
+            caj = _cq_cajero(conn)
+            if caj:
+                resp = f"{caj['nombre']} lidera hoy con ${int(caj['total']):,.0f} en {caj['ventas']} ventas.".replace(",", ".")
+                return {"datos": caj, "template": resp, "es_complejo": False}
+            return {"datos": None, "template": "Aún no hay ventas hoy.", "es_complejo": False}
+
+        # ── Hora pico ─────────────────────────────────────────────────
+        if any(k in t for k in KEYWORDS_HORA):
+            hp = _cq_hora_pico(conn)
+            if hp:
+                resp = f"La hora con más movimiento hoy fue las {hp['hora']}:00 hrs con {hp['ventas']} ventas."
+                return {"datos": hp, "template": resp, "es_complejo": False}
+            return {"datos": None, "template": "Aún no hay ventas hoy.", "es_complejo": False}
 
         # ── Predicción mañana ──────────────────────────────────────────
         if any(k in t for k in ["mañana", "manana", "necesito", "próxima semana", "proxima semana",
@@ -1306,21 +1426,14 @@ def _consultar_db(texto: str, ctx: str) -> dict:
             if rows:
                 items = [(r["nombre"], round(r["prom"])) for r in rows]
                 resp = "Para mañana sugiero: " + ", ".join(f"{n} ~{v}u" for n, v in items) + "."
-                return {"datos": items, "template": resp}
+                return {"datos": items, "template": resp, "es_complejo": True}
 
         # ── Top productos ──────────────────────────────────────────────
         if any(k in t for k in ["más vendido", "mas vendido", "mejor", "top", "popular"]):
-            rows = conn.execute(
-                "SELECT p.nombre, SUM(vi.cantidad) as v "
-                "FROM venta_items vi JOIN productos p ON vi.producto_id=p.id "
-                "JOIN ventas vn ON vi.venta_id=vn.id "
-                "WHERE vn.estado='completada' AND DATE(vn.creado_en)>=DATE('now','-30 days') "
-                "GROUP BY vi.producto_id ORDER BY v DESC LIMIT 5"
-            ).fetchall()
-            if rows:
-                items = [(r["nombre"], r["v"]) for r in rows]
-                resp = "Los más vendidos del mes: " + ", ".join(f"{n} ({v})" for n, v in items) + "."
-                return {"datos": items, "template": resp}
+            top = _cq_top_prod(conn, dias=30)
+            if top:
+                resp = f"El producto más vendido del mes es {top['nombre']} con {top['unidades']} unidades."
+                return {"datos": top, "template": resp, "es_complejo": False}
 
         # ── Mejor día esta semana ──────────────────────────────────────
         if any(k in t for k in ["mejor día", "mejor dia", "cuál fue el mejor", "cual fue el mejor",
@@ -1341,16 +1454,14 @@ def _consultar_db(texto: str, ctx: str) -> dict:
                     dia_nom = str(row["fecha"])
                 resp = (f"El mejor día fue el {dia_nom} con "
                         f"${int(row['tot']):,.0f} en {row['n']} ventas.").replace(",", ".")
-                return {"datos": dict(row), "template": resp}
-            return {"datos": None, "template": "No hay ventas esta semana."}
+                return {"datos": dict(row), "template": resp, "es_complejo": False}
+            return {"datos": None, "template": "No hay ventas esta semana.", "es_complejo": False}
 
-        # ── Resumen del día / cierra el día ────────────────────────────
+        # ── Resumen del día / cierra el día ─── complejo: merece narrativa
         if any(k in t for k in ["resumen", "cierra el día", "cierra el dia", "cómo vamos",
-                                  "como vamos", "cuánto va", "cuanto va"]):
-            row_tot = conn.execute(
-                "SELECT COUNT(*) as n, COALESCE(SUM(total),0) as tot "
-                "FROM ventas WHERE DATE(creado_en)=DATE('now') AND estado='completada'"
-            ).fetchone()
+                                  "como vamos", "cuánto va", "cuanto va",
+                                  "fue un buen día", "fue un buen dia", "buen día", "buen dia"]):
+            row_tot = _cq_ventas_hoy(conn)
             metodos = conn.execute(
                 "SELECT metodo_pago, COUNT(*) as n, SUM(total) as tot "
                 "FROM ventas WHERE DATE(creado_en)=DATE('now') AND estado='completada' "
@@ -1363,19 +1474,25 @@ def _consultar_db(texto: str, ctx: str) -> dict:
                 "WHERE DATE(v.creado_en)=DATE('now') AND v.estado='completada' "
                 "GROUP BY vi.producto_id ORDER BY cant DESC LIMIT 3"
             ).fetchall()
-            n_, tot_ = row_tot["n"], int(row_tot["tot"])
+            ayer_row = _cq_ventas_ayer(conn)
+            n_, tot_ = row_tot["num_ventas"], int(row_tot["total"])
             if n_ == 0:
                 return {"datos": {"total": 0, "ventas": 0},
-                        "template": "Hoy no hay ventas registradas."}
+                        "template": "Hoy no hay ventas registradas.", "es_complejo": False}
             met_txt = ", ".join(
                 f"{r['metodo_pago']} ${int(r['tot']):,.0f}".replace(",", ".") for r in metodos
             ) or "—"
             top_txt = ", ".join(f"{r['nombre']} ({r['cant']})" for r in top_prod)
             resp = (f"Hoy: ${tot_:,.0f} en {n_} {'venta' if n_==1 else 'ventas'}. "
                     f"Métodos: {met_txt}. Más vendido: {top_txt}.").replace(",", ".")
-            return {"datos": {"total": tot_, "ventas": n_}, "template": resp}
+            return {"datos": {
+                "total": tot_, "ventas": n_,
+                "total_ayer": int(ayer_row["total"]),
+                "metodos": [dict(r) for r in metodos],
+                "top_productos": [dict(r) for r in top_prod],
+            }, "template": resp, "es_complejo": True}
 
-        # ── Predicción de compras ──────────────────────────────────────
+        # ── Predicción de compras ─── complejo: requiere razonamiento
         if any(k in t for k in ["qué necesito pedir", "que necesito pedir", "qué pedir",
                                   "que pedir", "lista de compras", "qué comprar", "que comprar",
                                   "cuánto comprar", "cuanto comprar", "debo pedir", "necesito pedir"]):
@@ -1400,8 +1517,8 @@ def _consultar_db(texto: str, ctx: str) -> dict:
                     sugerido = int(max(round(prom * 7), r["stock_minimo"] * 2, 1))
                     items_pred.append(f"{r['nombre']}: pedir ~{sugerido} (tienes {r['stock']})")
                 resp = "Necesitas pedir: " + ". ".join(items_pred[:5]) + "."
-                return {"datos": [dict(r) for r in rows_pred], "template": resp}
-            return {"datos": None, "template": "No hay productos con stock bajo."}
+                return {"datos": [dict(r) for r in rows_pred], "template": resp, "es_complejo": True}
+            return {"datos": None, "template": "No hay productos con stock bajo.", "es_complejo": False}
 
         # ── Búsqueda por proveedor ─────────────────────────────────────
         _PROV_TRIGGERS = ["vendedor de", "proveedor de", "el de las", "el de los", "el de la",
@@ -1457,10 +1574,11 @@ def _consultar_db(texto: str, ctx: str) -> dict:
                     else:
                         resp = f"{prov_nombre}: sin productos registrados. Último pedido {last_txt}."
                     return {"datos": {"proveedor": prov_nombre, "low_stock": low, "productos": all_p},
-                            "template": resp}
+                            "template": resp, "es_complejo": False}
                 else:
                     return {"datos": None,
-                            "template": f"No encontré proveedor que coincida con '{nombre_buscar}'."}
+                            "template": f"No encontré proveedor que coincida con '{nombre_buscar}'.",
+                            "es_complejo": False}
                 break
 
         # ── Stock de producto específico ──────────────────────────────
@@ -1493,9 +1611,10 @@ def _consultar_db(texto: str, ctx: str) -> dict:
                     resp = f"{prod['nombre']}: {detalle}."
                 else:
                     resp = f"Quedan {prod['stock']} {prod['nombre']}."
-                return {"datos": dict(prod), "template": resp}
+                return {"datos": dict(prod), "template": resp, "es_complejo": False}
 
-    return {"datos": None, "template": "No encontré esa información. Intenta ser más específico."}
+    return {"datos": None, "template": "No encontré esa información. Intenta ser más específico.",
+            "es_complejo": False}
 
 
 # ── Saludo matutino ───────────────────────────────────────────────────────────

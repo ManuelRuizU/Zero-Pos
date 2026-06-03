@@ -302,6 +302,22 @@ def _m005_usuarios_permisos_sucursal(conn):
         conn.execute("ALTER TABLE usuarios ADD COLUMN permisos TEXT DEFAULT NULL")
 
 
+def _m008_vocabulario_local(conn):
+    """Vocabulario coloquial aprendido: expresiones libres → producto/consulta."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS vocabulario_local (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        expresion    TEXT NOT NULL UNIQUE,
+        producto_id  INTEGER REFERENCES productos(id),
+        categoria    TEXT,
+        consulta_tipo TEXT,
+        usos         INTEGER NOT NULL DEFAULT 1,
+        creado_en    DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_vocab_expresion ON vocabulario_local(expresion)"
+    )
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -310,6 +326,7 @@ _MIGRACIONES = [
     (5, "usuarios: sucursal_id y permisos JSON",                                 _m005_usuarios_permisos_sucursal),
     (6, "cola_impresion: tickets persistentes con reintentos",                   _m006_cola_impresion),
     (7, "lotes y mermas: control opcional de vencimientos por producto",          _m007_lotes_vencimientos),
+    (8, "vocabulario_local: expresiones coloquiales aprendidas sin TinyLlama",   _m008_vocabulario_local),
 ]
 
 

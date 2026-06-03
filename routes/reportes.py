@@ -3,6 +3,11 @@ import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, session
 from database import db_session
+from utils.consultas_rapidas import (
+    ventas_hoy as _cq_ventas_hoy,
+    producto_mas_vendido as _cq_top_prod,
+    stock_bajo as _cq_stock_bajo,
+)
 
 reportes_bp = Blueprint("reportes", __name__, url_prefix="/api/reportes")
 logger = logging.getLogger("zero_pos.reportes")
@@ -138,26 +143,18 @@ def analisis_ia():
     pregunta = str(data.get("pregunta", "")).strip()
 
     with db_session() as conn:
-        ventas_hoy = conn.execute(
-            """SELECT COUNT(*) as n, COALESCE(SUM(total),0) as t
-               FROM ventas WHERE DATE(creado_en)=DATE('now') AND estado='completada'"""
-        ).fetchone()
-        top5 = conn.execute(
-            """SELECT p.nombre, SUM(vi.cantidad) as u
-               FROM venta_items vi
-               JOIN ventas v ON vi.venta_id=v.id
-               JOIN productos p ON vi.producto_id=p.id
-               WHERE v.estado='completada' AND v.creado_en >= DATE('now','-7 days')
-               GROUP BY vi.producto_id ORDER BY u DESC LIMIT 5"""
-        ).fetchall()
-        alertas = conn.execute(
+        vh = _cq_ventas_hoy(conn)
+        top_prod = _cq_top_prod(conn, dias=7)
+        bajo = _cq_stock_bajo(conn)
+        alertas_n = conn.execute(
             "SELECT COUNT(*) as n FROM alertas_stock WHERE leida=0"
-        ).fetchone()
+        ).fetchone()["n"]
 
     contexto = {
-        "ventas_hoy": dict(ventas_hoy),
-        "top_productos_semana": [dict(r) for r in top5],
-        "alertas_stock_activas": alertas["n"],
+        "ventas_hoy": {"n": vh["num_ventas"], "t": int(vh["total"])},
+        "top_producto_semana": top_prod,
+        "stock_bajo_count": len(bajo),
+        "alertas_stock_activas": alertas_n,
     }
 
     respuesta = _llamar_tinyllama(pregunta, contexto)
@@ -165,11 +162,13 @@ def analisis_ia():
 
 
 def _llamar_tinyllama(pregunta: str, contexto: dict) -> str:
+    top_nombre = contexto.get('top_producto_semana', {})
+    top_txt = top_nombre.get('nombre', '—') if isinstance(top_nombre, dict) else '—'
     prompt = f"""Eres el asistente de ZERO POS, un sistema de punto de venta.
 Datos actuales del negocio:
 - Ventas hoy: {contexto['ventas_hoy']['n']} ventas por ${contexto['ventas_hoy']['t']:,.0f}
 - Alertas de stock sin atender: {contexto['alertas_stock_activas']}
-- Top productos esta semana: {', '.join(p['nombre'] for p in contexto['top_productos_semana'][:3])}
+- Producto más vendido esta semana: {top_txt}
 
 Pregunta del dueño: {pregunta if pregunta else '¿Cómo va el negocio hoy?'}
 
@@ -265,7 +264,7 @@ def metricas_rapidas():
 def _analisis_sin_ia(contexto: dict, pregunta: str) -> str:
     v = contexto["ventas_hoy"]
     alertas = contexto["alertas_stock_activas"]
-    top = contexto["top_productos_semana"]
+    top = contexto.get("top_producto_semana")
 
     partes = []
     if v["n"] > 0:
@@ -274,6 +273,6 @@ def _analisis_sin_ia(contexto: dict, pregunta: str) -> str:
         partes.append("Aún no hay ventas registradas hoy.")
     if alertas > 0:
         partes.append(f"Tienes {alertas} alerta(s) de stock bajo — revísalas en inventario.")
-    if top:
-        partes.append(f"Tus productos estrella esta semana: {top[0]['nombre']}.")
+    if top and isinstance(top, dict):
+        partes.append(f"Tu producto estrella esta semana: {top['nombre']}.")
     return " ".join(partes)
