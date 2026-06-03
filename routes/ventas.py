@@ -97,6 +97,32 @@ def crear_venta():
                     return jsonify({"error": f"Stock insuficiente: {prod['nombre']}"}), 409
                 precio_unit = float(prod["precio"])
 
+            # FEFO: si el producto tiene lotes activos, usar el de vencimiento más próximo
+            lote_id = item.get("lote_id") or None
+            lote_info = None
+            if not lote_id:
+                lote_row = conn.execute(
+                    """SELECT id, numero_lote, fecha_vencimiento, cantidad_actual
+                       FROM lotes WHERE producto_id=? AND estado='activo'
+                       AND cantidad_actual > 0
+                       ORDER BY fecha_vencimiento ASC NULLS LAST LIMIT 1""",
+                    (pid,)
+                ).fetchone()
+                if lote_row:
+                    lote_id = lote_row["id"]
+                    lote_info = {
+                        "id": lote_row["id"],
+                        "numero_lote": lote_row["numero_lote"],
+                        "vencimiento": lote_row["fecha_vencimiento"],
+                    }
+            elif lote_id:
+                lr = conn.execute(
+                    "SELECT id, numero_lote, fecha_vencimiento FROM lotes WHERE id=?", (lote_id,)
+                ).fetchone()
+                if lr:
+                    lote_info = {"id": lr["id"], "numero_lote": lr["numero_lote"],
+                                 "vencimiento": lr["fecha_vencimiento"]}
+
             subtotal = pesos((precio_unit * qty) - descuento_item)
             total += subtotal
             items_validados.append({
@@ -109,6 +135,8 @@ def crear_venta():
                 "descuento": pesos(descuento_item),
                 "subtotal": subtotal,
                 "modo_stock": modo_stock,
+                "lote_id": lote_id,
+                "lote_info": lote_info,
             })
 
         total = pesos(total - descuento_global)
@@ -145,11 +173,11 @@ def crear_venta():
             conn.execute(
                 """INSERT INTO venta_items
                    (venta_id, producto_id, variante_id, nombre_variante,
-                    cantidad, precio_unit, descuento, subtotal)
-                   VALUES (?,?,?,?,?,?,?,?)""",
+                    cantidad, precio_unit, descuento, subtotal, lote_id)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
                 (venta_id, it["producto_id"], it.get("variante_id"),
                  it.get("nombre_variante"), it["cantidad"],
-                 it["precio_unit"], it["descuento"], it["subtotal"])
+                 it["precio_unit"], it["descuento"], it["subtotal"], it.get("lote_id"))
             )
             if it.get("variante_id"):
                 registrar_movimiento_stock(
@@ -161,6 +189,15 @@ def crear_venta():
                     "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
             if it.get("modo_stock") != "sin_stock":
                 _check_stock_alerta(conn, it["producto_id"])
+            # Descontar del lote si aplica
+            if it.get("lote_id"):
+                conn.execute(
+                    """UPDATE lotes
+                       SET cantidad_actual = MAX(0, cantidad_actual - ?),
+                           estado = CASE WHEN cantidad_actual - ? <= 0 THEN 'agotado' ELSE estado END
+                       WHERE id=?""",
+                    (it["cantidad"], it["cantidad"], it["lote_id"])
+                )
 
         items_para_ticket = items_validados
 

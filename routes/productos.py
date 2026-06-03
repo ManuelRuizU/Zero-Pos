@@ -253,6 +253,97 @@ def detectar_codigo():
         return jsonify({"error": str(e)}), 500
 
 
+def _identificar_codigo(codigo: str) -> dict:
+    """Detecta si el código escaneado es un QR de lote ZERO o un código de barras normal."""
+    import json as _json
+    try:
+        datos = _json.loads(codigo)
+        if isinstance(datos, dict) and datos.get("t") == "L":
+            return {
+                "tipo": "lote",
+                "lote_id": datos["l"],
+                "producto_id": datos["p"],
+                "vencimiento": datos.get("v") or None,
+            }
+    except Exception:
+        pass
+    return {"tipo": "barras", "codigo": codigo}
+
+
+@productos_bp.route("/buscar-codigo", methods=["POST"])
+def buscar_codigo():
+    """Búsqueda unificada: acepta código de barras normal o QR de lote ZERO."""
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+
+    data = request.get_json(silent=True) or {}
+    codigo = str(data.get("codigo", "")).strip()
+    if not codigo:
+        return jsonify({"error": "Código requerido"}), 400
+
+    identificado = _identificar_codigo(codigo)
+
+    with db_session() as conn:
+        if identificado["tipo"] == "lote":
+            lote_id    = identificado["lote_id"]
+            producto_id = identificado["producto_id"]
+
+            lote = conn.execute(
+                """SELECT l.*, p.nombre, p.precio, p.imagen_url
+                   FROM lotes l JOIN productos p ON p.id=l.producto_id
+                   WHERE l.id=? AND l.producto_id=? AND p.activo=1""",
+                (lote_id, producto_id)
+            ).fetchone()
+
+            if not lote:
+                return jsonify({"error": "Lote no encontrado o inactivo"}), 404
+
+            if lote["estado"] != "activo":
+                return jsonify({"error": f"Lote {lote['estado']}", "lote_id": lote_id}), 400
+
+            from datetime import date as _date
+            venc = lote["fecha_vencimiento"]
+            if venc and venc < _date.today().isoformat():
+                return jsonify({
+                    "error": "PRODUCTO VENCIDO",
+                    "lote_id": lote_id,
+                    "producto_id": producto_id,
+                    "nombre": lote["nombre"],
+                    "vencimiento": venc,
+                    "vencido": True,
+                }), 400
+
+            return jsonify({
+                "id": producto_id,
+                "nombre": lote["nombre"],
+                "precio": lote["precio"],
+                "imagen_url": lote["imagen_url"],
+                "lote_id": lote_id,
+                "lote_numero": lote["numero_lote"],
+                "vencimiento": venc,
+                "tiene_lote": True,
+            })
+
+        # Barras normal — busca en productos y variantes
+        prod = conn.execute(
+            "SELECT * FROM productos WHERE codigo_barras=? AND activo=1",
+            (identificado["codigo"],)
+        ).fetchone()
+        if prod:
+            return jsonify({**dict(prod), "tiene_lote": False})
+
+        variante = conn.execute(
+            """SELECT pv.*, p.nombre as producto_nombre, p.id as producto_id_padre
+               FROM producto_variantes pv JOIN productos p ON pv.producto_id=p.id
+               WHERE pv.codigo_barras=? AND pv.activo=1""",
+            (identificado["codigo"],)
+        ).fetchone()
+        if variante:
+            return jsonify({**dict(variante), "es_variante": True, "tiene_lote": False})
+
+    return jsonify({"error": "Código no encontrado"}), 404
+
+
 @productos_bp.route("/barras/<codigo>", methods=["GET"])
 def por_barras(codigo):
     """Busca en DB local. Para lookup completo usar /barras/<codigo>/lookup."""
