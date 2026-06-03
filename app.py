@@ -388,6 +388,42 @@ def _reset_stock_produccion():
         logger.warning(f"reset_stock_produccion error: {e}")
 
 
+def procesar_cola_impresion(app: Flask):
+    """Reintenta tickets pendientes/fallidos con menos de 3 intentos."""
+    from database import db_session, marcar_ticket_impreso, marcar_ticket_fallido
+    with app.app_context():
+        try:
+            with db_session() as conn:
+                cfg_rows = conn.execute(
+                    "SELECT clave, valor FROM config WHERE clave LIKE 'impresora_%'"
+                ).fetchall()
+                cfg = {r["clave"]: r["valor"] for r in cfg_rows}
+                pendientes = conn.execute(
+                    "SELECT id, contenido FROM cola_impresion "
+                    "WHERE estado IN ('pendiente','fallido') AND intentos < 3 "
+                    "ORDER BY id ASC LIMIT 10"
+                ).fetchall()
+
+            if not pendientes:
+                return
+
+            from utils.impresora import enviar_crudo
+            config_imp = {
+                "tipo":   cfg.get("impresora_tipo", "red"),
+                "ip":     cfg.get("impresora_ip", ""),
+                "puerto": cfg.get("impresora_puerto", "9100"),
+            }
+            for row in pendientes:
+                resultado = enviar_crudo(config_imp, row["contenido"])
+                with db_session() as conn2:
+                    if resultado.get("ok"):
+                        marcar_ticket_impreso(conn2, row["id"])
+                    else:
+                        marcar_ticket_fallido(conn2, row["id"], resultado.get("error", ""))
+        except Exception as e:
+            logger.error(f"procesar_cola_impresion error: {e}")
+
+
 def start_backup_scheduler(app: Flask):
     try:
         import schedule
@@ -397,7 +433,8 @@ def start_backup_scheduler(app: Flask):
         schedule.every().day.at("03:00").do(run_scheduled_backup, app=app)
         schedule.every().day.at("06:00").do(_reset_stock_produccion)
         schedule.every().day.at("23:59").do(calcular_metricas_dia, app)
-        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00) + métricas (23:59)")
+        schedule.every(60).seconds.do(procesar_cola_impresion, app)
+        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00) + métricas (23:59) + cola impresión (60s)")
 
         def loop():
             while True:
