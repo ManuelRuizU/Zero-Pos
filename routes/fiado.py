@@ -71,9 +71,22 @@ def _estado_cliente(c: dict) -> dict:
 
 
 def _get_ip_local():
-    with db_session() as conn:
-        row = conn.execute("SELECT valor FROM config WHERE clave='ip_local'").fetchone()
-    return row['valor'] if row else '127.0.0.1'
+    try:
+        with db_session() as conn:
+            row = conn.execute("SELECT valor FROM config WHERE clave='ip_local'").fetchone()
+        if row and row['valor'] and row['valor'] not in ('127.0.0.1', 'localhost'):
+            return row['valor']
+    except Exception:
+        pass
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return '192.168.1.1'
 
 
 @fiado_bp.route("/clientes", methods=["POST"])

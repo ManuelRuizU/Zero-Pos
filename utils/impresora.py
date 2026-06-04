@@ -1,11 +1,36 @@
 import importlib.util
 import logging
 import os
+import socket
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent
+
+
+def _obtener_ip_local() -> str:
+    """Lee ip_local desde config DB; si falla detecta en tiempo real."""
+    try:
+        from database import db_session
+        with db_session() as conn:
+            row = conn.execute("SELECT valor FROM config WHERE clave='ip_local'").fetchone()
+        if row and row['valor'] and row['valor'] not in ('127.0.0.1', 'localhost'):
+            return row['valor']
+    except Exception:
+        pass
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        pass
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except Exception:
+        return '192.168.1.1'
 
 logger = logging.getLogger("zero_pos.impresora")
 
@@ -318,8 +343,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
                 f"{fiado_info.get('nombre','')} {fiado_info.get('apellido','') or ''}"
             ).strip()
             qr_token  = fiado_info.get("qr_token", "")
-            ip_local  = fiado_info.get("ip_local", "127.0.0.1")
-            url_credit = f"http://{ip_local}:5001/credit/{qr_token}"
+            url_credit = f"http://{_obtener_ip_local()}:5001/credit/{qr_token}"
             p.text("\n")
             p.set(align="center")
             p.text(SEP + "\n")

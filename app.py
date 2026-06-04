@@ -173,8 +173,21 @@ def create_app() -> Flask:
     except ImportError:
         logger.warning("flask-compress no disponible — respuestas sin comprimir")
 
-    from database import init_db
+    from database import init_db, db_session
     init_db()
+
+    # Guardar IP de red real en la DB para usarla en QR tickets
+    try:
+        _ip = get_ip_local()
+        with db_session() as _conn:
+            _conn.execute(
+                "INSERT INTO config (clave, valor) VALUES ('ip_local', ?) "
+                "ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor",
+                (_ip,)
+            )
+        logger.info(f"IP local guardada en config: {_ip}")
+    except Exception as _e:
+        logger.warning(f"No se pudo guardar ip_local: {_e}")
 
     from routes.auth import auth_bp
     from routes.ventas import ventas_bp
