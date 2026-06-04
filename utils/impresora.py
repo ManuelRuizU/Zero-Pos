@@ -159,6 +159,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
         hora_str  = _hora_ticket(creado_en)
         fecha_str = _fecha_ticket(creado_en)
 
+        p.text("\n\n\n")
         # ── CABECERA ──────────────────────────────────────────────
         p.set(align="center", bold=True, height=2, width=2)
         p.text(nombre_neg + "\n")
@@ -318,7 +319,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
             num_display = f"#{pedido.get('numero', '')}-{str(venta['id']).zfill(4)}"
         p.text(f"{fecha_str}  {hora_str}  {num_display}".center(N) + "\n")
         p.text(SEP + "\n")
-        p.text("\n\n")
+        p.text("\n\n\n\n\n")
         p.cut()
         p.close()
         return {"ok": True}
@@ -348,6 +349,7 @@ def imprimir_comanda(venta: dict, items: list, config: dict, config_imp: dict,
         hora_str  = _hora_ticket(creado_en)
         fecha_str = _fecha_ticket(creado_en)
 
+        p.text("\n\n\n")
         p.text(SEP + "\n")
 
         # ── NÚMERO PEDIDO GRANDE ──────────────────────────────────
@@ -417,7 +419,7 @@ def imprimir_comanda(venta: dict, items: list, config: dict, config_imp: dict,
             p.text("NOTA: " + limpiar_texto(pedido["notas"]) + "\n")
 
         p.text(SEP + "\n")
-        p.text("\n\n")
+        p.text("\n\n\n\n\n")
         p.cut()
         p.close()
         return {"ok": True}
@@ -636,8 +638,9 @@ def _formatear_texto(venta: dict, items: list, config: dict,
         "Gracias por preferirnos!".center(N),
         f"{fecha_str}  {hora_str}  {num_display}".center(N),
         SEP,
+        "", "", "", "", "",
     ]
-    return "\n".join(lineas)
+    return "\n\n\n" + "\n".join(lineas)
 
 
 def _formatear_comanda_texto(venta: dict, items: list, config: dict,
@@ -691,8 +694,8 @@ def _formatear_comanda_texto(venta: dict, items: list, config: dict,
     if pedido and pedido.get("notas"):
         lineas += [SEP2, "NOTA: " + limpiar_texto(pedido["notas"])]
 
-    lineas.append(SEP)
-    return "\n".join(lineas)
+    lineas += [SEP, "", "", "", "", ""]
+    return "\n\n\n" + "\n".join(lineas)
 
 
 def imprimir_tarjeta_credit(cliente: dict, negocio: dict, url_portal: str, config_imp: dict) -> dict:
