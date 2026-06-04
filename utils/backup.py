@@ -158,3 +158,108 @@ def backup_a_pendrive(db_path, backup_nombre) -> bool:
         logger.info(f"Backup copiado al pendrive: {destino}")
         return True
     return False
+
+
+# ─── Email ───────────────────────────────────────────────────────────────────
+
+SMTP_PROVIDERS = {
+    'gmail': {
+        'host': 'smtp.gmail.com', 'port': 587, 'nombre': 'Gmail', 'icono': '📧',
+        'instrucciones': (
+            'Necesitas una "Contraseña de aplicación".\n'
+            'Gmail → Cuenta → Seguridad → Verificación en dos pasos → Contraseñas de aplicaciones'
+        ),
+    },
+    'outlook': {
+        'host': 'smtp.office365.com', 'port': 587, 'nombre': 'Outlook / Hotmail', 'icono': '📨',
+        'instrucciones': 'Usa tu contraseña normal de Outlook.',
+    },
+    'yahoo': {
+        'host': 'smtp.mail.yahoo.com', 'port': 587, 'nombre': 'Yahoo Mail', 'icono': '📩',
+        'instrucciones': 'Genera una contraseña de aplicación en Yahoo → Seguridad.',
+    },
+    'custom': {
+        'host': '', 'port': 587, 'nombre': 'Otro servidor SMTP', 'icono': '⚙️',
+        'instrucciones': 'Ingresa los datos de tu servidor SMTP.',
+    },
+}
+
+
+def obtener_config_smtp() -> dict | None:
+    """Lee la config SMTP desde la base de datos."""
+    try:
+        from database import db_session
+        with db_session() as conn:
+            rows = conn.execute(
+                "SELECT clave, valor FROM config "
+                "WHERE clave IN ('smtp_host','smtp_port','smtp_user','smtp_password','smtp_from','nombre_negocio')"
+            ).fetchall()
+        cfg = {r['clave']: r['valor'] for r in rows}
+        if not cfg.get('smtp_host') or not cfg.get('smtp_user') or not cfg.get('smtp_password'):
+            return None
+        if not cfg.get('smtp_from'):
+            cfg['smtp_from'] = cfg['smtp_user']
+        return cfg
+    except Exception as e:
+        logger.error(f"obtener_config_smtp: {e}")
+        return None
+
+
+def backup_por_email(db_path, backup_nombre: str, email_destino: str) -> tuple[bool, str]:
+    try:
+        import smtplib
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.base import MIMEBase
+        from email.mime.text import MIMEText
+        from email import encoders
+        import gzip
+        from datetime import date
+
+        config = obtener_config_smtp()
+        if not config:
+            logger.error("SMTP no configurado")
+            return False, "smtp_no_configurado"
+
+        with open(str(db_path), 'rb') as f:
+            datos = f.read()
+
+        buf = io.BytesIO()
+        with gzip.GzipFile(fileobj=buf, mode='wb') as gz:
+            gz.write(datos)
+        datos_gz = buf.getvalue()
+
+        tamaño_mb = len(datos_gz) / (1024 * 1024)
+        if tamaño_mb > 20:
+            logger.warning(f"Backup muy grande para email: {tamaño_mb:.1f}MB. Recomendando rclone.")
+            return False, "muy_grande"
+
+        msg = MIMEMultipart()
+        msg['From'] = config['smtp_from']
+        msg['To'] = email_destino
+        msg['Subject'] = f"ZERO POS — Backup {date.today()}"
+
+        cuerpo = (
+            f"Respaldo automático de ZERO POS.\n\n"
+            f"Fecha: {date.today()}\n"
+            f"Negocio: {config.get('nombre_negocio', 'Mi negocio')}\n"
+            f"Archivo: {backup_nombre}.gz\n\n"
+            "Guarda este correo en un lugar seguro.\n— ZERO POS"
+        )
+        msg.attach(MIMEText(cuerpo, 'plain'))
+
+        adjunto = MIMEBase('application', 'octet-stream')
+        adjunto.set_payload(datos_gz)
+        encoders.encode_base64(adjunto)
+        adjunto.add_header('Content-Disposition', f'attachment; filename="{backup_nombre}.gz"')
+        msg.attach(adjunto)
+
+        with smtplib.SMTP(config['smtp_host'], int(config.get('smtp_port', 587))) as server:
+            server.starttls()
+            server.login(config['smtp_user'], config['smtp_password'])
+            server.send_message(msg)
+
+        logger.info(f"Backup enviado por email a {email_destino}")
+        return True, "ok"
+    except Exception as e:
+        logger.error(f"Error enviando backup por email: {e}")
+        return False, str(e)
