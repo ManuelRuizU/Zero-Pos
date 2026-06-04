@@ -362,27 +362,39 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
             c_nombre = limpiar_texto(
                 f"{fiado_info.get('nombre','')} {fiado_info.get('apellido','') or ''}"
             ).strip()
-            qr_token  = fiado_info.get("qr_token", "")
+            qr_token   = fiado_info.get("qr_token", "")
             url_credit = f"http://{_obtener_ip_local()}:5001/credit/{qr_token}"
+            compra     = int(fiado_info.get('monto', 0))
+            deuda_ant  = int(fiado_info.get('deuda_antes', 0))
+            deuda_tot  = int(fiado_info.get('deuda_despues', 0))
+            limite     = int(fiado_info.get('limite_credito', 0))
+            disponible = max(0, limite - deuda_tot)
+
+            def _linea_r(label, monto, ancho=N):
+                monto_str = _clp(monto)
+                esp = max(1, ancho - len(label) - len(monto_str))
+                return label + ' ' * esp + monto_str + "\n"
+
             p.text("\n")
             p.set(align="center")
             p.text(SEP + "\n")
-            p.text("ZERO CREDIT\n")
-            p.text(SEP + "\n")
-            p.text("\n")
-            p.set(align="left")
-            p.text(f"Cliente: {c_nombre}\n")
-            p.text(f"Deuda anterior: {_clp(fiado_info.get('deuda_antes', 0))}\n")
-            p.text(f"Esta compra:    {_clp(fiado_info.get('monto', 0))}\n")
             p.set(bold=True)
-            p.text(f"Total deuda:    {_clp(fiado_info.get('deuda_despues', 0))}\n")
+            p.text("PAGO EN CUENTA CORRIENTE\n")
+            p.set(bold=False, align="left")
+            p.text(SEP + "\n")
+            p.text(f"Cliente: {c_nombre[:24]}\n")
+            p.text(_linea_r("Esta compra:", compra))
+            p.text(_linea_r("Deuda anterior:", max(0, deuda_ant)))
+            p.set(bold=True)
+            p.text(_linea_r("Deuda total:", deuda_tot))
             p.set(bold=False)
-            p.text(f"Limite:         {_clp(fiado_info.get('limite_credito', 0))}\n")
-            p.text("\n")
+            p.text(_linea_r("Cupo disponible:", disponible))
+            p.text(SEP2 + "\n\n")
             p.set(align="center")
             p.text("Escanea para ver tu cuenta:\n\n")
             imprimir_qr(p, url_credit, size=140)
             p.text("\n")
+            p.text(SEP + "\n")
             p.set(align="left")
 
         # ── FOOTER ────────────────────────────────────────────────
