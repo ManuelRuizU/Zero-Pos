@@ -1,4 +1,6 @@
 import io
+import os
+import shutil
 import zipfile
 import logging
 from datetime import datetime
@@ -115,3 +117,44 @@ def _descifrar(datos: bytes, clave: bytes) -> bytes:
         return f.decrypt(datos)
     except ImportError:
         return datos
+
+
+# ─── Pendrive ────────────────────────────────────────────────────────────────
+
+def detectar_pendrives() -> list:
+    """Detecta pendrives montados en Linux (/media, /mnt)."""
+    posibles = []
+    for base in ['/media', '/mnt']:
+        if not os.path.exists(base):
+            continue
+        try:
+            for d in os.listdir(base):
+                ruta = os.path.join(base, d)
+                if os.path.ismount(ruta):
+                    posibles.append(ruta)
+                if os.path.isdir(ruta):
+                    try:
+                        for sub in os.listdir(ruta):
+                            subruta = os.path.join(ruta, sub)
+                            if os.path.ismount(subruta):
+                                posibles.append(subruta)
+                    except PermissionError:
+                        pass
+        except PermissionError:
+            pass
+    return posibles
+
+
+def backup_a_pendrive(db_path, backup_nombre) -> bool:
+    pendrives = detectar_pendrives()
+    if not pendrives:
+        logger.warning("No se encontró pendrive montado")
+        return False
+    for pendrive in pendrives:
+        destino_dir = os.path.join(pendrive, 'ZERO_BACKUP')
+        os.makedirs(destino_dir, exist_ok=True)
+        destino = os.path.join(destino_dir, backup_nombre)
+        shutil.copy2(str(db_path), destino)
+        logger.info(f"Backup copiado al pendrive: {destino}")
+        return True
+    return False
