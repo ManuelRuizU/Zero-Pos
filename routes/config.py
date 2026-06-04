@@ -75,6 +75,37 @@ def guardar():
     return jsonify({"ok": True})
 
 
+@config_bp.route("/logo-ticket", methods=["POST"])
+def subir_logo_ticket():
+    if session.get("usuario_rol") != "admin":
+        return jsonify({"error": "Sin permisos"}), 403
+
+    archivo = request.files.get("logo")
+    if not archivo or not archivo.filename:
+        return jsonify({"error": "No se recibió imagen"}), 400
+
+    try:
+        from PIL import Image
+        import io
+        from pathlib import Path
+
+        img = Image.open(archivo.stream).convert("L")
+        max_ancho = 384
+        if img.width > max_ancho:
+            ratio = max_ancho / img.width
+            img = img.resize((max_ancho, int(img.height * ratio)), Image.LANCZOS)
+
+        destino = Path(__file__).parent.parent / "static" / "negocio"
+        destino.mkdir(parents=True, exist_ok=True)
+        img.save(destino / "logo_ticket.png", "PNG")
+
+        logger.info("Logo ticket actualizado")
+        return jsonify({"ok": True})
+    except Exception as e:
+        logger.error(f"Error subiendo logo: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @config_bp.route("/sistema/sincronizar-hora", methods=["POST"])
 def sincronizar_hora():
     data = request.get_json(silent=True) or {}

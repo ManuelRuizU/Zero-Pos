@@ -1,7 +1,11 @@
 import importlib.util
 import logging
+import os
 import urllib.parse
 from datetime import datetime
+from pathlib import Path
+
+BASE_DIR = Path(__file__).parent.parent
 
 logger = logging.getLogger("zero_pos.impresora")
 
@@ -93,6 +97,29 @@ def _fecha_ticket(ts) -> str:
         return str(ts or "")[:10]
 
 
+def imprimir_logo(p) -> None:
+    """Imprime el logo del negocio si existe static/negocio/logo_ticket.png."""
+    logo_path = BASE_DIR / "static" / "negocio" / "logo_ticket.png"
+    if not logo_path.exists():
+        return
+    try:
+        from PIL import Image
+        import io as _io
+        img = Image.open(logo_path).convert("L")
+        max_ancho = 384
+        if img.width > max_ancho:
+            ratio = max_ancho / img.width
+            img = img.resize((max_ancho, int(img.height * ratio)), Image.LANCZOS)
+        buf = _io.BytesIO()
+        img.save(buf, "PNG")
+        buf.seek(0)
+        p.set(align="center")
+        p.image(buf)
+        p.text("\n")
+    except Exception as e:
+        logger.debug(f"Error logo ticket: {e}")
+
+
 def cortar_ticket(p, config: dict) -> None:
     """Corta el papel si impresora_autocorte=='1' (default). Modo FULL o PART."""
     if config.get("impresora_autocorte", "1") != "0":
@@ -176,6 +203,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
         fecha_str = _fecha_ticket(creado_en)
 
         p.text("\n\n\n")
+        imprimir_logo(p)
         # ── CABECERA ──────────────────────────────────────────────
         p.set(align="center", bold=True, height=2, width=2)
         p.text(nombre_neg + "\n")
@@ -366,6 +394,7 @@ def imprimir_comanda(venta: dict, items: list, config: dict, config_imp: dict,
         fecha_str = _fecha_ticket(creado_en)
 
         p.text("\n\n\n")
+        imprimir_logo(p)
         p.text(SEP + "\n")
 
         # ── NÚMERO PEDIDO GRANDE ──────────────────────────────────

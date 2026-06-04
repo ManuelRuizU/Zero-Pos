@@ -397,6 +397,35 @@ input:checked + .slider:before{transform:translateX(20px);}
             <input type="text" id="cfg_impresora_puerto" placeholder="9100">
           </div>
         </div>
+        <div class="cfg-grid2" style="margin-top:12px">
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Logo del negocio en el ticket</label>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+              <img id="logoPreview" src="/static/negocio/logo_ticket.png" alt="Logo"
+                style="height:48px;max-width:120px;object-fit:contain;border:1px solid var(--border);border-radius:6px;background:#fff;display:none"
+                onerror="this.style.display='none'" onload="this.style.display=''">
+              <label style="cursor:pointer;padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;font-size:13px">
+                📷 Subir logo
+                <input type="file" accept="image/*" style="display:none" onchange="subirLogoTicket(this)">
+              </label>
+              <span style="font-size:11px;color:var(--text-dim)">PNG recomendado · max 384px · BN automático</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Auto corte al finalizar</label>
+            <select id="cfg_impresora_autocorte">
+              <option value="1">Sí (corte automático)</option>
+              <option value="0">No (solo avance de papel)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de corte</label>
+            <select id="cfg_impresora_corte_tipo">
+              <option value="FULL">Total (corte completo)</option>
+              <option value="PART">Parcial (con hilo)</option>
+            </select>
+          </div>
+        </div>
         <div class="cfg-save">
           <span class="save-feedback" id="fb_impresora">✓ Guardado</span>
           <div style="display:flex;gap:8px;">
@@ -1188,9 +1217,11 @@ async function cargarConfig() {
   set('cfg_comuna_negocio',      cfgActual.comuna_negocio);
   set('cfg_moneda',              cfgActual.moneda || 'CLP');
   set('cfg_iva_porcentaje',      cfgActual.iva_porcentaje ?? '19');
-  set('cfg_impresora_tipo',      cfgActual.impresora_tipo || 'red');
-  set('cfg_impresora_ip',        cfgActual.impresora_ip);
-  set('cfg_impresora_puerto',    cfgActual.impresora_puerto || '9100');
+  set('cfg_impresora_tipo',         cfgActual.impresora_tipo || 'red');
+  set('cfg_impresora_ip',           cfgActual.impresora_ip);
+  set('cfg_impresora_puerto',       cfgActual.impresora_puerto || '9100');
+  set('cfg_impresora_autocorte',    cfgActual.impresora_autocorte || '1');
+  set('cfg_impresora_corte_tipo',   cfgActual.impresora_corte_tipo || 'FULL');
   set('cfg_khipu_receiver_id',   cfgActual.khipu_receiver_id);
   set('cfg_khipu_secret',        cfgActual.khipu_secret ? '••••••••••••' : '');
   set('cfg_banco_titular',       cfgActual.banco_titular);
@@ -1245,7 +1276,7 @@ function toggleImpresora() {
 
 const SECCIONES = {
   negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje','comuna_negocio'],
-  impresora: ['impresora_tipo','impresora_ip','impresora_puerto'],
+  impresora: ['impresora_tipo','impresora_ip','impresora_puerto','impresora_autocorte','impresora_corte_tipo'],
   khipu:     ['khipu_receiver_id','khipu_secret'],
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
   pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa','modulo_delivery','modo_mesas'],
@@ -1303,8 +1334,27 @@ async function testImpresora() {
   res.textContent = 'Probando...';
   res.style.color = 'var(--text-dim)';
   const r = await fetch('/api/impresora/test',{method:'POST',credentials:'include'}).then(r=>r.json());
-  res.textContent = r.ok ? '✓ Impresora conectada correctamente' : '✗ ' + (r.error || 'Sin respuesta');
+  res.textContent = r.ok ? 'OK - Impresora conectada correctamente' : 'X ' + (r.error || 'Sin respuesta');
   res.style.color = r.ok ? 'var(--success)' : 'var(--danger)';
+}
+
+async function subirLogoTicket(input) {
+  if (!input.files.length) return;
+  const fd = new FormData();
+  fd.append('logo', input.files[0]);
+  try {
+    const r = await fetch('/api/config/logo-ticket', {method:'POST', credentials:'include', body:fd}).then(r=>r.json());
+    if (r.ok) {
+      const preview = document.getElementById('logoPreview');
+      if (preview) {
+        preview.src = '/static/negocio/logo_ticket.png?t=' + Date.now();
+        preview.style.display = '';
+      }
+      showToast && showToast('Logo guardado', 'success');
+    } else {
+      alert('Error: ' + (r.error || 'No se pudo subir el logo'));
+    }
+  } catch(e) { alert('Error de conexión'); }
 }
 
 function toggleDeliveryTarifa() {
