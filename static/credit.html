@@ -110,7 +110,7 @@
 </head>
 <body>
   <div class="topbar">
-    <button class="btn" onclick="location.href='admin.html'">← Volver</button>
+    <button class="btn" onclick="history.length>1?history.back():location.href='pos.html'">← Volver</button>
     <div class="logo">ZERO<span>CREDIT</span></div>
     <div style="margin-left:auto;display:flex;gap:6px">
       <button class="btn tab-btn" id="tab-resumen-btn" onclick="showTab('resumen')">📊 Resumen</button>

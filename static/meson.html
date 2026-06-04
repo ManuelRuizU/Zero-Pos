@@ -345,6 +345,7 @@ body{ height:100dvh; overflow:hidden; }
     <div class="topbar-spacer"></div>
     <span class="topbar-user" id="topUser"></span>
     <button class="btn-back" id="btnBack" onclick="volverInicio()" style="display:none">← Volver</button>
+    <button id="btnMesonCredit" class="btn-back" onclick="location.href='credit.html'" style="display:none">💳</button>
     <button class="btn-logout" onclick="logout()">Salir</button>
   </div>
 
@@ -621,6 +622,10 @@ function entrarAlMain() {
   document.getElementById('pantallaMain').style.display = 'flex';
   document.getElementById('topUser').textContent = usuarioActual.nombre;
   document.getElementById('inicioSaludo').textContent = 'Bienvenido/a, ' + usuarioActual.nombre;
+  if (!['bodega','delivery','cocina'].includes(usuarioActual.rol)) {
+    const btn = document.getElementById('btnMesonCredit');
+    if (btn) btn.style.display = '';
+  }
   cargarProductos();
   actualizarBadgePedidos();
   iniciarPollLlamada();

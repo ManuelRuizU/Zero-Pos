@@ -980,6 +980,11 @@ body {
     <a href="admin.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">📊 <span>Reportes y Admin</span></a>
     <a href="inventario.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">📦 <span>Inventario</span></a>
     <a href="pedidos.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">🛵 <span>Pedidos</span></a>
+    <a id="navCredito" href="credit.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
+      <span style="font-size:18px">💳</span>
+      <div style="flex:1"><div>ZERO CREDIT</div><div style="font-size:11px;color:var(--text-dim)">Clientes y fiados</div></div>
+      <span id="badgeCreditoNav" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:2px 8px;font-size:12px;font-weight:700"></span>
+    </a>
     <div onclick="abrirHistorial();cerrarNavbar()" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);font-size:14px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">🕐 <span>Historial de ventas</span></div>
   </div>
   <div style="padding:16px 18px;border-top:1px solid var(--border)">
@@ -1978,6 +1983,10 @@ function _aplicarPermisosPOS(me) {
   if (me.rol !== 'admin' && !p.puede_ver_reportes) {
     const btnAdmin = document.querySelector('[onclick*="admin.html"]');
     if (btnAdmin) btnAdmin.style.display = 'none';
+  }
+  // Ocultar ZERO CREDIT para roles sin acceso
+  if (['bodega', 'delivery', 'cocina'].includes(me.rol)) {
+    document.getElementById('navCredito')?.remove();
   }
   // Limitar input de descuento al máximo permitido
   const descInput = document.getElementById('descuentoInput');
@@ -4091,12 +4100,24 @@ function medirScan(ms) {
 }
 
 // ── Navbar ───────────────────────────────────────────────────────
+async function cargarBadgeCredito() {
+  try {
+    const data = await fetch('/api/fiado/resumen', {credentials:'include'}).then(r => r.json());
+    const badge = document.getElementById('badgeCreditoNav');
+    if (badge) {
+      if (data.vencidos > 0) { badge.textContent = data.vencidos; badge.style.display = 'inline-block'; }
+      else badge.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
 function abrirNavbar() {
   const nombre = document.getElementById('cajeroNombre')?.textContent || '';
   document.getElementById('menuCajeroNombre').textContent = nombre;
   document.getElementById('navbarDrawer').classList.add('abierto');
   document.getElementById('navbarOverlay').classList.add('visible');
   _blurActivo();
+  cargarBadgeCredito();
 }
 function cerrarNavbar() {
   document.getElementById('navbarDrawer').classList.remove('abierto');
