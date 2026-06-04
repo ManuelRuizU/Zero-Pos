@@ -28,11 +28,24 @@ def limpiar_texto(texto) -> str:
         'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u', 'ü': 'u',
         'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ü': 'U',
         'ñ': 'n', 'Ñ': 'N', '°': ' ', '✅': 'OK',
-        '📱': '', '📍': '', '⚠': '!', '🔔': '', '━': '=',
+        '📱': '', '📍': '', '⚠': '!', '🔔': '',
+        '═': '=', '─': '-', '━': '-', '│': '|',
+        '┌': '+', '┐': '+', '└': '+', '┘': '+',
+        '├': '+', '┤': '+', '┬': '+', '┴': '+', '┼': '+',
+        '•': '*', '·': '.', '→': '->', '←': '<-',
+        '✓': 'OK', '✗': 'X', '★': '*',
     }
     for orig, remp in reemplazos.items():
         texto = texto.replace(orig, remp)
     return texto.encode('ascii', 'ignore').decode('ascii')
+
+
+def separador(tipo: str = 'simple', largo: int = ANCHO) -> str:
+    if tipo == 'doble':
+        return '=' * largo
+    elif tipo == 'estrella':
+        return '*' * largo
+    return '-' * largo
 
 
 def _clp(valor) -> str:
@@ -45,7 +58,7 @@ def _sep(c='=', n=ANCHO) -> str:
 
 
 def _sep2(n=ANCHO) -> str:
-    return ('- ' * (n // 2 + 1))[:n]
+    return '-' * n
 
 
 def _linea_precio(nombre, precio, n=ANCHO) -> str:
@@ -472,8 +485,8 @@ def test_conexion() -> dict:
 def _formatear_texto(venta: dict, items: list, config: dict,
                      pedido: dict | None = None) -> str:
     N = ANCHO
-    SEP  = '━' * N
-    SEP2 = ('- ' * (N // 2 + 1))[:N]
+    SEP  = '=' * N
+    SEP2 = '-' * N
 
     nombre_neg    = limpiar_texto(config.get("nombre_negocio", "ZERO POS"))
     direccion_neg = limpiar_texto(config.get("direccion_negocio", ""))
@@ -579,8 +592,8 @@ def _formatear_texto(venta: dict, items: list, config: dict,
 def _formatear_comanda_texto(venta: dict, items: list, config: dict,
                               pedido: dict | None = None) -> str:
     N = ANCHO
-    SEP  = '━' * N
-    SEP2 = ('- ' * (N // 2 + 1))[:N]
+    SEP  = '=' * N
+    SEP2 = '-' * N
 
     cajero    = limpiar_texto(venta.get("cajero", ""))
     creado_en = venta.get("creado_en", "")
