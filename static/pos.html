@@ -999,7 +999,11 @@ body {
     </div>
     <div id="secCredito" style="display:none">
       <div style="padding:0 0 8px;font-size:13px;color:var(--text-dim);text-align:center">Identificar cliente ZERO CREDIT</div>
-      <input id="creditQrInput" placeholder="📷 Escanear QR o ingresar código..."
+      <button onclick="abrirEscanerCreditoQR()"
+        style="width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+        📷 Escanear tarjeta del cliente
+      </button>
+      <input id="creditQrInput" placeholder="O ingresar código manualmente..."
         style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:8px"
         oninput="if(this.value.length>10) buscarClienteQR(this.value)">
       <input id="creditBuscarInput" placeholder="🔍 Buscar por nombre o teléfono..."
@@ -3123,11 +3127,29 @@ async function crearClienteCredito() {
     btn.disabled = false; btn.textContent = 'Crear y continuar →';
   }
 }
+function _extraerTokenCredit(codigo) {
+  const s = (codigo || '').trim();
+  if (s.includes('/credit/')) return s.split('/credit/')[1].split('?')[0].split('/')[0];
+  if (s.includes('ZERO:CREDIT:')) return s.split('ZERO:CREDIT:')[1];
+  return s;
+}
 function buscarClienteQR(token) {
-  fetch(`/api/fiado/token/${encodeURIComponent(token.trim())}`, {credentials:'include'})
+  const t = _extraerTokenCredit(token);
+  if (!t) return;
+  fetch(`/api/fiado/token/${encodeURIComponent(t)}`, {credentials:'include'})
     .then(r => r.json()).then(c => {
       if (c.id) seleccionarClienteCredito(c);
     }).catch(() => {});
+}
+function abrirEscanerCreditoQR() {
+  abrirEscanerVideo(codigo => {
+    const token = _extraerTokenCredit(codigo);
+    if (token && token.length > 6) {
+      buscarClienteQR(token);
+    } else {
+      showToast('QR no valido para ZERO CREDIT', 'error');
+    }
+  });
 }
 function buscarClienteNombre(q) {
   clearTimeout(_creditBuscarTimer);
