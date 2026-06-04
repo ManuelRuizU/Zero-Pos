@@ -629,3 +629,32 @@ def _formatear_comanda_texto(venta: dict, items: list, config: dict,
 
     lineas.append(SEP)
     return "\n".join(lineas)
+
+
+def imprimir_tarjeta_credit(cliente: dict, negocio: dict, url_portal: str, config_imp: dict) -> dict:
+    """Imprime tarjeta de membresía ZERO CREDIT en impresora térmica."""
+    N = ANCHO
+    SEP = _sep('=', N)
+
+    lineas = [
+        SEP,
+        "ZERO CREDIT".center(N),
+        SEP,
+        "",
+        limpiar_texto(f"{cliente.get('nombre','')} {cliente.get('apellido','') or ''}").strip().center(N),
+        f"Tel: {limpiar_texto(str(cliente.get('telefono') or '-'))}".center(N),
+        "",
+        f"Limite: ${cliente.get('limite_credito',0):,}".center(N),
+        f"Pago: {str(cliente.get('frecuencia_pago','mensual')).title()}".center(N),
+        "",
+    ]
+
+    texto = "\n".join(lineas)
+    texto += f"\n{url_portal}\n"
+    texto += "\n" + "Escanea QR para ver tu cuenta".center(N) + "\n"
+    texto += SEP + "\n"
+    texto += limpiar_texto(negocio.get('nombre_negocio', 'ZERO POS')).center(N) + "\n"
+    texto += limpiar_texto(negocio.get('direccion_negocio', '')).center(N) + "\n"
+    texto += SEP + "\n\n\n"
+
+    return enviar_crudo(config_imp, texto)
