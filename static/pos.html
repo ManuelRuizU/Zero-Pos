@@ -391,18 +391,22 @@ body {
 
 /* ── Cart FAB (mobile only) ───────────────── */
 .fab-carrito {
-  position: fixed; bottom: 20px; right: 16px; z-index: 150;
+  position: fixed; bottom: 20px; right: 16px; z-index: 997;
   background: var(--accent); color: #fff; border: none;
-  border-radius: 28px; padding: 13px 18px;
-  font-size: 14px; font-weight: 700; cursor: pointer;
-  box-shadow: 0 8px 32px rgba(99,102,241,.5);
+  border-radius: 28px; height: 56px; min-width: 56px; padding: 0 20px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(99,102,241,.5);
   display: flex; align-items: center; gap: 8px;
-  transition: transform .2s, box-shadow .2s;
+  transition: transform .15s, box-shadow .15s, opacity .2s;
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
-.fab-carrito:active { transform: scale(.96); }
+.fab-carrito:active { transform: scale(.95); box-shadow: 0 2px 10px rgba(99,102,241,.4); }
 .fab-carrito.pulsing { animation: fabPulse .4s ease; }
+.fab-carrito.oculto { transform: scale(0); pointer-events: none; opacity: 0; }
 @keyframes fabPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+@keyframes badge-bounce { 0%,100%{transform:scale(1);} 50%{transform:scale(1.5);} }
+.fab-carrito.bounce .fab-count { animation: badge-bounce .3s ease; }
 
 /* ── Cart overlay (mobile) ────────────────── */
 .cart-overlay {
@@ -2496,12 +2500,13 @@ function actualizarFAB() {
   const ft = document.getElementById('fabTotal');
   if (fc) fc.textContent = totalItems;
   if (ft) ft.textContent = fmt(total);
-  // Pulse animation on item add
   const fab = document.getElementById('fabCarrito');
   if (fab && totalItems > 0) {
-    fab.classList.remove('pulsing');
+    // Pulse (whole FAB) + badge bounce
+    fab.classList.remove('pulsing', 'bounce');
     void fab.offsetWidth;
-    fab.classList.add('pulsing');
+    fab.classList.add('pulsing', 'bounce');
+    setTimeout(() => fab.classList.remove('bounce'), 350);
   }
 }
 
