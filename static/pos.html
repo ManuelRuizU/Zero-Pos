@@ -3331,9 +3331,53 @@ async function guardarNuevoCliente() {
   }
 }
 
-// ── Paso 3: confirmación ──────────────────────────────────────
+// ── Paso 3: confirmación con resumen deuda ────────────────────
 function seleccionarClienteCredito(c) {
   mostrarConfirmacionCredito(c);
+}
+
+function mostrarConfirmacionCredito(c) {
+  const nuevaDeuda = (c.deuda_actual || 0) + total;
+  const disponible = (c.limite_credito || 0) - (c.deuda_actual || 0);
+  const supera = total > disponible;
+  const ini = (c.nombre || '?').charAt(0).toUpperCase();
+
+  document.getElementById('secCredito').innerHTML = `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;color:#fff;flex-shrink:0">${escH(ini)}</div>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escH(c.nombre)} ${escH(c.apellido || '')}</div>
+          <div style="font-size:12px;color:var(--text-dim)">${escH(c.telefono || 'Sin teléfono')}</div>
+        </div>
+      </div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="color:var(--text-dim);font-size:13px">Deuda anterior</span>
+          <span style="font-weight:600;font-size:14px">$${(c.deuda_actual || 0).toLocaleString('es-CL')}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="color:var(--text-dim);font-size:13px">Esta compra</span>
+          <span style="font-weight:600;font-size:14px;color:var(--accent)">+ $${total.toLocaleString('es-CL')}</span>
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:9px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;font-size:14px">Nueva deuda</span>
+          <span style="font-weight:700;font-size:17px;color:${supera ? '#ef4444' : 'var(--text)'}">${fmt(nuevaDeuda)}</span>
+        </div>
+        ${supera ? `<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:9px 12px;font-size:12px;color:#ef4444;font-weight:600">⛔ Supera el límite de ${fmt(c.limite_credito || 0)}. Disponible: ${fmt(Math.max(0, disponible))}</div>` : ''}
+      </div>
+    </div>`;
+
+  document.getElementById('footerCobro').innerHTML =
+    `<button class="btn-cancelar" onclick="renderPasoCredito();_resetFooterCobro()">← Cambiar</button>` +
+    `<button class="btn-confirmar" id="btnConfirmarCredito" ${supera ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''} onclick="confirmarVentaCredito(${c.id})">✓ Confirmar venta</button>`;
+
+  _creditClienteId = supera ? null : c.id;
+}
+
+function confirmarVentaCredito(clienteId) {
+  _creditClienteId = clienteId;
+  confirmarPago();
 }
 
 async function _postVentaCredito(ventaId) {
