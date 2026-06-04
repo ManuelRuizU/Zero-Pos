@@ -3319,7 +3319,6 @@ async function guardarNuevoCliente() {
     });
     const data = await r.json();
     if (!r.ok || data.error) { showToast(data.error || 'Error al crear cliente', 'error'); return; }
-    _creditClienteNuevo = true;
     cerrarNuevoCredito();
     await _imprimirTarjetaCredit(data.id);
     seleccionarClienteCredito(data);
