@@ -140,7 +140,7 @@ def generar_portal_html(cliente: dict, negocio: dict, movimientos: list) -> str:
     qr_token = cliente.get('qr_token', '')
     tema_color = negocio.get('tema_color', '#6366f1')
 
-    # Banner PWA
+    # Banner PWA (instalar app)
     pwa_banner = """
     <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e2e;border-top:1px solid #333;padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:1000">
       <div style="flex:1;font-size:13px">📲 Instala esta app para ver tu deuda sin internet</div>
@@ -314,6 +314,7 @@ def generar_portal_html(cliente: dict, negocio: dict, movimientos: list) -> str:
   </style>
 </head>
 <body>
+  <div id="bannerConexion" style="text-align:center;padding:6px 16px;font-size:12px;background:#1e1e2e;border-bottom:1px solid #2d2d3d;min-height:28px;"></div>
   <div class="header">
     <div class="logo">ZERO<span>CREDIT</span></div>
     <div class="nombre-cliente">{nombre_completo}</div>
@@ -357,6 +358,23 @@ def generar_portal_html(cliente: dict, negocio: dict, movimientos: list) -> str:
   {pwa_banner}
 
   <script>
+    // Estado de conexión
+    function mostrarEstadoConexion() {{
+      const banner = document.getElementById('bannerConexion');
+      if (!banner) return;
+      if (navigator.onLine) {{
+        const ahora = new Date().toLocaleString('es-CL');
+        localStorage.setItem('zc_ultima_actualizacion_{qr_token}', ahora);
+        banner.innerHTML = '<span style="color:#22c55e">✅ Conectado — datos actualizados</span>';
+      }} else {{
+        const ult = localStorage.getItem('zc_ultima_actualizacion_{qr_token}') || 'desconocida';
+        banner.innerHTML = '<span style="color:#f59e0b">📵 Sin conexión — Última actualización: ' + ult + '</span>';
+      }}
+    }}
+    mostrarEstadoConexion();
+    window.addEventListener('online',  mostrarEstadoConexion);
+    window.addEventListener('offline', mostrarEstadoConexion);
+
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', e => {{
       e.preventDefault();

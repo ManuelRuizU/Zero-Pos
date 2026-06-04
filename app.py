@@ -263,34 +263,78 @@ def create_app() -> Flask:
     def sw_credit(qr_token):
         from flask import Response
         sw_js = f"""
-const CACHE = 'zero-credit-{qr_token}';
+const CACHE = 'zc-{qr_token}-v2';
 const URL = '/credit/{qr_token}';
 
 self.addEventListener('install', e => {{
-  e.waitUntil(caches.open(CACHE).then(c => c.add(URL)));
+  e.waitUntil(
+    caches.open(CACHE).then(cache => cache.addAll([URL]))
+  );
   self.skipWaiting();
 }});
 
 self.addEventListener('activate', e => {{
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys.filter(k => k.startsWith('zc-{qr_token}-') && k !== CACHE)
+            .map(k => caches.delete(k))
+      )
+    )
+  );
   self.clients.claim();
 }});
 
+const SIN_CONEXION = `<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ZERO CREDIT</title>
+<style>
+body{{background:#0f0f1a;color:#e2e8f0;font-family:-apple-system,sans-serif;
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;margin:0;text-align:center;padding:20px;box-sizing:border-box;}}
+.card{{background:#1e1e2e;border-radius:16px;padding:32px 24px;max-width:320px;width:100%;}}
+.ico{{font-size:64px;margin-bottom:16px;}}
+h2{{margin:0 0 8px;font-size:20px;}}
+p{{color:#94a3b8;font-size:14px;line-height:1.6;margin:0;}}
+.tip{{margin-top:20px;padding:14px;background:#2d2d44;border-radius:10px;
+  font-size:13px;color:#94a3b8;line-height:1.5;}}
+</style></head><body>
+<div class="card">
+  <div class="ico">📵</div>
+  <h2>Sin conexión</h2>
+  <p>No hay datos guardados aún.<br>
+     Visita el almacén para sincronizar<br>
+     tu cuenta por primera vez.</p>
+  <div class="tip">
+    💡 La próxima vez que vayas al almacén
+    conéctate a su WiFi y abre esta página.
+    Tus datos se guardarán automáticamente.
+  </div>
+</div></body></html>`;
+
 self.addEventListener('fetch', e => {{
-  if (e.request.url.includes('/credit/')) {{
-    e.respondWith(
-      fetch(e.request).then(r => {{
-        const clone = r.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return r;
-      }}).catch(() => caches.match(e.request))
-    );
-  }}
+  if (!e.request.url.includes(URL)) return;
+  e.respondWith(
+    Promise.race([
+      fetch(e.request).then(response => {{
+        const clone = response.clone();
+        caches.open(CACHE).then(cache => cache.put(e.request, clone));
+        return response;
+      }}),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+    ]).catch(() =>
+      caches.match(e.request).then(cached =>
+        cached || new Response(SIN_CONEXION, {{headers: {{'Content-Type': 'text/html'}}}})
+      )
+    )
+  );
 }});
 """.strip()
-        return Response(sw_js, mimetype='application/javascript')
+        resp = Response(sw_js, mimetype='application/javascript')
+        resp.headers['Cache-Control'] = 'no-cache'
+        return resp
 
     @app.route("/api/sistema/tipo")
     def sistema_tipo():
