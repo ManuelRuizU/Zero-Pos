@@ -63,10 +63,18 @@ def ventas_dia():
             [fecha] + suc_param
         ).fetchall()
 
+        resumen_list = [dict(r) for r in resumen]
+        total_vendido = sum(r['total'] for r in resumen_list if isinstance(r.get('total'), (int, float)))
+        credito_hoy = sum(r['total'] for r in resumen_list if r.get('metodo_pago') == 'credito')
+        cobrado_hoy = total_vendido - credito_hoy
+
         return jsonify({
-            "por_metodo": [dict(r) for r in resumen],
+            "por_metodo": resumen_list,
             "por_hora": [dict(r) for r in por_hora],
             "top_productos": [dict(r) for r in top_productos],
+            "total_vendido": total_vendido,
+            "credito_hoy": credito_hoy,
+            "cobrado_hoy": cobrado_hoy,
         })
 
 
