@@ -255,7 +255,8 @@ def backup_por_email(db_path, backup_nombre: str, email_destino: str) -> tuple[b
 
         with smtplib.SMTP(config['smtp_host'], int(config.get('smtp_port', 587))) as server:
             server.starttls()
-            server.login(config['smtp_user'], config['smtp_password'])
+            password = config['smtp_password'].replace(' ', '')
+            server.login(config['smtp_user'], password)
             server.send_message(msg)
 
         logger.info(f"Backup enviado por email a {email_destino}")
