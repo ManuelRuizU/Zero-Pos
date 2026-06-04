@@ -263,3 +263,79 @@ def backup_por_email(db_path, backup_nombre: str, email_destino: str) -> tuple[b
     except Exception as e:
         logger.error(f"Error enviando backup por email: {e}")
         return False, str(e)
+
+
+# ─── rclone (Google Drive / OneDrive) ────────────────────────────────────────
+
+def backup_rclone(db_path, backup_nombre: str, remote_name: str = 'gdrive') -> tuple[bool, str]:
+    import subprocess
+    result = subprocess.run(['rclone', 'version'], capture_output=True)
+    if result.returncode != 0:
+        logger.warning("rclone no instalado")
+        return False, "rclone no instalado"
+
+    destino = f"{remote_name}:ZERO_BACKUP/"
+    result = subprocess.run(
+        ['rclone', 'copy', str(db_path), destino, '--log-level', 'INFO'],
+        capture_output=True, text=True, timeout=120,
+    )
+    if result.returncode == 0:
+        logger.info(f"Backup subido a {destino}")
+        return True, "ok"
+    else:
+        logger.error(f"Error rclone: {result.stderr}")
+        return False, result.stderr
+
+
+# ─── Orquestador ─────────────────────────────────────────────────────────────
+
+def obtener_config_backup() -> dict:
+    """Lee toda la configuración de backup desde la base de datos."""
+    try:
+        from database import db_session
+        with db_session() as conn:
+            rows = conn.execute(
+                "SELECT clave, valor FROM config "
+                "WHERE clave LIKE 'backup_%' OR clave LIKE 'smtp_%'"
+            ).fetchall()
+        cfg = {r['clave']: r['valor'] for r in rows}
+        destinos_str = cfg.get('backup_destinos', 'local')
+        cfg['destinos'] = [d.strip() for d in destinos_str.split(',') if d.strip()]
+        return cfg
+    except Exception as e:
+        logger.error(f"obtener_config_backup: {e}")
+        return {'destinos': ['local']}
+
+
+def ejecutar_backup_completo(app=None) -> dict:
+    """Backup a todos los destinos activos configurados."""
+    from datetime import date as _date
+    logger.info("Ejecutando backup completo programado...")
+
+    config = obtener_config_backup()
+    destinos = config.get('destinos', ['local'])
+    backup_nombre = f"zero_backup_{_date.today()}.db"
+    db_path = BASE_DIR / "zero_pos.db"
+
+    resultados: dict = {}
+
+    if 'local' in destinos:
+        r = crear_backup_cifrado()
+        resultados['local'] = r.get('ok', False)
+        if r.get('ok'):
+            _limpiar_backups_antiguos(int(config.get('backup_retener_dias', 7)))
+
+    if 'pendrive' in destinos:
+        resultados['pendrive'] = backup_a_pendrive(db_path, backup_nombre)
+
+    if 'email' in destinos and config.get('backup_email_destino'):
+        ok, _ = backup_por_email(db_path, backup_nombre, config['backup_email_destino'])
+        resultados['email'] = ok
+
+    if 'rclone' in destinos:
+        remote = config.get('backup_rclone_remote', 'gdrive')
+        ok, _ = backup_rclone(db_path, backup_nombre, remote)
+        resultados['rclone'] = ok
+
+    logger.info(f"Backup completo finalizado: {resultados}")
+    return resultados
