@@ -670,6 +670,9 @@ body {
   </button>
   <div class="topbar-spacer"></div>
   <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;"></span>
+  <button class="btn-top" id="btnCreditBadge" onclick="location.href='credit.html'" title="ZERO CREDIT — fiados vencidos" style="display:none;position:relative">
+    📒<span id="creditBadge" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
+  </button>
   <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Consulta por voz — ventas, stock, proveedores" style="display:none">🎤 <span class="voz-kw-label">ZERO</span></button>
   <button class="btn-top" onclick="window.open('cliente.html','pantalla-cliente')" title="Pantalla cliente">📺</button>
   <button class="btn-top" id="btnImpresora" onclick="mostrarAlertaImpresora()" title="Estado impresora" style="position:relative">
@@ -970,6 +973,9 @@ body {
       <div class="metodo-btn" data-met="khipu" onclick="selMetodo(this)">
         <div class="metodo-icon">🏦</div>Khipu
       </div>
+      <div class="metodo-btn" data-met="credito" onclick="selMetodo(this)">
+        <div class="metodo-icon">📒</div>Crédito
+      </div>
     </div>
     <div class="efectivo-section" id="secEfectivo">
       <div class="label">Monto recibido</div>
@@ -990,6 +996,21 @@ body {
       <p style="color:var(--text-dim);font-size:13px;text-align:center;">
         Se generará un link de pago Khipu para el cliente.
       </p>
+    </div>
+    <div id="secCredito" style="display:none">
+      <div style="padding:0 0 8px;font-size:13px;color:var(--text-dim);text-align:center">Identificar cliente ZERO CREDIT</div>
+      <input id="creditQrInput" placeholder="📷 Escanear QR o ingresar código..."
+        style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:8px"
+        oninput="if(this.value.length>10) buscarClienteQR(this.value)">
+      <input id="creditBuscarInput" placeholder="🔍 Buscar por nombre o teléfono..."
+        style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:8px"
+        oninput="buscarClienteNombre(this.value)">
+      <div id="creditResultados" style="max-height:120px;overflow-y:auto"></div>
+      <div id="creditClienteSeleccionado" style="display:none;background:rgba(99,102,241,0.1);border:1px solid var(--accent);border-radius:10px;padding:12px;margin-top:8px">
+        <div style="font-size:15px;font-weight:700" id="creditNombreCliente"></div>
+        <div style="font-size:13px;color:var(--text-dim);margin-top:4px" id="creditDeudaInfo"></div>
+        <div id="creditAlerta" style="display:none;color:var(--danger);font-size:12px;margin-top:6px;font-weight:600"></div>
+      </div>
     </div>
     <div class="modal-acciones">
       <button class="btn-cancelar" onclick="cerrarCobro()">Cancelar</button>
@@ -1153,6 +1174,7 @@ let indiceId = new Map();       // product.id → product
 const scanTiempos = [];
 let metodoPago = 'efectivo';
 let total = 0;
+let _creditClienteId = null;
 
 // Smart emoji: category icon → category name map → name-based keyword → fallback
 function getProductEmoji(prod) {
@@ -1804,6 +1826,7 @@ async function init() {
   iniciarPollCola();
   verificarEstadoImpresora();
   _verificarTicketsPendientes();
+  cargarFiadosBadge();
 }
 
 async function _verificarTicketsPendientes() {
@@ -2825,7 +2848,16 @@ function selMetodo(btn) {
   document.getElementById('secEfectivo').style.display = metodoPago === 'efectivo' ? 'block' : 'none';
   document.getElementById('secTransferencia').style.display = metodoPago === 'transferencia' ? 'block' : 'none';
   document.getElementById('secKhipu').style.display = metodoPago === 'khipu' ? 'block' : 'none';
+  document.getElementById('secCredito').style.display = metodoPago === 'credito' ? 'block' : 'none';
   if (metodoPago === 'transferencia') cargarQrPago();
+  if (metodoPago === 'credito') {
+    _creditClienteId = null;
+    document.getElementById('creditClienteSeleccionado').style.display = 'none';
+    document.getElementById('creditQrInput').value = '';
+    document.getElementById('creditBuscarInput').value = '';
+    document.getElementById('creditResultados').innerHTML = '';
+    setTimeout(() => document.getElementById('creditQrInput').focus(), 100);
+  }
 }
 
 async function cargarQrPago() {
@@ -2866,6 +2898,9 @@ async function confirmarPago() {
   if (metodoPago === 'efectivo') {
     const recibido = parseFloat(document.getElementById('montoRecibido').value) || 0;
     if (recibido < total) { showToast('Monto insuficiente', 'error'); return; }
+  }
+  if (metodoPago === 'credito' && !_creditClienteId) {
+    showToast('Selecciona un cliente para fiado', 'error'); return;
   }
   if (metodoPago === 'khipu') { await crearPagoKhipu(); return; }
 
@@ -3000,6 +3035,9 @@ async function confirmarPago() {
     if (_pantallaTimer) clearTimeout(_pantallaTimer);
     _pantallaTimer = setTimeout(() => { _pantallaLock = false; _pushPantallaIdle(); }, 10000);
 
+    if (metodoPago === 'credito' && _creditClienteId && ventaId) {
+      await _postVentaCredito(ventaId);
+    }
     cerrarCobro();
     if (document.getElementById('carrito').classList.contains('open')) toggleCarritoMobile();
     limpiarCarrito();
@@ -3011,6 +3049,73 @@ async function confirmarPago() {
   } finally {
     btn.disabled = false; btn.textContent = '✓ Confirmar pago';
   }
+}
+
+// ── ZERO CREDIT ──────────────────────────────────────────────
+function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+let _creditBuscarTimer = null;
+function buscarClienteQR(token) {
+  fetch(`/api/fiado/token/${encodeURIComponent(token.trim())}`, {credentials:'include'})
+    .then(r => r.json()).then(c => {
+      if (c.id) seleccionarClienteCredito(c);
+    }).catch(() => {});
+}
+function buscarClienteNombre(q) {
+  clearTimeout(_creditBuscarTimer);
+  if (!q || q.length < 2) { document.getElementById('creditResultados').innerHTML = ''; return; }
+  _creditBuscarTimer = setTimeout(async () => {
+    const res = await fetch(`/api/fiado/buscar?q=${encodeURIComponent(q)}`,{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+    const div = document.getElementById('creditResultados');
+    div.innerHTML = res.map(c => `
+      <div onclick="seleccionarClienteCredito(${JSON.stringify(c).replace(/"/g,'&quot;')})" style="padding:8px 10px;cursor:pointer;border-radius:6px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <span style="font-weight:600">${escH(c.nombre)} ${escH(c.apellido||'')}</span>
+        <span style="float:right;color:${c.estado==='vencido'?'var(--danger)':'var(--text-dim)'}">Deuda: $${(c.deuda_actual||0).toLocaleString('es-CL')}</span>
+      </div>`).join('') || '<div style="color:var(--text-dim);font-size:12px;padding:8px">Sin resultados</div>';
+  }, 300);
+}
+function seleccionarClienteCredito(c) {
+  _creditClienteId = c.id;
+  document.getElementById('creditResultados').innerHTML = '';
+  document.getElementById('creditBuscarInput').value = '';
+  const nuevaDeuda = (c.deuda_actual||0) + total;
+  const disponible = (c.limite_credito||0) - (c.deuda_actual||0);
+  const supera = nuevaDeuda > (c.limite_credito||0);
+  const el = document.getElementById('creditClienteSeleccionado');
+  const alerta = document.getElementById('creditAlerta');
+  document.getElementById('creditNombreCliente').textContent = `👤 ${c.nombre} ${c.apellido||''}`;
+  document.getElementById('creditDeudaInfo').innerHTML =
+    `Deuda actual: <strong>${fmt(c.deuda_actual||0)}</strong> · Esta compra: <strong>${fmt(total)}</strong> · Nueva deuda: <strong>${fmt(nuevaDeuda)}</strong><br>Límite: ${fmt(c.limite_credito||0)} · Disponible: ${fmt(disponible)}`;
+  if (supera) {
+    alerta.style.display = '';
+    alerta.textContent = `⛔ Sin crédito: solo puede fiarse $${Math.max(0,disponible).toLocaleString('es-CL')} más`;
+    _creditClienteId = null;
+  } else {
+    alerta.style.display = 'none';
+  }
+  el.style.display = '';
+}
+async function _postVentaCredito(ventaId) {
+  if (!_creditClienteId || !ventaId) return;
+  try {
+    await fetch('/api/fiado/cargo', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({cliente_id: _creditClienteId, monto: total, venta_id: ventaId})
+    });
+  } catch(e) { console.warn('fiado/cargo error:', e); }
+  _creditClienteId = null;
+}
+async function cargarFiadosBadge() {
+  try {
+    const r = await fetch('/api/fiado/resumen',{credentials:'include'}).then(r=>r.json());
+    const n = r.vencidos || 0;
+    const btn = document.getElementById('btnCreditBadge');
+    const badge = document.getElementById('creditBadge');
+    if (btn && badge) {
+      btn.style.display = n > 0 ? '' : 'none';
+      badge.textContent = n > 9 ? '9+' : n;
+    }
+  } catch(_) {}
 }
 
 async function crearPagoKhipu() {
