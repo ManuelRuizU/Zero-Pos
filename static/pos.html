@@ -598,6 +598,12 @@ body {
 .toast.success { border-color: var(--success); color: var(--success); }
 .toast.error { border-color: var(--danger); color: var(--danger); }
 
+/* Mobile-only carrito controls */
+@media (max-width: 767px) {
+  #carritoHint { display: block !important; }
+  #btnCerrarCarrito { display: inline-block !important; }
+}
+
 /* ── Navbar drawer ────────────────────────── */
 .navbar-overlay {
   position:fixed;inset:0;background:rgba(0,0,0,0);
@@ -654,6 +660,8 @@ body {
     background: rgba(10,10,15,.4);
   }
   .carrito-handle { display: none; }
+  #carritoHint { display: none !important; }
+  #btnCerrarCarrito { display: none !important; }
 
   /* Hide mobile FAB on desktop */
   .fab-carrito { display: none; }
@@ -753,12 +761,16 @@ body {
 
   <!-- Panel carrito -->
   <div class="carrito-panel" id="carrito">
-    <div class="carrito-handle" onclick="toggleCarritoMobile()">
+    <div class="carrito-handle" id="carritoHandle" onclick="if(window.innerWidth<768)toggleCarritoMobile()">
       <div class="handle-bar"></div>
+      <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:4px;display:none" id="carritoHint">Desliza hacia abajo para cerrar</div>
     </div>
     <div class="carrito-header">
       <span class="carrito-title">🛒 Carrito (<span id="itemCount">0</span>)</span>
-      <button class="btn-clear" onclick="limpiarCarrito()">Limpiar</button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-clear" onclick="limpiarCarrito()">Limpiar</button>
+        <button onclick="toggleCarritoMobile()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;display:none" id="btnCerrarCarrito">✕</button>
+      </div>
     </div>
     <div class="carrito-items" id="carritoItems">
       <div class="carrito-empty">
@@ -3926,26 +3938,51 @@ function cerrarNavbar() {
 function abrirDrawerMenu() { abrirNavbar(); }
 function cerrarDrawerMenu() { cerrarNavbar(); }
 
-// Swipe para cerrar navbar
+// Swipe para cerrar navbar y carrito
 document.addEventListener('DOMContentLoaded', () => {
-  const drawer = document.getElementById('navbarDrawer');
+  // ── Navbar swipe ──
+  const navDrawer = document.getElementById('navbarDrawer');
   let startX = 0, isDraggingNav = false;
-  drawer?.addEventListener('touchstart', e => {
+  navDrawer?.addEventListener('touchstart', e => {
     startX = e.touches[0].clientX;
     isDraggingNav = true;
-    drawer.style.transition = 'none';
+    navDrawer.style.transition = 'none';
   }, { passive: true });
-  drawer?.addEventListener('touchmove', e => {
+  navDrawer?.addEventListener('touchmove', e => {
     if (!isDraggingNav) return;
     const diff = startX - e.touches[0].clientX;
-    if (diff > 0) drawer.style.transform = `translateX(-${diff}px)`;
+    if (diff > 0) navDrawer.style.transform = `translateX(-${diff}px)`;
   }, { passive: true });
-  drawer?.addEventListener('touchend', e => {
+  navDrawer?.addEventListener('touchend', e => {
     if (!isDraggingNav) return;
     isDraggingNav = false;
-    drawer.style.transition = '';
-    drawer.style.transform = '';
+    navDrawer.style.transition = '';
+    navDrawer.style.transform = '';
     if (startX - e.changedTouches[0].clientX > 80) cerrarNavbar();
+  }, { passive: true });
+
+  // ── Carrito swipe hacia abajo ──
+  const sheet = document.getElementById('carrito');
+  const handle = document.getElementById('carritoHandle');
+  let startY = 0, isDraggingCart = false;
+  handle?.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    isDraggingCart = true;
+    sheet.style.transition = 'none';
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!isDraggingCart) return;
+    const diff = e.touches[0].clientY - startY;
+    if (diff > 0) sheet.style.transform = `translateY(${diff}px)`;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!isDraggingCart) return;
+    isDraggingCart = false;
+    sheet.style.transition = '';
+    sheet.style.transform = '';
+    if (e.changedTouches[0].clientY - startY > 100 && sheet.classList.contains('open')) {
+      toggleCarritoMobile();
+    }
   }, { passive: true });
 });
 async function _cargarVersion() {
