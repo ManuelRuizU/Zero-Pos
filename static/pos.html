@@ -3272,6 +3272,65 @@ function buscarClientesCredito(q) {
   }, 280);
 }
 
+// ── Paso 2C: nuevo cliente (overlay full-screen) ──────────────
+let _ncLimiteSeleccionado = 10000;
+let _ncLimiteCustom = null;
+
+function flujoNuevoCliente(preNombre) {
+  document.getElementById('modalNuevoCredito').style.display = 'flex';
+  document.getElementById('ncNombre').value = preNombre || '';
+  document.getElementById('ncTelefono').value = '';
+  document.getElementById('ncApellido').value = '';
+  document.getElementById('ncEmail').value = '';
+  document.getElementById('ncLimiteCustom').value = '';
+  _ncLimiteCustom = null;
+  seleccionarLimite(10000);
+  setTimeout(() => document.getElementById('ncNombre').focus(), 80);
+}
+function cerrarNuevoCredito() {
+  document.getElementById('modalNuevoCredito').style.display = 'none';
+  _blurActivo();
+}
+function seleccionarLimite(val) {
+  _ncLimiteSeleccionado = val;
+  _ncLimiteCustom = null;
+  document.getElementById('ncLimiteCustom').value = '';
+  document.querySelectorAll('.nc-limite-btn').forEach(b => {
+    const sel = parseInt(b.dataset.val) === val;
+    b.style.background = sel ? 'var(--accent)' : 'var(--surface2)';
+    b.style.color = sel ? '#fff' : 'var(--text)';
+    b.style.borderColor = sel ? 'var(--accent)' : 'var(--border)';
+  });
+}
+async function guardarNuevoCliente() {
+  const nombre = document.getElementById('ncNombre').value.trim();
+  const telefono = document.getElementById('ncTelefono').value.trim();
+  if (!nombre || !telefono) { showToast('Nombre y teléfono son obligatorios', 'error'); return; }
+  const limite = _ncLimiteCustom || _ncLimiteSeleccionado;
+  const apellido = (document.getElementById('ncApellido').value || '').trim() || undefined;
+  const email = (document.getElementById('ncEmail').value || '').trim() || undefined;
+  const btn = document.getElementById('btnGuardarNuevoCredito');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const r = await fetch('/api/fiado/clientes', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({nombre, telefono, limite_credito: limite, apellido, email})
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) { showToast(data.error || 'Error al crear cliente', 'error'); return; }
+    _creditClienteNuevo = true;
+    cerrarNuevoCredito();
+    await _imprimirTarjetaCredit(data.id);
+    seleccionarClienteCredito(data);
+    showToast(`Cliente ${nombre} creado`, 'success');
+  } catch(e) {
+    showToast('Error de conexión', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar y continuar →';
+  }
+}
+
 // ── Paso 3: confirmación ──────────────────────────────────────
 function seleccionarClienteCredito(c) {
   mostrarConfirmacionCredito(c);
