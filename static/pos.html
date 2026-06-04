@@ -1006,6 +1006,34 @@ body {
         style="width:100%;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:8px"
         oninput="buscarClienteNombre(this.value)">
       <div id="creditResultados" style="max-height:120px;overflow-y:auto"></div>
+      <div id="creditNuevoBtn" style="display:none;margin-top:6px">
+        <button onclick="mostrarNuevoClienteForm()"
+          style="width:100%;padding:9px;background:none;border:1px dashed var(--accent);color:var(--accent);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">
+          + Nuevo cliente
+        </button>
+      </div>
+      <div id="creditNuevoForm" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Nuevo cliente ZERO CREDIT</div>
+        <input id="nuevoNombre" placeholder="Nombre *"
+          style="width:100%;padding:9px;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;margin-bottom:7px;box-sizing:border-box">
+        <input id="nuevoTelefono" placeholder="Teléfono *" type="tel"
+          style="width:100%;padding:9px;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;margin-bottom:7px;box-sizing:border-box">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <span style="font-size:12px;color:var(--text-dim);white-space:nowrap">Límite $</span>
+          <input id="nuevoLimite" type="number" value="10000" min="1000" step="1000"
+            style="flex:1;padding:9px;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;box-sizing:border-box">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button id="btnCrearCliente" onclick="crearClienteCredito()"
+            style="flex:1;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">
+            Crear y continuar →
+          </button>
+          <button onclick="cancelarNuevoCliente()"
+            style="padding:9px 13px;background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:7px;cursor:pointer;font-size:13px">
+            ✕
+          </button>
+        </div>
+      </div>
       <div id="creditClienteSeleccionado" style="display:none;background:rgba(99,102,241,0.1);border:1px solid var(--accent);border-radius:10px;padding:12px;margin-top:8px">
         <div style="font-size:15px;font-weight:700" id="creditNombreCliente"></div>
         <div style="font-size:13px;color:var(--text-dim);margin-top:4px" id="creditDeudaInfo"></div>
@@ -1175,6 +1203,7 @@ const scanTiempos = [];
 let metodoPago = 'efectivo';
 let total = 0;
 let _creditClienteId = null;
+let _creditClienteNuevo = false;
 
 // Smart emoji: category icon → category name map → name-based keyword → fallback
 function getProductEmoji(prod) {
@@ -2852,7 +2881,10 @@ function selMetodo(btn) {
   if (metodoPago === 'transferencia') cargarQrPago();
   if (metodoPago === 'credito') {
     _creditClienteId = null;
+    _creditClienteNuevo = false;
     document.getElementById('creditClienteSeleccionado').style.display = 'none';
+    document.getElementById('creditNuevoBtn').style.display = 'none';
+    document.getElementById('creditNuevoForm').style.display = 'none';
     document.getElementById('creditQrInput').value = '';
     document.getElementById('creditBuscarInput').value = '';
     document.getElementById('creditResultados').innerHTML = '';
@@ -3054,6 +3086,43 @@ async function confirmarPago() {
 // ── ZERO CREDIT ──────────────────────────────────────────────
 function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 let _creditBuscarTimer = null;
+
+function mostrarNuevoClienteForm() {
+  document.getElementById('creditNuevoBtn').style.display = 'none';
+  document.getElementById('creditNuevoForm').style.display = '';
+  const q = document.getElementById('creditBuscarInput').value.trim();
+  if (q) document.getElementById('nuevoNombre').value = q;
+  document.getElementById('nuevoNombre').focus();
+}
+function cancelarNuevoCliente() {
+  document.getElementById('creditNuevoForm').style.display = 'none';
+  document.getElementById('creditNuevoBtn').style.display = 'none';
+}
+async function crearClienteCredito() {
+  const nombre = document.getElementById('nuevoNombre').value.trim();
+  const telefono = document.getElementById('nuevoTelefono').value.trim();
+  const limite = parseInt(document.getElementById('nuevoLimite').value) || 10000;
+  if (!nombre || !telefono) { showToast('Nombre y teléfono son obligatorios', 'error'); return; }
+  const btn = document.getElementById('btnCrearCliente');
+  btn.disabled = true; btn.textContent = 'Creando...';
+  try {
+    const r = await fetch('/api/fiado/clientes', {
+      method:'POST', credentials:'include',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({nombre, telefono, limite_credito: limite})
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) { showToast(data.error || 'Error al crear cliente', 'error'); return; }
+    _creditClienteNuevo = true;
+    cancelarNuevoCliente();
+    seleccionarClienteCredito(data);
+    showToast(`Cliente ${nombre} creado`, 'success');
+  } catch(e) {
+    showToast('Error de conexión', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Crear y continuar →';
+  }
+}
 function buscarClienteQR(token) {
   fetch(`/api/fiado/token/${encodeURIComponent(token.trim())}`, {credentials:'include'})
     .then(r => r.json()).then(c => {
@@ -3062,15 +3131,25 @@ function buscarClienteQR(token) {
 }
 function buscarClienteNombre(q) {
   clearTimeout(_creditBuscarTimer);
-  if (!q || q.length < 2) { document.getElementById('creditResultados').innerHTML = ''; return; }
+  if (!q || q.length < 2) {
+    document.getElementById('creditResultados').innerHTML = '';
+    document.getElementById('creditNuevoBtn').style.display = 'none';
+    return;
+  }
   _creditBuscarTimer = setTimeout(async () => {
     const res = await fetch(`/api/fiado/buscar?q=${encodeURIComponent(q)}`,{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
     const div = document.getElementById('creditResultados');
-    div.innerHTML = res.map(c => `
-      <div onclick="seleccionarClienteCredito(${JSON.stringify(c).replace(/"/g,'&quot;')})" style="padding:8px 10px;cursor:pointer;border-radius:6px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-        <span style="font-weight:600">${escH(c.nombre)} ${escH(c.apellido||'')}</span>
-        <span style="float:right;color:${c.estado==='vencido'?'var(--danger)':'var(--text-dim)'}">Deuda: $${(c.deuda_actual||0).toLocaleString('es-CL')}</span>
-      </div>`).join('') || '<div style="color:var(--text-dim);font-size:12px;padding:8px">Sin resultados</div>';
+    if (res.length) {
+      div.innerHTML = res.map(c => `
+        <div onclick="seleccionarClienteCredito(${JSON.stringify(c).replace(/"/g,'&quot;')})" style="padding:8px 10px;cursor:pointer;border-radius:6px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+          <span style="font-weight:600">${escH(c.nombre)} ${escH(c.apellido||'')}</span>
+          <span style="float:right;color:${c.estado==='vencido'?'var(--danger)':'var(--text-dim)'}">Deuda: $${(c.deuda_actual||0).toLocaleString('es-CL')}</span>
+        </div>`).join('');
+      document.getElementById('creditNuevoBtn').style.display = 'none';
+    } else {
+      div.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px">Sin resultados</div>';
+      document.getElementById('creditNuevoBtn').style.display = '';
+    }
   }, 300);
 }
 function seleccionarClienteCredito(c) {
@@ -3096,14 +3175,25 @@ function seleccionarClienteCredito(c) {
 }
 async function _postVentaCredito(ventaId) {
   if (!_creditClienteId || !ventaId) return;
+  const cid = _creditClienteId;
+  const esNuevo = _creditClienteNuevo;
+  _creditClienteId = null;
+  _creditClienteNuevo = false;
   try {
     await fetch('/api/fiado/cargo', {
       method:'POST', credentials:'include',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({cliente_id: _creditClienteId, monto: total, venta_id: ventaId})
+      body: JSON.stringify({cliente_id: cid, monto: total, venta_id: ventaId})
     });
+    if (esNuevo) await _imprimirTarjetaCredit(cid);
   } catch(e) { console.warn('fiado/cargo error:', e); }
-  _creditClienteId = null;
+}
+async function _imprimirTarjetaCredit(cid) {
+  try {
+    await fetch(`/api/fiado/clientes/${cid}/imprimir_tarjeta`, {
+      method:'POST', credentials:'include'
+    });
+  } catch(e) { console.warn('tarjeta credit print error:', e); }
 }
 async function cargarFiadosBadge() {
   try {

@@ -360,3 +360,30 @@ def generar_tarjeta(cid):
         "=" * 32, "  Escanea el QR para", "  ver tu cuenta online",
     ]
     return jsonify({"ok": True, "texto": "\n".join(lines), "qr_imagen": qr_img, "url_portal": url})
+
+
+@fiado_bp.route("/clientes/<int:cid>/imprimir_tarjeta", methods=["POST"])
+def imprimir_tarjeta(cid):
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+    with db_session() as conn:
+        c = conn.execute("SELECT * FROM clientes_fiado WHERE id=?", (cid,)).fetchone()
+        cfg_rows = conn.execute(
+            "SELECT clave,valor FROM config WHERE clave IN "
+            "('nombre_negocio','direccion_negocio','ip_local',"
+            "'impresora_tipo','impresora_ip','impresora_puerto')"
+        ).fetchall()
+    if not c:
+        return jsonify({"error": "No encontrado"}), 404
+    cfg = {r['clave']: r['valor'] for r in cfg_rows}
+    ip = cfg.get('ip_local', '127.0.0.1')
+    url = f"http://{ip}:5001/credit/{c['qr_token']}"
+    config_imp = {
+        "tipo": cfg.get("impresora_tipo", "red"),
+        "ip": cfg.get("impresora_ip", ""),
+        "puerto": cfg.get("impresora_puerto", "9100"),
+    }
+    negocio = {k: cfg[k] for k in ('nombre_negocio', 'direccion_negocio') if k in cfg}
+    from utils.impresora import imprimir_tarjeta_credit
+    resultado = imprimir_tarjeta_credit(dict(c), negocio, url, config_imp)
+    return jsonify(resultado)
