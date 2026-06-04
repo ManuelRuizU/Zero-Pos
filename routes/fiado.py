@@ -12,8 +12,22 @@ def generar_qr_token() -> str:
     return secrets.token_urlsafe(16)
 
 
-def calcular_proximo_vencimiento(frecuencia, fecha_fija=None):
+def calcular_proximo_vencimiento(frecuencia, fecha_fija=None, dia_pago=None):
     hoy = date.today()
+    if dia_pago:
+        import calendar
+        dia = int(dia_pago)
+        try:
+            venc = hoy.replace(day=dia)
+            if venc <= hoy:
+                if hoy.month == 12:
+                    venc = venc.replace(year=hoy.year + 1, month=1)
+                else:
+                    venc = venc.replace(month=hoy.month + 1)
+            return venc
+        except ValueError:
+            ultimo = calendar.monthrange(hoy.year, hoy.month)[1]
+            return hoy.replace(day=ultimo)
     if frecuencia == 'semanal':
         return hoy + timedelta(days=7)
     elif frecuencia == 'quincenal':
@@ -98,9 +112,14 @@ def crear_cliente():
     if not nombre:
         return jsonify({"error": "Nombre requerido"}), 400
 
-    frecuencia = data.get('frecuencia_pago', 'mensual')
+    dia_pago = data.get('dia_pago')
+    if dia_pago:
+        dia_pago = int(dia_pago)
+    frecuencia_raw = data.get('frecuencia_pago', 'mensual')
+    # Normalizar 'dia_fijo' → 'mensual' para respetar la constraint de la DB
+    frecuencia = 'mensual' if frecuencia_raw == 'dia_fijo' else frecuencia_raw
     fecha_fija = data.get('fecha_pago_fija')
-    proximo = calcular_proximo_vencimiento(frecuencia, fecha_fija)
+    proximo = calcular_proximo_vencimiento(frecuencia, fecha_fija, dia_pago)
     qr_token = generar_qr_token()
 
     with db_session() as conn:
@@ -108,12 +127,13 @@ def crear_cliente():
             INSERT INTO clientes_fiado
               (nombre, apellido, telefono, email, rut, direccion,
                limite_credito, frecuencia_pago, fecha_pago_fija,
-               proximo_vencimiento, qr_token, notas)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+               proximo_vencimiento, qr_token, notas, dia_pago)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (nombre, data.get('apellido'), data.get('telefono'), data.get('email'),
               data.get('rut'), data.get('direccion'),
               int(data.get('limite_credito', 10000)),
-              frecuencia, fecha_fija, proximo.isoformat(), qr_token, data.get('notas')))
+              frecuencia, fecha_fija, proximo.isoformat(), qr_token, data.get('notas'),
+              dia_pago))
         cliente_id = cur.lastrowid
         cliente = dict(conn.execute("SELECT * FROM clientes_fiado WHERE id=?", (cliente_id,)).fetchone())
 

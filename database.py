@@ -357,6 +357,11 @@ def _m010_zero_credit(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_cliente ON fiado_movimientos(cliente_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_vencimiento ON clientes_fiado(proximo_vencimiento)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_deuda ON clientes_fiado(deuda_actual) WHERE deuda_actual > 0")
+    # Migración: columna dia_pago para día fijo del mes
+    try:
+        conn.execute("ALTER TABLE clientes_fiado ADD COLUMN dia_pago INTEGER DEFAULT 15")
+    except Exception:
+        pass
 
 
 def _m009_modificadores(conn):
