@@ -194,15 +194,90 @@ def create_app() -> Flask:
     from routes.pedidos import pedidos_bp
     from routes.direcciones import direcciones_bp
     from routes.modificadores import modificadores_bp
+    from routes.fiado import fiado_bp
 
     for bp in (
         auth_bp, ventas_bp, productos_bp, reportes_bp,
         impresora_bp, backup_bp, inventario_bp, facturas_bp,
         comprobante_bp, qr_bp, khipu_bp, multi_bp, config_bp,
         onboarding_bp, voz_bp, pedidos_bp, direcciones_bp,
-        modificadores_bp,
+        modificadores_bp, fiado_bp,
     ):
         app.register_blueprint(bp)
+
+    @app.route('/credit/<qr_token>')
+    def portal_credit(qr_token):
+        from database import db_session
+        from utils.portal_credit import generar_portal_html
+        with db_session() as conn:
+            c = conn.execute(
+                "SELECT * FROM clientes_fiado WHERE qr_token=? AND activo=1", (qr_token,)
+            ).fetchone()
+            if not c:
+                return "Cliente no encontrado", 404
+            movs = conn.execute(
+                "SELECT * FROM fiado_movimientos WHERE cliente_id=? ORDER BY creado_en DESC LIMIT 20",
+                (c['id'],)
+            ).fetchall()
+            cfg = conn.execute("SELECT clave,valor FROM config").fetchall()
+        negocio = {r['clave']: r['valor'] for r in cfg}
+        return generar_portal_html(dict(c), negocio, [dict(m) for m in movs])
+
+    @app.route('/credit/manifest/<qr_token>')
+    def manifest_credit(qr_token):
+        from flask import jsonify
+        from database import db_session
+        with db_session() as conn:
+            cfg = {r['clave']: r['valor'] for r in conn.execute("SELECT clave,valor FROM config").fetchall()}
+        nombre = cfg.get('nombre_negocio', 'ZERO POS')
+        color = cfg.get('tema_color', '#6366f1')
+        resp = jsonify({
+            "name": f"ZERO CREDIT — {nombre}",
+            "short_name": "Mi Crédito",
+            "start_url": f"/credit/{qr_token}",
+            "display": "standalone",
+            "background_color": "#0f0f1a",
+            "theme_color": color,
+            "icons": [
+                {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
+                {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
+            ]
+        })
+        resp.headers['Content-Type'] = 'application/manifest+json'
+        return resp
+
+    @app.route('/credit/sw/<qr_token>.js')
+    def sw_credit(qr_token):
+        from flask import Response
+        sw_js = f"""
+const CACHE = 'zero-credit-{qr_token}';
+const URL = '/credit/{qr_token}';
+
+self.addEventListener('install', e => {{
+  e.waitUntil(caches.open(CACHE).then(c => c.add(URL)));
+  self.skipWaiting();
+}});
+
+self.addEventListener('activate', e => {{
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+}});
+
+self.addEventListener('fetch', e => {{
+  if (e.request.url.includes('/credit/')) {{
+    e.respondWith(
+      fetch(e.request).then(r => {{
+        const clone = r.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return r;
+      }}).catch(() => caches.match(e.request))
+    );
+  }}
+}});
+""".strip()
+        return Response(sw_js, mimetype='application/javascript')
 
     @app.route("/api/sistema/tipo")
     def sistema_tipo():
@@ -430,6 +505,26 @@ def procesar_cola_impresion(app: Flask):
             logger.error(f"procesar_cola_impresion error: {e}")
 
 
+def revisar_fiados_vencidos(app: Flask):
+    with app.app_context():
+        from database import db_session
+        from datetime import date
+        hoy = date.today().isoformat()
+        try:
+            with db_session() as conn:
+                vencidos = conn.execute("""
+                    SELECT COUNT(*) as n, COALESCE(SUM(deuda_actual),0) as total
+                    FROM clientes_fiado
+                    WHERE proximo_vencimiento < ? AND deuda_actual > 0 AND activo = 1
+                """, (hoy,)).fetchone()
+            if vencidos['n'] > 0:
+                logger.warning(
+                    f"ZERO CREDIT: {vencidos['n']} fiados vencidos — ${vencidos['total']:,}"
+                )
+        except Exception as e:
+            logger.debug(f"revisar_fiados_vencidos: {e}")
+
+
 def start_backup_scheduler(app: Flask):
     try:
         import schedule
@@ -439,9 +534,10 @@ def start_backup_scheduler(app: Flask):
         hora_backup = obtener_config_backup().get("backup_hora", "03:00")
         schedule.every().day.at(hora_backup).do(ejecutar_backup_completo)
         schedule.every().day.at("06:00").do(_reset_stock_produccion)
+        schedule.every().day.at("08:00").do(revisar_fiados_vencidos, app)
         schedule.every().day.at("23:59").do(calcular_metricas_dia, app)
         schedule.every(60).seconds.do(procesar_cola_impresion, app)
-        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00) + métricas (23:59) + cola impresión (60s)")
+        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00) + fiados (08:00) + métricas (23:59) + cola impresión (60s)")
 
         def loop():
             while True:
