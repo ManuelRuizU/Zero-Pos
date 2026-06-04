@@ -36,6 +36,8 @@ CLAVES_PERMITIDAS = {
     "responsable_email",
     "razon_social",
     "giro",
+    "tema_color",
+    "tema_modo",
 }
 
 
@@ -48,7 +50,7 @@ def obtener():
         return jsonify({r["clave"]: r["valor"] for r in rows})
 
 
-@config_bp.route("", methods=["POST"])
+@config_bp.route("", methods=["POST", "PUT"])
 def guardar():
     if session.get("usuario_rol") != "admin":
         return jsonify({"error": "Sin permisos"}), 403
