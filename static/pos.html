@@ -2460,17 +2460,31 @@ function actualizarFAB() {
   }
 }
 
+// ── Helpers móvil ────────────────────────────────────────────
+const esMobil = () => /iPhone|iPad|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+function _blurActivo() {
+  if (document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
+  document.body.focus();
+}
+
 // ── Mobile cart toggle ───────────────────────────────────────
 function toggleCarritoMobile() {
   const cart = document.getElementById('carrito');
   const overlay = document.getElementById('cartOverlay');
+  const fab = document.getElementById('fabCarrito');
   const isOpen = cart.classList.contains('open');
   if (isOpen) {
     cart.classList.remove('open');
     overlay.classList.remove('active');
+    fab?.classList.remove('oculto');
+    _blurActivo();
   } else {
     cart.classList.add('open');
     overlay.classList.add('active');
+    fab?.classList.add('oculto');
+    _blurActivo();
   }
 }
 
@@ -2872,6 +2886,7 @@ function _abrirModalCobro() {
 function cerrarCobro() {
   document.getElementById('modalCobro').classList.remove('active');
   entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:'',receptor_nombre:null,receptor_tel:null};
+  _blurActivo();
 }
 
 function selMetodo(btn) {
@@ -2892,7 +2907,7 @@ function selMetodo(btn) {
     document.getElementById('creditQrInput').value = '';
     document.getElementById('creditBuscarInput').value = '';
     document.getElementById('creditResultados').innerHTML = '';
-    setTimeout(() => document.getElementById('creditQrInput').focus(), 100);
+    if (!esMobil()) setTimeout(() => document.getElementById('creditQrInput').focus(), 100);
   }
 }
 
@@ -3869,6 +3884,7 @@ function abrirDrawerMenu() {
 }
 function cerrarDrawerMenu() {
   document.getElementById('drawerMenu').style.display = 'none';
+  _blurActivo();
 }
 async function _cargarVersion() {
   try {

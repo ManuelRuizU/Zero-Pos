@@ -760,6 +760,8 @@ function abrirDrawer() {
 function cerrarDrawer() {
   document.getElementById('mesonDrawer').classList.remove('abierto');
   document.getElementById('mesonOverlay').classList.remove('visible');
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  document.body.focus();
 }
 
 function renderDrawerItems() {

@@ -731,6 +731,8 @@ function abrirSidebarCat() {
 function cerrarSidebarCat() {
   document.getElementById('sidebarCat').classList.remove('open');
   document.getElementById('sidebarOverlay').classList.remove('active');
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  document.body.focus();
 }
 function seleccionarCategoriaSidebar(id, btn) {
   catFiltroId = id;
@@ -1252,8 +1254,9 @@ async function guardarProduccion() {
   else { const e = await r.json(); alert(e.error || 'Error'); }
 }
 
-function cerrarModalProduccion() { document.getElementById('modalProduccion').classList.remove('active'); }
-function cerrarModalProd() { document.getElementById('modalProd').classList.remove('active'); }
+function _blurInv() { if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur(); document.body.focus(); }
+function cerrarModalProduccion() { document.getElementById('modalProduccion').classList.remove('active'); _blurInv(); }
+function cerrarModalProd() { document.getElementById('modalProd').classList.remove('active'); _blurInv(); }
 
 // ── Lotes ────────────────────────────────────────────────────────
 let _loteUltimoId = null;
@@ -1370,6 +1373,7 @@ function abrirModalNuevoModificador() {
 
 function cerrarModalNuevoModificador() {
   document.getElementById('modalNuevoModificador').classList.remove('active');
+  _blurInv();
 }
 
 async function guardarNuevoModificador() {
@@ -1417,6 +1421,7 @@ function abrirModalNuevoLote() {
 
 function cerrarModalNuevoLote() {
   document.getElementById('modalNuevoLote').classList.remove('active');
+  _blurInv();
   const prodId = document.getElementById('prodId').value;
   if (prodId) cargarLotesProducto(parseInt(prodId));
 }
@@ -1527,7 +1532,7 @@ async function guardarProv() {
   else { const e = await r.json(); alert(e.error || 'Error'); }
 }
 
-function cerrarModalProv() { document.getElementById('modalProv').classList.remove('active'); }
+function cerrarModalProv() { document.getElementById('modalProv').classList.remove('active'); _blurInv(); }
 
 // ── Alertas ───────────────────────────────────────────────────────────
 async function cargarAlertas() {
@@ -2381,6 +2386,7 @@ function _agregarFilaFactura() {
 function cerrarModalFactura() {
   document.getElementById('modalFactura').classList.remove('active');
   _facturaData = null;
+  _blurInv();
 }
 
 async function importarFactura() {
