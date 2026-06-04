@@ -11,6 +11,7 @@ logger = logging.getLogger("zero_pos.config")
 CLAVES_PERMITIDAS = {
     "nombre_negocio", "moneda", "iva_porcentaje", "rut_negocio",
     "impresora_tipo", "impresora_ip", "impresora_puerto",
+    "impresora_autocorte", "impresora_corte_tipo",
     "khipu_receiver_id", "khipu_secret",
     "banco_nombre", "banco_tipo_cuenta", "banco_cuenta", "banco_titular",
     "backup_hora",

@@ -93,6 +93,22 @@ def _fecha_ticket(ts) -> str:
         return str(ts or "")[:10]
 
 
+def cortar_ticket(p, config: dict) -> None:
+    """Corta el papel si impresora_autocorte=='1' (default). Modo FULL o PART."""
+    if config.get("impresora_autocorte", "1") != "0":
+        try:
+            modo = config.get("impresora_corte_tipo", "FULL")
+            if modo == "PART":
+                p.cut(mode="PART")
+            else:
+                p.cut()
+        except Exception as e:
+            logger.debug(f"Impresora sin cortador: {e}")
+            p.text("\n\n\n")
+    else:
+        p.text("\n\n\n")
+
+
 def _get_printer(config_imp: dict):
     from escpos.printer import Network, Usb, File  # noqa: F401
     tipo = config_imp.get("tipo", "red")
@@ -320,7 +336,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
         p.text(f"{fecha_str}  {hora_str}  {num_display}".center(N) + "\n")
         p.text(SEP + "\n")
         p.text("\n\n\n\n\n")
-        p.cut()
+        cortar_ticket(p, config)
         p.close()
         return {"ok": True}
     except Exception as e:
@@ -420,7 +436,7 @@ def imprimir_comanda(venta: dict, items: list, config: dict, config_imp: dict,
 
         p.text(SEP + "\n")
         p.text("\n\n\n\n\n")
-        p.cut()
+        cortar_ticket(p, config)
         p.close()
         return {"ok": True}
     except Exception as e:
@@ -428,9 +444,12 @@ def imprimir_comanda(venta: dict, items: list, config: dict, config_imp: dict,
         return {"ok": False, "error": str(e)}
 
 
-def enviar_crudo(config_imp: dict, texto: str) -> dict:
+def enviar_crudo(config_imp: dict, texto: str, config: dict | None = None) -> dict:
     """Envía texto pre-formateado a la impresora. Usa socket directo para red, escpos para USB/archivo."""
     tipo = config_imp.get("tipo", "red")
+    cfg = config or {}
+    autocorte = cfg.get("impresora_autocorte", "1") != "0"
+    corte_tipo = cfg.get("impresora_corte_tipo", "FULL")
     if tipo == "red":
         import socket as _sock
         ip = config_imp.get("ip", "192.168.1.100")
@@ -438,9 +457,11 @@ def enviar_crudo(config_imp: dict, texto: str) -> dict:
         try:
             with _sock.create_connection((ip, puerto), timeout=5) as s:
                 payload = texto.encode("latin-1", errors="replace")
-                # ESC/POS: full cut
-                CUT = b"\x1d\x56\x00"
-                s.sendall(payload + CUT)
+                if autocorte:
+                    CUT = b"\x1d\x56\x01" if corte_tipo == "PART" else b"\x1d\x56\x00"
+                    s.sendall(payload + CUT)
+                else:
+                    s.sendall(payload)
             return {"ok": True}
         except Exception as e:
             return {"ok": False, "error": str(e)}
