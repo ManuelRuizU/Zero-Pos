@@ -434,9 +434,10 @@ def start_backup_scheduler(app: Flask):
     try:
         import schedule
         import time
-        from utils.backup import run_scheduled_backup
+        from utils.backup import ejecutar_backup_completo, obtener_config_backup
 
-        schedule.every().day.at("03:00").do(run_scheduled_backup, app=app)
+        hora_backup = obtener_config_backup().get("backup_hora", "03:00")
+        schedule.every().day.at(hora_backup).do(ejecutar_backup_completo)
         schedule.every().day.at("06:00").do(_reset_stock_produccion)
         schedule.every().day.at("23:59").do(calcular_metricas_dia, app)
         schedule.every(60).seconds.do(procesar_cola_impresion, app)

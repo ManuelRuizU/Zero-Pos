@@ -38,6 +38,8 @@ CLAVES_PERMITIDAS = {
     "giro",
     "tema_color",
     "tema_modo",
+    "smtp_host", "smtp_port", "smtp_user", "smtp_password", "smtp_from", "smtp_provider",
+    "backup_email_destino", "backup_destinos", "backup_retener_dias", "backup_rclone_remote",
 }
 
 

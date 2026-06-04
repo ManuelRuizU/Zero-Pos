@@ -616,20 +616,102 @@ input:checked + .slider:before{transform:translateX(20px);}
       <!-- Backup -->
       <div class="cfg-card">
         <div class="cfg-card-title">💾 Backup automático</div>
-        <div class="form-group" style="margin-bottom:14px;">
-          <label>Hora del backup diario</label>
-          <input type="time" id="cfg_backup_hora" value="03:00">
+
+        <!-- Hora + Retención -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="form-group" style="margin:0">
+            <label>Hora del backup diario</label>
+            <input type="time" id="cfg_backup_hora" value="03:00">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Backups a retener</label>
+            <input type="number" id="cfg_backup_retener_dias" value="7" min="1" max="30">
+          </div>
         </div>
-        <p style="font-size:11px;color:var(--text-dim);margin-bottom:14px;">
-          Los backups se cifran con AES-256 y se guardan en <code>backups/</code>. Se mantienen los últimos 7.
-        </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn primary sm" onclick="crearBackup()">Crear backup ahora</button>
-          <button class="btn sm" onclick="cargarListaBackups()">Actualizar lista</button>
+
+        <!-- Destinos -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Destinos activos</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="dest_local" checked onchange="guardarBackupConfig()">
+              <span>💾 <strong>Local</strong> — carpeta <code>backups/</code> cifrada con AES-256</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="dest_pendrive" onchange="guardarBackupConfig()">
+              <span>🔌 <strong>Pendrive</strong> — copia automática al USB conectado</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="dest_email" onchange="toggleEmailConfig();guardarBackupConfig()">
+              <span>📧 <strong>Email</strong> — adjunto comprimido (máx. 20 MB)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="dest_rclone" onchange="toggleRcloneConfig();guardarBackupConfig()">
+              <span>☁️ <strong>Google Drive / OneDrive</strong> — vía rclone (sin límite)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Email config -->
+        <div id="emailConfig" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Configuración Email</div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label>Proveedor</label>
+            <select id="cfg_smtp_provider" onchange="onSMTPProviderChange()">
+              <option value="gmail">📧 Gmail</option>
+              <option value="outlook">📨 Outlook / Hotmail</option>
+              <option value="yahoo">📩 Yahoo Mail</option>
+              <option value="custom">⚙️ Otro servidor SMTP</option>
+            </select>
+          </div>
+          <div id="smtpInstrucciones" style="font-size:11px;color:var(--text-dim);background:rgba(99,102,241,0.08);border-radius:8px;padding:10px;margin-bottom:10px;white-space:pre-line"></div>
+          <div style="display:grid;grid-template-columns:1fr 80px;gap:8px;margin-bottom:8px">
+            <div class="form-group" style="margin:0"><label>Servidor SMTP</label><input type="text" id="cfg_smtp_host" placeholder="smtp.gmail.com"></div>
+            <div class="form-group" style="margin:0"><label>Puerto</label><input type="number" id="cfg_smtp_port" value="587"></div>
+          </div>
+          <div class="form-group" style="margin-bottom:8px"><label>Email / Usuario</label><input type="email" id="cfg_smtp_user" placeholder="tumail@gmail.com"></div>
+          <div class="form-group" style="margin-bottom:8px"><label>Contraseña de aplicación</label><input type="password" id="cfg_smtp_password" placeholder="••••••••••••"></div>
+          <div class="form-group" style="margin-bottom:10px"><label>Enviar backup a este email</label><input type="email" id="cfg_backup_email_destino" placeholder="destino@gmail.com"></div>
+          <button class="btn sm" onclick="probarEmail()">📤 Probar envío ahora</button>
+          <span id="fb_email_test" style="font-size:12px;color:var(--text-dim);margin-left:8px"></span>
+        </div>
+
+        <!-- rclone config -->
+        <div id="rcloneConfig" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+          <div style="font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Configuración rclone</div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label>Nombre del remote (configurado con <code>rclone config</code>)</label>
+            <input type="text" id="cfg_backup_rclone_remote" value="gdrive" placeholder="gdrive">
+          </div>
+          <details style="margin-bottom:6px">
+            <summary style="cursor:pointer;font-size:12px;color:var(--text-dim);font-weight:600">Ver instrucciones para conectar Google Drive</summary>
+            <div style="font-size:12px;color:var(--text-dim);background:var(--surface2);border-radius:8px;padding:12px;margin-top:8px;line-height:1.7">
+              <strong>1.</strong> Instala rclone:<br>
+              <code style="font-size:11px;user-select:all">curl https://rclone.org/install.sh | sudo bash</code><br><br>
+              <strong>2.</strong> Configura Google Drive:<br>
+              <code style="font-size:11px;user-select:all">rclone config</code><br><br>
+              <strong>3.</strong> Elige: <code>n</code> (New remote)<br>
+              <strong>4.</strong> Nombre: <code>gdrive</code><br>
+              <strong>5.</strong> Tipo: <code>drive</code> (Google Drive)<br>
+              <strong>6.</strong> Sigue los pasos → abre el navegador<br>
+              <strong>7.</strong> Inicia sesión con tu Gmail → Permitir<br>
+              <strong>8.</strong> Listo. ZERO usará <code>gdrive:ZERO_BACKUP/</code>
+            </div>
+          </details>
+        </div>
+
+        <!-- Estado destinos -->
+        <div id="backupEstado" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px"></div>
+
+        <!-- Botones -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="btn primary sm" onclick="backupAhora()">▶ Backup completo ahora</button>
+          <button class="btn sm" onclick="crearBackup()">💾 Solo local</button>
+          <button class="btn sm" onclick="cargarListaBackups();cargarEstadoBackup()">↻ Actualizar</button>
         </div>
         <div class="cfg-save">
           <span class="save-feedback" id="fb_backup">✓ Guardado</span>
-          <button class="btn sm" onclick="guardarSeccion('backup')">Guardar hora</button>
+          <button class="btn sm" onclick="guardarBackupConfig()">Guardar configuración</button>
         </div>
         <div class="backup-list" id="backupList"></div>
       </div>
@@ -978,17 +1060,118 @@ async function preguntarIA() {
 
 async function crearBackup() {
   const btn = event.currentTarget;
-  btn.disabled = true;
-  btn.textContent = 'Creando...';
+  btn.disabled = true; btn.textContent = 'Creando...';
   const r = await fetch('/api/backup/crear',{method:'POST',credentials:'include'}).then(r=>r.json());
-  btn.disabled = false;
-  btn.textContent = 'Crear backup ahora';
-  if (r.ok) {
-    showFeedback('fb_backup', `✓ ${r.nombre} (${r.tamaño_kb} KB)`);
-    cargarListaBackups();
-  } else {
-    alert('Error: ' + r.error);
-  }
+  btn.disabled = false; btn.textContent = '💾 Solo local';
+  if (r.ok) { showFeedback('fb_backup', `✓ ${r.nombre} (${r.tamaño_kb} KB)`); cargarListaBackups(); }
+  else alert('Error: ' + r.error);
+}
+
+async function backupAhora() {
+  const btn = event.currentTarget;
+  btn.disabled = true; btn.textContent = 'Ejecutando...';
+  try {
+    const r = await fetch('/api/backup/ahora',{method:'POST',credentials:'include'}).then(r=>r.json());
+    if (r.ok) {
+      const res = r.resultados || {};
+      const msgs = Object.entries(res).map(([k,v]) => `${k}: ${v ? '✓' : '✗'}`).join(' · ');
+      showFeedback('fb_backup', msgs || '✓ OK');
+      cargarListaBackups(); cargarEstadoBackup();
+    } else { alert('Error: ' + (r.error || 'Desconocido')); }
+  } catch(e) { alert('Error: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = '▶ Backup completo ahora'; }
+}
+
+async function guardarBackupConfig() {
+  const destinos = ['local','pendrive','email','rclone'].filter(d => {
+    const el = document.getElementById('dest_' + d); return el && el.checked;
+  });
+  const payload = {
+    hora:           document.getElementById('cfg_backup_hora')?.value || '03:00',
+    retener_dias:   parseInt(document.getElementById('cfg_backup_retener_dias')?.value) || 7,
+    destinos,
+    email_destino:  document.getElementById('cfg_backup_email_destino')?.value.trim() || '',
+    smtp_provider:  document.getElementById('cfg_smtp_provider')?.value || 'gmail',
+    smtp_host:      document.getElementById('cfg_smtp_host')?.value.trim() || '',
+    smtp_port:      document.getElementById('cfg_smtp_port')?.value || '587',
+    smtp_user:      document.getElementById('cfg_smtp_user')?.value.trim() || '',
+    smtp_password:  document.getElementById('cfg_smtp_password')?.value || '',
+    rclone_remote:  document.getElementById('cfg_backup_rclone_remote')?.value.trim() || 'gdrive',
+  };
+  const r = await fetch('/api/backup/config',{method:'PUT',credentials:'include',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}).then(r=>r.json());
+  if (r.ok) showFeedback('fb_backup', '✓ Guardado');
+}
+
+async function probarEmail() {
+  const btn = event.currentTarget;
+  const fb = document.getElementById('fb_email_test');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  fb.textContent = '';
+  try {
+    const email = document.getElementById('cfg_backup_email_destino')?.value.trim();
+    const r = await fetch('/api/backup/probar-email',{method:'POST',credentials:'include',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify({email_destino: email})}).then(r=>r.json());
+    if (r.ok) {
+      fb.style.color = 'var(--success)'; fb.textContent = '✓ Email enviado correctamente';
+    } else if (r.mensaje === 'muy_grande') {
+      fb.style.color = 'var(--warning)';
+      fb.textContent = '⚠️ Base de datos muy grande para email. Recomendamos configurar Google Drive con rclone.';
+      document.getElementById('rcloneConfig').style.display = '';
+    } else if (r.mensaje === 'smtp_no_configurado') {
+      fb.style.color = 'var(--danger)'; fb.textContent = '✗ SMTP no configurado. Completa host, usuario y contraseña.';
+    } else {
+      fb.style.color = 'var(--danger)'; fb.textContent = '✗ Error: ' + (r.mensaje || r.error || 'Desconocido');
+    }
+  } catch(e) { fb.style.color = 'var(--danger)'; fb.textContent = '✗ ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = '📤 Probar envío ahora'; }
+}
+
+const SMTP_DATA = {
+  gmail:   { host:'smtp.gmail.com', port:587, instrucciones:'Necesitas una "Contraseña de aplicación".\nGmail → Cuenta → Seguridad → Verificación en dos pasos → Contraseñas de aplicaciones' },
+  outlook: { host:'smtp.office365.com', port:587, instrucciones:'Usa tu contraseña normal de Outlook.' },
+  yahoo:   { host:'smtp.mail.yahoo.com', port:587, instrucciones:'Genera una contraseña de aplicación en Yahoo → Seguridad.' },
+  custom:  { host:'', port:587, instrucciones:'Ingresa los datos de tu servidor SMTP.' },
+};
+
+function onSMTPProviderChange() {
+  const p = document.getElementById('cfg_smtp_provider')?.value;
+  const d = SMTP_DATA[p];
+  if (!d) return;
+  if (d.host) document.getElementById('cfg_smtp_host').value = d.host;
+  document.getElementById('cfg_smtp_port').value = d.port;
+  const instr = document.getElementById('smtpInstrucciones');
+  if (instr) instr.textContent = d.instrucciones;
+}
+
+function toggleEmailConfig() {
+  const show = document.getElementById('dest_email')?.checked;
+  const el = document.getElementById('emailConfig');
+  if (el) el.style.display = show ? '' : 'none';
+}
+
+function toggleRcloneConfig() {
+  const show = document.getElementById('dest_rclone')?.checked;
+  const el = document.getElementById('rcloneConfig');
+  if (el) el.style.display = show ? '' : 'none';
+}
+
+async function cargarEstadoBackup() {
+  const div = document.getElementById('backupEstado');
+  if (!div) return;
+  try {
+    const est = await fetch('/api/backup/estado',{credentials:'include'}).then(r=>r.json());
+    const chip = (ok, label, sub) => `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+        <div style="font-size:12px;font-weight:600">${ok ? '✅' : '⬜'} ${label}</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${sub}</div>
+      </div>`;
+    div.innerHTML =
+      chip(est.local?.activo,   '💾 Local',   est.local?.ultimo   || 'Sin backups aún') +
+      chip(est.pendrive?.detectado, '🔌 Pendrive', est.pendrive?.detectado ? est.pendrive.ruta : 'No detectado') +
+      chip(est.email?.configurado,  '📧 Email',    est.email?.email    || 'No configurado') +
+      chip(est.rclone?.instalado,   '☁️ rclone',   est.rclone?.instalado ? `Remote: ${est.rclone.remote}` : 'rclone no instalado');
+  } catch(_) { div.innerHTML = ''; }
 }
 
 // ── Config ────────────────────────────────────────────────────────────
@@ -1014,7 +1197,25 @@ async function cargarConfig() {
   set('cfg_banco_nombre',        cfgActual.banco_nombre);
   set('cfg_banco_tipo_cuenta',   cfgActual.banco_tipo_cuenta || 'Cuenta Corriente');
   set('cfg_banco_cuenta',        cfgActual.banco_cuenta);
-  set('cfg_backup_hora',         cfgActual.backup_hora || '03:00');
+  set('cfg_backup_hora',              cfgActual.backup_hora || '03:00');
+  set('cfg_backup_retener_dias',      cfgActual.backup_retener_dias || '7');
+  set('cfg_backup_email_destino',     cfgActual.backup_email_destino || '');
+  set('cfg_smtp_provider',            cfgActual.smtp_provider || 'gmail');
+  set('cfg_smtp_host',                cfgActual.smtp_host || '');
+  set('cfg_smtp_port',                cfgActual.smtp_port || '587');
+  set('cfg_smtp_user',                cfgActual.smtp_user || '');
+  set('cfg_smtp_password',            cfgActual.smtp_password ? '••••••••••••' : '');
+  set('cfg_backup_rclone_remote',     cfgActual.backup_rclone_remote || 'gdrive');
+  // Destinos checkboxes
+  const destinos = (cfgActual.backup_destinos || 'local').split(',').map(d => d.trim());
+  ['local','pendrive','email','rclone'].forEach(d => {
+    const el = document.getElementById('dest_' + d);
+    if (el) el.checked = destinos.includes(d);
+  });
+  onSMTPProviderChange();
+  toggleEmailConfig();
+  toggleRcloneConfig();
+  cargarEstadoBackup();
   setChk('cfg_pantalla_cliente_activa', cfgActual.pantalla_cliente_activa);
   setChk('cfg_pantalla_cocina_activa',  cfgActual.pantalla_cocina_activa);
   setChk('cfg_modulo_delivery',         cfgActual.modulo_delivery);
@@ -1048,7 +1249,7 @@ const SECCIONES = {
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
   pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa','modulo_delivery','modo_mesas'],
   delivery:  ['delivery_tarifa_tipo','delivery_precio_fijo','delivery_precio_km1','delivery_precio_km3','delivery_precio_km5','delivery_precio_mas5','delivery_texto'],
-  backup:    ['backup_hora'],
+  backup:    ['backup_hora','backup_retener_dias','backup_email_destino','smtp_provider','smtp_host','smtp_port','smtp_user','backup_rclone_remote'],
 };
 
 async function guardarSeccion(seccion) {
