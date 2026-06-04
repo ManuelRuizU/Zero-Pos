@@ -39,6 +39,21 @@ def imprimir_ticket(venta_id):
         cfg = conn.execute("SELECT clave, valor FROM config").fetchall()
         config = {r["clave"]: r["valor"] for r in cfg}
 
+        fiado_info = None
+        if venta["metodo_pago"] == "credito":
+            mov = conn.execute(
+                """SELECT fm.monto, fm.deuda_antes, fm.deuda_despues,
+                          cf.nombre, cf.apellido, cf.qr_token, cf.limite_credito
+                   FROM fiado_movimientos fm
+                   JOIN clientes_fiado cf ON cf.id = fm.cliente_id
+                   WHERE fm.venta_id=? AND fm.tipo='cargo'
+                   ORDER BY fm.id DESC LIMIT 1""",
+                (venta_id,)
+            ).fetchone()
+            if mov:
+                fiado_info = dict(mov)
+                fiado_info["ip_local"] = config.get("ip_local", "127.0.0.1")
+
     config_imp = {
         "tipo":   config.get("impresora_tipo", "red"),
         "ip":     config.get("impresora_ip", "192.168.1.100"),
@@ -47,7 +62,7 @@ def imprimir_ticket(venta_id):
 
     from utils.impresora import imprimir_recibo
     resultado = imprimir_recibo(dict(venta), [dict(i) for i in items], config, config_imp,
-                                pedido=pedido)
+                                pedido=pedido, fiado_info=fiado_info)
     return jsonify(resultado)
 
 

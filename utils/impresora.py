@@ -136,7 +136,7 @@ def _generar_qr_bytes(url: str) -> bytes | None:
 # ── BOLETA CLIENTE ────────────────────────────────────────────────────────────
 
 def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
-                    pedido: dict | None = None) -> dict:
+                    pedido: dict | None = None, fiado_info: dict | None = None) -> dict:
     texto = _formatear_texto(venta, items, config, pedido)
 
     if not ESCPOS_OK:
@@ -266,6 +266,48 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
                     p.text(url[:N] + "\n")
             else:
                 p.text(url[:N] + "\n")
+
+        # ── ZERO CREDIT ───────────────────────────────────────────
+        if venta.get("metodo_pago") == "credito" and fiado_info:
+            c_nombre = limpiar_texto(
+                f"{fiado_info.get('nombre','')} {fiado_info.get('apellido','') or ''}"
+            ).strip()
+            qr_token  = fiado_info.get("qr_token", "")
+            ip_local  = fiado_info.get("ip_local", "127.0.0.1")
+            url_credit = f"http://{ip_local}:5001/credit/{qr_token}"
+            p.text("\n")
+            p.set(align="center")
+            p.text(SEP + "\n")
+            p.text("ZERO CREDIT\n")
+            p.text(SEP + "\n")
+            p.text("\n")
+            p.set(align="left")
+            p.text(f"Cliente: {c_nombre}\n")
+            p.text(f"Deuda anterior: {_clp(fiado_info.get('deuda_antes', 0))}\n")
+            p.text(f"Esta compra:    {_clp(fiado_info.get('monto', 0))}\n")
+            p.set(bold=True)
+            p.text(f"Total deuda:    {_clp(fiado_info.get('deuda_despues', 0))}\n")
+            p.set(bold=False)
+            p.text(f"Limite:         {_clp(fiado_info.get('limite_credito', 0))}\n")
+            p.text("\n")
+            p.set(align="center")
+            p.text("Escanea para ver tu cuenta:\n\n")
+            try:
+                p.qr(url_credit, size=6)
+            except Exception:
+                qr_b = _generar_qr_bytes(url_credit)
+                if qr_b:
+                    try:
+                        from PIL import Image
+                        import io as _io
+                        img = Image.open(_io.BytesIO(qr_b)).resize((200, 200))
+                        p.image(img)
+                    except Exception:
+                        p.text(url_credit[:N] + "\n")
+                else:
+                    p.text(url_credit[:N] + "\n")
+            p.text("\n")
+            p.set(align="left")
 
         # ── FOOTER ────────────────────────────────────────────────
         p.text(SEP + "\n")
@@ -576,6 +618,15 @@ def _formatear_texto(venta: dict, items: list, config: dict,
 
     if pedido and pedido.get("tipo") == "delivery" and pedido.get("direccion"):
         lineas += [SEP, _maps_url(pedido)[:N]]
+
+    if venta.get("metodo_pago") == "credito":
+        lineas += [
+            SEP,
+            "ZERO CREDIT".center(N),
+            SEP,
+            "Pago en cuenta corriente".center(N),
+            "",
+        ]
 
     num_display = ""
     if pedido:
