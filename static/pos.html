@@ -3177,112 +3177,106 @@ async function confirmarPago() {
 
 // ── ZERO CREDIT ──────────────────────────────────────────────
 function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-let _creditBuscarTimer = null;
 
-function mostrarNuevoClienteForm() {
-  document.getElementById('creditNuevoBtn').style.display = 'none';
-  document.getElementById('creditNuevoForm').style.display = '';
-  const q = document.getElementById('creditBuscarInput').value.trim();
-  if (q) document.getElementById('nuevoNombre').value = q;
-  document.getElementById('nuevoNombre').focus();
+// ── Paso 1: 3 opciones ────────────────────────────────────────
+function renderPasoCredito() {
+  document.getElementById('secCredito').innerHTML = `
+    <div style="padding:4px 0 10px;text-align:center;font-size:13px;color:var(--text-dim);font-weight:500">
+      ¿Cómo identificas al cliente?
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="flujoEscanearQR()"
+        style="min-height:64px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;padding:0 18px;width:100%;text-align:left;transition:.15s"
+        onmousedown="this.style.background='var(--surface)'" onmouseup="this.style.background='var(--surface2)'" onmouseleave="this.style.background='var(--surface2)'">
+        <span style="font-size:26px;flex-shrink:0">📷</span>
+        <div><div>Escanear tarjeta QR</div><div style="font-size:12px;font-weight:400;color:var(--text-dim)">Apunta al código de la tarjeta</div></div>
+      </button>
+      <button onclick="flujoBuscarCliente()"
+        style="min-height:64px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;padding:0 18px;width:100%;text-align:left;transition:.15s"
+        onmousedown="this.style.background='var(--surface)'" onmouseup="this.style.background='var(--surface2)'" onmouseleave="this.style.background='var(--surface2)'">
+        <span style="font-size:26px;flex-shrink:0">🔍</span>
+        <div><div>Buscar cliente</div><div style="font-size:12px;font-weight:400;color:var(--text-dim)">Por nombre o teléfono</div></div>
+      </button>
+      <button onclick="flujoNuevoCliente()"
+        style="min-height:64px;background:rgba(99,102,241,.07);border:1px dashed var(--accent);border-radius:12px;color:var(--accent);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;padding:0 18px;width:100%;text-align:left;transition:.15s"
+        onmousedown="this.style.background='rgba(99,102,241,.15)'" onmouseup="this.style.background='rgba(99,102,241,.07)'" onmouseleave="this.style.background='rgba(99,102,241,.07)'">
+        <span style="font-size:26px;flex-shrink:0">➕</span>
+        <div><div>Nuevo cliente</div><div style="font-size:12px;font-weight:400;color:var(--text-dim)">Registrar en ZERO CREDIT</div></div>
+      </button>
+    </div>`;
 }
-function cancelarNuevoCliente() {
-  document.getElementById('creditNuevoForm').style.display = 'none';
-  document.getElementById('creditNuevoBtn').style.display = 'none';
-}
-async function crearClienteCredito() {
-  const nombre = document.getElementById('nuevoNombre').value.trim();
-  const telefono = document.getElementById('nuevoTelefono').value.trim();
-  const limite = parseInt(document.getElementById('nuevoLimite').value) || 10000;
-  if (!nombre || !telefono) { showToast('Nombre y teléfono son obligatorios', 'error'); return; }
-  const btn = document.getElementById('btnCrearCliente');
-  btn.disabled = true; btn.textContent = 'Creando...';
-  try {
-    const r = await fetch('/api/fiado/clientes', {
-      method:'POST', credentials:'include',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({nombre, telefono, limite_credito: limite})
-    });
-    const data = await r.json();
-    if (!r.ok || data.error) { showToast(data.error || 'Error al crear cliente', 'error'); return; }
-    _creditClienteNuevo = true;
-    cancelarNuevoCliente();
-    seleccionarClienteCredito(data);
-    showToast(`Cliente ${nombre} creado`, 'success');
-  } catch(e) {
-    showToast('Error de conexión', 'error');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Crear y continuar →';
-  }
-}
+
+// ── Paso 2A: escanear QR ──────────────────────────────────────
 function _extraerTokenCredit(codigo) {
   const s = (codigo || '').trim();
   if (s.includes('/credit/')) return s.split('/credit/')[1].split('?')[0].split('/')[0];
   if (s.includes('ZERO:CREDIT:')) return s.split('ZERO:CREDIT:')[1];
   return s;
 }
-function buscarClienteQR(token) {
-  const t = _extraerTokenCredit(token);
-  if (!t) return;
-  fetch(`/api/fiado/token/${encodeURIComponent(t)}`, {credentials:'include'})
-    .then(r => r.json()).then(c => {
-      if (c.id) seleccionarClienteCredito(c);
-    }).catch(() => {});
-}
-function abrirEscanerCreditoQR() {
+function flujoEscanearQR() {
   abrirEscanerVideo(codigo => {
     const token = _extraerTokenCredit(codigo);
-    if (token && token.length > 6) {
-      buscarClienteQR(token);
-    } else {
-      showToast('QR no valido para ZERO CREDIT', 'error');
-    }
+    if (!token || token.length < 6) { showToast('QR no válido para ZERO CREDIT', 'error'); return; }
+    fetch(`/api/fiado/token/${encodeURIComponent(token)}`, {credentials:'include'})
+      .then(r => r.json())
+      .then(c => { if (c.id) seleccionarClienteCredito(c); else showToast('Cliente no encontrado', 'error'); })
+      .catch(() => showToast('Error al buscar cliente', 'error'));
   });
 }
-function buscarClienteNombre(q) {
-  clearTimeout(_creditBuscarTimer);
-  if (!q || q.length < 2) {
-    document.getElementById('creditResultados').innerHTML = '';
-    document.getElementById('creditNuevoBtn').style.display = 'none';
-    return;
-  }
-  _creditBuscarTimer = setTimeout(async () => {
+
+// ── Paso 2B: buscar cliente (overlay full-screen) ─────────────
+let _buscarCreditTimer = null;
+function flujoBuscarCliente() {
+  const overlay = document.getElementById('modalBuscarCredito');
+  overlay.style.display = 'flex';
+  document.getElementById('buscarCreditoInput').value = '';
+  document.getElementById('buscarCreditoResultados').innerHTML = '';
+  setTimeout(() => document.getElementById('buscarCreditoInput').focus(), 80);
+}
+function cerrarBuscarCredito() {
+  document.getElementById('modalBuscarCredito').style.display = 'none';
+  _blurActivo();
+}
+function buscarClientesCredito(q) {
+  clearTimeout(_buscarCreditTimer);
+  const div = document.getElementById('buscarCreditoResultados');
+  if (!q || q.length < 2) { div.innerHTML = ''; return; }
+  _buscarCreditTimer = setTimeout(async () => {
+    div.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:10px 0">Buscando...</div>';
     const res = await fetch(`/api/fiado/buscar?q=${encodeURIComponent(q)}`,{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
-    const div = document.getElementById('creditResultados');
-    if (res.length) {
-      div.innerHTML = res.map(c => `
-        <div onclick="seleccionarClienteCredito(${JSON.stringify(c).replace(/"/g,'&quot;')})" style="padding:8px 10px;cursor:pointer;border-radius:6px;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
-          <span style="font-weight:600">${escH(c.nombre)} ${escH(c.apellido||'')}</span>
-          <span style="float:right;color:${c.estado==='vencido'?'var(--danger)':'var(--text-dim)'}">Deuda: $${(c.deuda_actual||0).toLocaleString('es-CL')}</span>
-        </div>`).join('');
-      document.getElementById('creditNuevoBtn').style.display = 'none';
-    } else {
-      div.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px">Sin resultados</div>';
-      document.getElementById('creditNuevoBtn').style.display = '';
+    if (!res.length) {
+      div.innerHTML = `
+        <div style="color:var(--text-dim);font-size:13px;padding:14px 0;text-align:center">Sin resultados para "<strong>${escH(q)}</strong>"</div>
+        <button onclick="cerrarBuscarCredito();flujoNuevoCliente(${JSON.stringify(q).replace(/"/g,'&quot;')})"
+          style="width:100%;min-height:54px;background:none;border:1px dashed var(--accent);border-radius:12px;color:var(--accent);font-size:14px;font-weight:600;cursor:pointer;margin-top:4px">
+          ➕ Crear nuevo cliente
+        </button>`;
+      return;
     }
-  }, 300);
+    div.innerHTML = res.map(c => {
+      const ini = (c.nombre||'?').charAt(0).toUpperCase();
+      const dc = c.estado === 'vencido' ? '#ef4444' : c.deuda_actual > 0 ? '#f59e0b' : '#22c55e';
+      return `<div onclick="cerrarBuscarCredito();seleccionarClienteCredito(${JSON.stringify(c).replace(/"/g,'&quot;')})"
+        style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);cursor:pointer">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:#fff;flex-shrink:0">${ini}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:15px">${escH(c.nombre)} ${escH(c.apellido||'')}</div>
+          <div style="font-size:12px;color:var(--text-dim)">${escH(c.telefono||'')}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:13px;font-weight:700;color:${dc}">$${(c.deuda_actual||0).toLocaleString('es-CL')}</div>
+          <div style="font-size:11px;color:var(--text-dim)">deuda</div>
+        </div>
+      </div>`;
+    }).join('');
+  }, 280);
 }
+
+// ── Paso 3: confirmación ──────────────────────────────────────
 function seleccionarClienteCredito(c) {
-  _creditClienteId = c.id;
-  document.getElementById('creditResultados').innerHTML = '';
-  document.getElementById('creditBuscarInput').value = '';
-  const nuevaDeuda = (c.deuda_actual||0) + total;
-  const disponible = (c.limite_credito||0) - (c.deuda_actual||0);
-  const supera = nuevaDeuda > (c.limite_credito||0);
-  const el = document.getElementById('creditClienteSeleccionado');
-  const alerta = document.getElementById('creditAlerta');
-  document.getElementById('creditNombreCliente').textContent = `👤 ${c.nombre} ${c.apellido||''}`;
-  document.getElementById('creditDeudaInfo').innerHTML =
-    `Deuda actual: <strong>${fmt(c.deuda_actual||0)}</strong> · Esta compra: <strong>${fmt(total)}</strong> · Nueva deuda: <strong>${fmt(nuevaDeuda)}</strong><br>Límite: ${fmt(c.limite_credito||0)} · Disponible: ${fmt(disponible)}`;
-  if (supera) {
-    alerta.style.display = '';
-    alerta.textContent = `⛔ Sin crédito: solo puede fiarse $${Math.max(0,disponible).toLocaleString('es-CL')} más`;
-    _creditClienteId = null;
-  } else {
-    alerta.style.display = 'none';
-  }
-  el.style.display = '';
+  mostrarConfirmacionCredito(c);
 }
+
 async function _postVentaCredito(ventaId) {
   if (!_creditClienteId || !ventaId) return;
   const cid = _creditClienteId;
