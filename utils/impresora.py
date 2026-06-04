@@ -201,6 +201,38 @@ def _generar_qr_bytes(url: str) -> bytes | None:
         return None
 
 
+def imprimir_qr(p, contenido: str, size: int = 200, align: str = 'center') -> None:
+    """Imprime QR siempre como imagen PNG. Nunca usa printer.qr() nativo."""
+    try:
+        import qrcode
+        from PIL import Image
+        import io
+
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=6,
+            border=3,
+        )
+        qr.add_data(contenido)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color='black', back_color='white').convert('RGB')
+        img = img.resize((size, size), Image.LANCZOS)
+
+        buf = io.BytesIO()
+        img.save(buf, 'PNG')
+        buf.seek(0)
+
+        p.set(align=align)
+        p.image(buf)
+        p.set(align='left')
+    except Exception as e:
+        logger.error(f"Error QR imagen: {e}")
+        p.set(align='center')
+        p.text(f"{contenido[:ANCHO]}\n")
+        p.set(align='left')
+
+
 # ── BOLETA CLIENTE ────────────────────────────────────────────────────────────
 
 def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
@@ -322,20 +354,8 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
         # ── QR RUTA ───────────────────────────────────────────────
         if pedido and pedido.get("tipo") == "delivery" and pedido.get("direccion"):
             url = _maps_url(pedido)
-            qr_bytes = _generar_qr_bytes(url)
             p.text(SEP + "\n")
-            p.set(align="center")
-            if qr_bytes:
-                try:
-                    from PIL import Image
-                    import io
-                    img = Image.open(io.BytesIO(qr_bytes)).resize((200, 200))
-                    p.image(img)
-                    p.text("\n")
-                except Exception:
-                    p.text(url[:N] + "\n")
-            else:
-                p.text(url[:N] + "\n")
+            imprimir_qr(p, url, size=180)
 
         # ── ZERO CREDIT ───────────────────────────────────────────
         if venta.get("metodo_pago") == "credito" and fiado_info:
@@ -361,20 +381,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
             p.text("\n")
             p.set(align="center")
             p.text("Escanea para ver tu cuenta:\n\n")
-            try:
-                p.qr(url_credit, size=6)
-            except Exception:
-                qr_b = _generar_qr_bytes(url_credit)
-                if qr_b:
-                    try:
-                        from PIL import Image
-                        import io as _io
-                        img = Image.open(_io.BytesIO(qr_b)).resize((200, 200))
-                        p.image(img)
-                    except Exception:
-                        p.text(url_credit[:N] + "\n")
-                else:
-                    p.text(url_credit[:N] + "\n")
+            imprimir_qr(p, url_credit, size=140)
             p.text("\n")
             p.set(align="left")
 
