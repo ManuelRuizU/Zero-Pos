@@ -318,6 +318,47 @@ def _m008_vocabulario_local(conn):
     )
 
 
+def _m010_zero_credit(conn):
+    """ZERO CREDIT — sistema de fiado avanzado."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS clientes_fiado (
+        id                  INTEGER PRIMARY KEY,
+        nombre              TEXT NOT NULL,
+        apellido            TEXT,
+        telefono            TEXT,
+        email               TEXT,
+        direccion           TEXT,
+        rut                 TEXT,
+        limite_credito      INTEGER DEFAULT 10000,
+        deuda_actual        INTEGER DEFAULT 0,
+        frecuencia_pago     TEXT DEFAULT 'mensual' CHECK(frecuencia_pago IN ('semanal','quincenal','mensual','fecha_fija')),
+        fecha_pago_fija     DATE,
+        proximo_vencimiento DATE,
+        qr_token            TEXT UNIQUE NOT NULL,
+        activo              INTEGER DEFAULT 1,
+        puntos              INTEGER DEFAULT 0,
+        total_compras       INTEGER DEFAULT 0,
+        total_abonos        INTEGER DEFAULT 0,
+        notas               TEXT,
+        creado_en           DATETIME DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en      DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS fiado_movimientos (
+        id            INTEGER PRIMARY KEY,
+        cliente_id    INTEGER NOT NULL REFERENCES clientes_fiado(id),
+        venta_id      INTEGER REFERENCES ventas(id),
+        tipo          TEXT NOT NULL CHECK(tipo IN ('cargo','abono','ajuste')),
+        monto         INTEGER NOT NULL,
+        deuda_antes   INTEGER NOT NULL,
+        deuda_despues INTEGER NOT NULL,
+        descripcion   TEXT,
+        usuario_id    INTEGER REFERENCES usuarios(id),
+        creado_en     DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_cliente ON fiado_movimientos(cliente_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_vencimiento ON clientes_fiado(proximo_vencimiento)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_deuda ON clientes_fiado(deuda_actual) WHERE deuda_actual > 0")
+
+
 def _m009_modificadores(conn):
     """Modificadores (toppings, salsas, puntos cocción) para sushi/food trucks."""
     conn.execute("""CREATE TABLE IF NOT EXISTS modificadores (
@@ -359,6 +400,7 @@ _MIGRACIONES = [
     (7, "lotes y mermas: control opcional de vencimientos por producto",          _m007_lotes_vencimientos),
     (8, "vocabulario_local: expresiones coloquiales aprendidas sin TinyLlama",   _m008_vocabulario_local),
     (9, "modificadores: toppings y opciones para sushi/food trucks",             _m009_modificadores),
+    (10, "ZERO CREDIT: clientes_fiado y fiado_movimientos",                      _m010_zero_credit),
 ]
 
 
