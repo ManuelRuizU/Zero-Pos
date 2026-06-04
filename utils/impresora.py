@@ -779,30 +779,98 @@ def _formatear_comanda_texto(venta: dict, items: list, config: dict,
     return "\n\n\n" + "\n".join(lineas)
 
 
-def imprimir_tarjeta_credit(cliente: dict, negocio: dict, url_portal: str, config_imp: dict) -> dict:
-    """Imprime tarjeta de membresía ZERO CREDIT en impresora térmica."""
+def imprimir_tarjeta_credit(cliente: dict, config: dict) -> dict:
+    """Imprime tarjeta de membresía ZERO CREDIT con QR portal y QR WiFi opcional."""
+    config_imp = {
+        "tipo": config.get("impresora_tipo", "red"),
+        "ip": config.get("impresora_ip", ""),
+        "puerto": config.get("impresora_puerto", "9100"),
+    }
+
+    ip = _obtener_ip_local()
+    url_portal = f"http://{ip}:5001/credit/{cliente.get('qr_token', '')}"
     N = ANCHO
-    SEP = _sep('=', N)
 
-    lineas = [
-        SEP,
-        "ZERO CREDIT".center(N),
-        SEP,
-        "",
-        limpiar_texto(f"{cliente.get('nombre','')} {cliente.get('apellido','') or ''}").strip().center(N),
-        f"Tel: {limpiar_texto(str(cliente.get('telefono') or '-'))}".center(N),
-        "",
-        f"Limite: ${cliente.get('limite_credito',0):,}".center(N),
-        f"Pago: {str(cliente.get('frecuencia_pago','mensual')).title()}".center(N),
-        "",
-    ]
+    # Texto plano para fallback cuando no hay escpos
+    nombre_c = limpiar_texto(f"{cliente.get('nombre','')} {cliente.get('apellido','') or ''}").strip()
+    limite_fmt = f"${cliente.get('limite_credito', 0):,}".replace(',', '.')
+    dia_pago = cliente.get('dia_pago')
+    if dia_pago:
+        pago_txt = f"Dia {dia_pago} de cada mes"
+    else:
+        freq_map = {'semanal': 'Semanal', 'quincenal': 'Quincenal', 'mensual': 'Mensual', 'dia_fijo': 'Mensual'}
+        pago_txt = freq_map.get(str(cliente.get('frecuencia_pago', 'mensual')), 'Mensual')
 
-    texto = "\n".join(lineas)
-    texto += f"\n{url_portal}\n"
-    texto += "\n" + "Escanea QR para ver tu cuenta".center(N) + "\n"
-    texto += SEP + "\n"
-    texto += limpiar_texto(negocio.get('nombre_negocio', 'ZERO POS')).center(N) + "\n"
-    texto += limpiar_texto(negocio.get('direccion_negocio', '')).center(N) + "\n"
-    texto += SEP + "\n\n\n"
+    if not ESCPOS_OK:
+        SEP = '=' * N
+        lineas = [SEP, "ZERO CREDIT".center(N), SEP, "", nombre_c.center(N),
+                  f"Tel: {limpiar_texto(str(cliente.get('telefono') or '-'))}".center(N),
+                  "", f"Limite: {limite_fmt}".center(N), f"Pago: {pago_txt}".center(N), "",
+                  url_portal.center(N), "", "Escanea QR para ver tu cuenta".center(N),
+                  SEP, limpiar_texto(config.get('nombre_negocio', 'ZERO POS')).center(N),
+                  limpiar_texto(config.get('direccion_negocio', '')).center(N), SEP]
+        return enviar_crudo(config_imp, "\n".join(lineas) + "\n\n\n")
 
-    return enviar_crudo(config_imp, texto)
+    try:
+        p = _get_printer(config_imp)
+        p.text("\n\n\n")
+        imprimir_logo(p)
+
+        # Título
+        p.set(align="center", bold=True)
+        p.text("ZERO CREDIT\n")
+        p.set(bold=False)
+        p.text(limpiar_texto(config.get('nombre_negocio', '')) + "\n")
+        p.text('-' * N + "\n\n")
+
+        # Nombre del cliente grande
+        p.set(align="center", bold=True, height=2)
+        p.text(nombre_c[:20] + "\n")
+        p.set(height=1, bold=False)
+        tel = cliente.get('telefono')
+        if tel:
+            p.text(f"Tel: {limpiar_texto(str(tel))}\n")
+        p.text("\n")
+        p.text('-' * N + "\n\n")
+
+        # Condiciones
+        p.set(align="left")
+        p.text(f"Limite:  {limite_fmt}\n")
+        p.text(f"Pago:    {pago_txt}\n\n")
+        p.text('-' * N + "\n\n")
+
+        # QR portal grande
+        p.set(align="center")
+        p.text("Escanea para ver\n")
+        p.text("tu cuenta ZERO CREDIT:\n\n")
+        imprimir_qr(p, url_portal, size=220)
+        p.text("\n")
+        p.text('-' * N + "\n")
+
+        # QR WiFi opcional
+        ssid = (config.get('wifi_ssid') or '').strip()
+        if ssid:
+            wifi_pass = (config.get('wifi_password') or '').strip()
+            wifi_qr = f"WIFI:T:WPA;S:{ssid};P:{wifi_pass};;"
+            p.text("\n")
+            p.set(align="center")
+            p.text("Conectate al WiFi del local\n")
+            p.text(f"Red: {limpiar_texto(ssid)}\n\n")
+            imprimir_qr(p, wifi_qr, size=160)
+            p.text("\n")
+            p.text('-' * N + "\n")
+
+        # Pie
+        p.set(align="center", bold=False)
+        p.text(limpiar_texto(config.get('nombre_negocio', '')) + "\n")
+        dir_neg = limpiar_texto(config.get('direccion_negocio', '') or '')
+        if dir_neg:
+            p.text(dir_neg + "\n")
+
+        p.text("\n\n\n\n\n\n\n\n")
+        cortar_ticket(p, config)
+        p.close()
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"Error imprimir tarjeta: {e}")
+        return {"ok": False, "error": str(e)}
