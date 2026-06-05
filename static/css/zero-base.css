@@ -18,6 +18,7 @@ body {
   -webkit-tap-highlight-color: transparent;
   background-image: var(--bg-gradient);
 }
+body:focus { outline: none; }
 
 /* ── Scrollbar personalizado ─────────────────────────────────────────────── */
 ::-webkit-scrollbar              { width: 4px; height: 4px; }

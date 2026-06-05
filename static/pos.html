@@ -2559,12 +2559,16 @@ function actualizarFAB() {
 
 // ── Helpers móvil ────────────────────────────────────────────
 const esMobil = () => /iPhone|iPad|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
-function _blurActivo() {
+
+function cerrarPanelSinTeclado() {
   if (document.activeElement && document.activeElement !== document.body) {
     document.activeElement.blur();
   }
+  document.body.setAttribute('tabindex', '-1');
   document.body.focus();
+  document.body.removeAttribute('tabindex');
 }
+function _blurActivo() { cerrarPanelSinTeclado(); }
 
 // ── Mobile cart toggle ───────────────────────────────────────
 function toggleCarritoMobile() {
@@ -3811,7 +3815,7 @@ function abrirEscanerArchivo(onCodigo) {
       } else {
         showToast('No detectado — ingresa el código', 'error');
         const campo = document.getElementById('searchInput');
-        if (campo) { campo.focus(); campo.select(); }
+        if (campo && !esMobil()) { campo.focus(); campo.select(); }
       }
     } catch(e) {
       showToast('Error al procesar imagen', 'error');
@@ -4088,7 +4092,9 @@ function flashProducto(productoId) {
 
 function limpiarYEnfocarBusqueda() {
   const campo = document.getElementById('searchInput');
-  if (campo) { campo.value = ''; campo.focus(); }
+  if (!campo) return;
+  campo.value = '';
+  if (!esMobil()) campo.focus();
 }
 
 function medirScan(ms) {
@@ -4130,6 +4136,14 @@ function cerrarDrawerMenu() { cerrarNavbar(); }
 
 // Swipe para cerrar navbar y carrito
 document.addEventListener('DOMContentLoaded', () => {
+  // En móvil: interceptar foco no-confiable en searchInput (causado por blur de otros elementos)
+  if (esMobil()) {
+    const si = document.getElementById('searchInput');
+    si?.addEventListener('focus', e => {
+      if (!e.isTrusted) { e.preventDefault(); si.blur(); }
+    });
+  }
+
   // ── Navbar swipe ──
   const navDrawer = document.getElementById('navbarDrawer');
   let startX = 0, isDraggingNav = false;
@@ -4423,8 +4437,9 @@ function mostrarAlertaImpresora() {
 // Verificar estado cada 30 segundos
 setInterval(verificarEstadoImpresora, 30000);
 
-// Auto-foco en el campo de búsqueda cuando no se interactúa con otro elemento
+// Auto-foco en búsqueda solo en desktop (móvil: el teclado se abre solo si hacemos focus)
 document.addEventListener('click', e => {
+  if (esMobil()) return;
   if (!e.target.closest('button, input, select, textarea, .modal, .modal-overlay, [role="dialog"]')) {
     const campo = document.getElementById('searchInput');
     if (campo) campo.focus();
