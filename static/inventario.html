@@ -2466,5 +2466,204 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- ── FAB Comando Stock ─────────────────────────────────────────── -->
+<button id="fabComandoStock" onclick="abrirComandoStock()"
+  style="position:fixed;bottom:24px;right:24px;z-index:900;
+         display:flex;align-items:center;gap:8px;
+         background:#16a34a;color:#fff;border:none;
+         border-radius:999px;padding:14px 20px;
+         font-size:15px;font-weight:700;cursor:pointer;
+         box-shadow:0 4px 16px rgba(0,0,0,0.4);
+         transition:transform .15s,box-shadow .15s;">
+  🎤 Agregar stock
+</button>
+
+<!-- ── Panel Comando Stock ──────────────────────────────────────── -->
+<div id="panelComandoStock"
+  style="position:fixed;bottom:0;left:0;right:0;
+         background:var(--z-bg-surface,#1a1a2e);
+         border-radius:20px 20px 0 0;padding:20px;z-index:1100;
+         transform:translateY(100%);
+         transition:transform 0.3s ease;
+         box-shadow:0 -4px 20px rgba(0,0,0,0.4);">
+
+  <div style="width:40px;height:4px;background:var(--z-border,#333);
+              border-radius:2px;margin:0 auto 16px;"></div>
+
+  <h3 style="margin:0 0 16px;color:var(--z-text-primary,#fff);font-size:17px;">
+    🎤 Comando de stock
+  </h3>
+
+  <input id="inputComandoStock" type="text"
+    placeholder="Ej: 20 Coca-Cola a $850"
+    style="width:100%;padding:14px;
+           background:var(--z-bg-elevated,#252540);
+           border:2px solid #16a34a;border-radius:12px;
+           color:#fff;font-size:16px;box-sizing:border-box;
+           margin-bottom:12px;outline:none;"
+    onkeydown="if(event.key==='Enter') procesarComandoStock()">
+
+  <div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:var(--z-text-secondary,#888);
+                 align-self:center;margin-right:4px;">Ejemplos:</span>
+    <button onclick="document.getElementById('inputComandoStock').value='24 Coca-Cola'"
+      style="padding:5px 11px;background:var(--z-bg-elevated,#252540);
+             border:1px solid var(--z-border,#333);border-radius:20px;
+             color:var(--z-text-secondary,#aaa);font-size:12px;cursor:pointer;">
+      24 Coca-Cola</button>
+    <button onclick="document.getElementById('inputComandoStock').value='12 Pan molde a \$900'"
+      style="padding:5px 11px;background:var(--z-bg-elevated,#252540);
+             border:1px solid var(--z-border,#333);border-radius:20px;
+             color:var(--z-text-secondary,#aaa);font-size:12px;cursor:pointer;">
+      12 Pan molde a $900</button>
+    <button onclick="document.getElementById('inputComandoStock').value='llegaron 6 aceite'"
+      style="padding:5px 11px;background:var(--z-bg-elevated,#252540);
+             border:1px solid var(--z-border,#333);border-radius:20px;
+             color:var(--z-text-secondary,#aaa);font-size:12px;cursor:pointer;">
+      llegaron 6 aceite</button>
+  </div>
+
+  <div id="resultadoComandoStock"
+    style="display:none;padding:12px;border-radius:10px;
+           margin-bottom:12px;font-size:15px;line-height:1.5;"></div>
+
+  <div style="display:flex;gap:8px;margin-bottom:8px;">
+    <button id="btnVozStock" onclick="activarVozStock()"
+      style="flex:1;padding:14px;background:var(--z-bg-elevated,#252540);
+             color:#fff;border:1px solid var(--z-border,#333);
+             border-radius:12px;font-size:15px;cursor:pointer;
+             display:flex;align-items:center;justify-content:center;gap:8px;">
+      🎤 Hablar
+    </button>
+    <button onclick="procesarComandoStock()"
+      style="flex:2;padding:14px;background:#16a34a;color:#fff;
+             border:none;border-radius:12px;
+             font-size:16px;font-weight:700;cursor:pointer;">
+      ✅ Procesar
+    </button>
+  </div>
+
+  <button onclick="cerrarComandoStock()"
+    style="width:100%;padding:12px;background:none;border:none;
+           color:var(--z-text-secondary,#888);cursor:pointer;font-size:14px;">
+    Cancelar
+  </button>
+</div>
+
+<div id="overlayComandoStock" onclick="cerrarComandoStock()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1099;"></div>
+
+<script>
+function abrirComandoStock() {
+  document.getElementById('panelComandoStock').style.transform = 'translateY(0)';
+  document.getElementById('overlayComandoStock').style.display = 'block';
+  document.getElementById('resultadoComandoStock').style.display = 'none';
+  document.getElementById('inputComandoStock').value = '';
+  setTimeout(() => document.getElementById('inputComandoStock')?.focus(), 300);
+}
+
+function cerrarComandoStock() {
+  document.getElementById('panelComandoStock').style.transform = 'translateY(100%)';
+  document.getElementById('overlayComandoStock').style.display = 'none';
+  document.getElementById('resultadoComandoStock').style.display = 'none';
+  document.getElementById('inputComandoStock').value = '';
+  if (document.activeElement) document.activeElement.blur();
+}
+
+async function procesarComandoStock() {
+  const input = document.getElementById('inputComandoStock');
+  const texto = input?.value.trim();
+  const resultado = document.getElementById('resultadoComandoStock');
+  if (!texto) return;
+
+  resultado.style.display = 'block';
+  resultado.style.background = '#1e1e2e';
+  resultado.style.border = '1px solid #444';
+  resultado.style.color = '#ccc';
+  resultado.innerHTML = '⏳ Procesando...';
+
+  try {
+    const resp = await fetch('/api/voz/comando-stock', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto }),
+    });
+    const data = await resp.json();
+
+    if (data.status === 'success') {
+      resultado.style.background = '#0f2d1a';
+      resultado.style.border = '1px solid #22c55e';
+      resultado.style.color = '#86efac';
+      resultado.innerHTML = data.mensaje;
+      input.value = '';
+      setTimeout(() => {
+        cerrarComandoStock();
+        if (typeof cargarProductos === 'function') cargarProductos();
+      }, 2000);
+    } else {
+      resultado.style.background = '#2d1111';
+      resultado.style.border = '1px solid #ef4444';
+      resultado.style.color = '#fca5a5';
+      resultado.innerHTML = data.mensaje || 'Error desconocido';
+    }
+  } catch(e) {
+    resultado.style.background = '#2d1111';
+    resultado.style.color = '#fca5a5';
+    resultado.innerHTML = '❌ Error de conexión';
+  }
+}
+
+function activarVozStock() {
+  const btn = document.getElementById('btnVozStock');
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('⚠️ Tu navegador no soporta voz. Escribe el comando.');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SR();
+  recognition.lang = 'es-CL';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  btn.innerHTML = '🔴 Escuchando...';
+  btn.style.background = '#ef4444';
+  btn.style.border = '1px solid #ef4444';
+
+  recognition.onresult = (e) => {
+    document.getElementById('inputComandoStock').value = e.results[0][0].transcript;
+    btn.innerHTML = '🎤 Hablar';
+    btn.style.background = '';
+    btn.style.border = '';
+    procesarComandoStock();
+  };
+  recognition.onerror = () => {
+    btn.innerHTML = '🎤 Hablar';
+    btn.style.background = '';
+    btn.style.border = '';
+    showToast('No se escuchó nada. Intenta de nuevo.');
+  };
+  recognition.onend = () => {
+    btn.innerHTML = '🎤 Hablar';
+    btn.style.background = '';
+    btn.style.border = '';
+  };
+  recognition.start();
+}
+
+// Hover effect FAB
+const _fab = document.getElementById('fabComandoStock');
+if (_fab) {
+  _fab.addEventListener('mouseenter', () => {
+    _fab.style.transform = 'scale(1.05)';
+    _fab.style.boxShadow = '0 6px 24px rgba(0,0,0,0.5)';
+  });
+  _fab.addEventListener('mouseleave', () => {
+    _fab.style.transform = '';
+    _fab.style.boxShadow = '0 4px 16px rgba(0,0,0,0.4)';
+  });
+}
+</script>
 </body>
 </html>

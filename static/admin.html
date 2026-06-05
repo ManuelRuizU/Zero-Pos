@@ -2172,5 +2172,218 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- ── FAB Comando Stock (admin) ──────────────────────────────────── -->
+<button id="fabComandoStockAdmin" onclick="abrirComandoStockAdmin()"
+  style="position:fixed;bottom:24px;right:24px;z-index:900;
+         display:none;align-items:center;gap:8px;
+         background:#16a34a;color:#fff;border:none;
+         border-radius:999px;padding:14px 20px;
+         font-size:15px;font-weight:700;cursor:pointer;
+         box-shadow:0 4px 16px rgba(0,0,0,0.4);
+         transition:transform .15s,box-shadow .15s;">
+  🎤 Agregar stock
+</button>
+
+<!-- ── Panel Comando Stock (admin) ──────────────────────────────── -->
+<div id="panelComandoStockAdmin"
+  style="position:fixed;bottom:0;left:0;right:0;
+         background:#1a1a2e;border-radius:20px 20px 0 0;
+         padding:20px;z-index:1100;
+         transform:translateY(100%);
+         transition:transform 0.3s ease;
+         box-shadow:0 -4px 20px rgba(0,0,0,0.4);">
+
+  <div style="width:40px;height:4px;background:#333;
+              border-radius:2px;margin:0 auto 16px;"></div>
+
+  <h3 style="margin:0 0 16px;color:#fff;font-size:17px;">
+    🎤 Comando de stock
+  </h3>
+
+  <input id="inputComandoStockAdmin" type="text"
+    placeholder="Ej: 20 Coca-Cola a $850"
+    style="width:100%;padding:14px;background:#252540;
+           border:2px solid #16a34a;border-radius:12px;
+           color:#fff;font-size:16px;box-sizing:border-box;
+           margin-bottom:12px;outline:none;"
+    onkeydown="if(event.key==='Enter') procesarComandoStockAdmin()">
+
+  <div style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:#888;align-self:center;margin-right:4px;">Ejemplos:</span>
+    <button onclick="document.getElementById('inputComandoStockAdmin').value='24 Coca-Cola'"
+      style="padding:5px 11px;background:#252540;border:1px solid #333;
+             border-radius:20px;color:#aaa;font-size:12px;cursor:pointer;">
+      24 Coca-Cola</button>
+    <button onclick="document.getElementById('inputComandoStockAdmin').value='12 Pan molde a \$900'"
+      style="padding:5px 11px;background:#252540;border:1px solid #333;
+             border-radius:20px;color:#aaa;font-size:12px;cursor:pointer;">
+      12 Pan molde a $900</button>
+    <button onclick="document.getElementById('inputComandoStockAdmin').value='llegaron 6 aceite'"
+      style="padding:5px 11px;background:#252540;border:1px solid #333;
+             border-radius:20px;color:#aaa;font-size:12px;cursor:pointer;">
+      llegaron 6 aceite</button>
+  </div>
+
+  <div id="resultadoComandoStockAdmin"
+    style="display:none;padding:12px;border-radius:10px;
+           margin-bottom:12px;font-size:15px;line-height:1.5;"></div>
+
+  <div style="display:flex;gap:8px;margin-bottom:8px;">
+    <button id="btnVozStockAdmin" onclick="activarVozStockAdmin()"
+      style="flex:1;padding:14px;background:#252540;color:#fff;
+             border:1px solid #333;border-radius:12px;
+             font-size:15px;cursor:pointer;
+             display:flex;align-items:center;justify-content:center;gap:8px;">
+      🎤 Hablar
+    </button>
+    <button onclick="procesarComandoStockAdmin()"
+      style="flex:2;padding:14px;background:#16a34a;color:#fff;
+             border:none;border-radius:12px;
+             font-size:16px;font-weight:700;cursor:pointer;">
+      ✅ Procesar
+    </button>
+  </div>
+
+  <button onclick="cerrarComandoStockAdmin()"
+    style="width:100%;padding:12px;background:none;border:none;
+           color:#888;cursor:pointer;font-size:14px;">
+    Cancelar
+  </button>
+</div>
+
+<div id="overlayComandoStockAdmin" onclick="cerrarComandoStockAdmin()"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1099;"></div>
+
+<script>
+// Mostrar FAB solo en la sección stock/inventario
+function _actualizarFabStock() {
+  const fab = document.getElementById('fabComandoStockAdmin');
+  if (!fab) return;
+  const seccionActiva = document.querySelector('.nav-item.active')?.dataset?.seccion || '';
+  fab.style.display = ['stock', 'inventario', 'productos'].includes(seccionActiva) ? 'flex' : 'none';
+}
+document.addEventListener('click', _actualizarFabStock);
+
+function _showToastAdmin(msg) {
+  if (typeof showToast === 'function') { showToast(msg); return; }
+  const t = document.createElement('div');
+  t.textContent = msg;
+  Object.assign(t.style, {
+    position:'fixed', bottom:'24px', left:'50%', transform:'translateX(-50%)',
+    background:'#333', color:'#fff', padding:'12px 20px', borderRadius:'10px',
+    zIndex:'9999', fontSize:'14px',
+  });
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function abrirComandoStockAdmin() {
+  document.getElementById('panelComandoStockAdmin').style.transform = 'translateY(0)';
+  document.getElementById('overlayComandoStockAdmin').style.display = 'block';
+  document.getElementById('resultadoComandoStockAdmin').style.display = 'none';
+  document.getElementById('inputComandoStockAdmin').value = '';
+  setTimeout(() => document.getElementById('inputComandoStockAdmin')?.focus(), 300);
+}
+
+function cerrarComandoStockAdmin() {
+  document.getElementById('panelComandoStockAdmin').style.transform = 'translateY(100%)';
+  document.getElementById('overlayComandoStockAdmin').style.display = 'none';
+  document.getElementById('resultadoComandoStockAdmin').style.display = 'none';
+  document.getElementById('inputComandoStockAdmin').value = '';
+  if (document.activeElement) document.activeElement.blur();
+}
+
+async function procesarComandoStockAdmin() {
+  const input = document.getElementById('inputComandoStockAdmin');
+  const texto = input?.value.trim();
+  const resultado = document.getElementById('resultadoComandoStockAdmin');
+  if (!texto) return;
+
+  resultado.style.display = 'block';
+  resultado.style.background = '#1e1e2e';
+  resultado.style.border = '1px solid #444';
+  resultado.style.color = '#ccc';
+  resultado.innerHTML = '⏳ Procesando...';
+
+  try {
+    const resp = await fetch('/api/voz/comando-stock', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto }),
+    });
+    const data = await resp.json();
+
+    if (data.status === 'success') {
+      resultado.style.background = '#0f2d1a';
+      resultado.style.border = '1px solid #22c55e';
+      resultado.style.color = '#86efac';
+      resultado.innerHTML = data.mensaje;
+      input.value = '';
+      setTimeout(() => cerrarComandoStockAdmin(), 2500);
+    } else {
+      resultado.style.background = '#2d1111';
+      resultado.style.border = '1px solid #ef4444';
+      resultado.style.color = '#fca5a5';
+      resultado.innerHTML = data.mensaje || 'Error desconocido';
+    }
+  } catch(e) {
+    resultado.style.background = '#2d1111';
+    resultado.style.color = '#fca5a5';
+    resultado.innerHTML = '❌ Error de conexión';
+  }
+}
+
+function activarVozStockAdmin() {
+  const btn = document.getElementById('btnVozStockAdmin');
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    _showToastAdmin('⚠️ Tu navegador no soporta voz. Escribe el comando.');
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = new SR();
+  recognition.lang = 'es-CL';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  btn.innerHTML = '🔴 Escuchando...';
+  btn.style.background = '#ef4444';
+  btn.style.border = '1px solid #ef4444';
+
+  recognition.onresult = (e) => {
+    document.getElementById('inputComandoStockAdmin').value = e.results[0][0].transcript;
+    btn.innerHTML = '🎤 Hablar';
+    btn.style.background = '';
+    btn.style.border = '';
+    procesarComandoStockAdmin();
+  };
+  recognition.onerror = () => {
+    btn.innerHTML = '🎤 Hablar';
+    btn.style.background = '';
+    btn.style.border = '';
+    _showToastAdmin('No se escuchó nada. Intenta de nuevo.');
+  };
+  recognition.onend = () => {
+    btn.innerHTML = '🎤 Hablar';
+    btn.style.background = '';
+    btn.style.border = '';
+  };
+  recognition.start();
+}
+
+// Hover effect FAB admin
+const _fabA = document.getElementById('fabComandoStockAdmin');
+if (_fabA) {
+  _fabA.addEventListener('mouseenter', () => {
+    _fabA.style.transform = 'scale(1.05)';
+    _fabA.style.boxShadow = '0 6px 24px rgba(0,0,0,0.5)';
+  });
+  _fabA.addEventListener('mouseleave', () => {
+    _fabA.style.transform = '';
+    _fabA.style.boxShadow = '0 4px 16px rgba(0,0,0,0.4)';
+  });
+}
+</script>
 </body>
 </html>
