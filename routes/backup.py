@@ -3,6 +3,7 @@ import threading
 from pathlib import Path
 from flask import Blueprint, request, jsonify, session, send_file, current_app
 from database import db_session
+from routes.config import upsert_config
 
 backup_bp = Blueprint("backup", __name__, url_prefix="/api/backup")
 logger = logging.getLogger("zero_pos.backup")
@@ -187,12 +188,7 @@ def guardar_config_backup():
         config_data["smtp_password"] = pwd
 
     with db_session() as conn:
-        for clave, valor in config_data.items():
-            conn.execute(
-                "INSERT INTO config (clave, valor) VALUES (?,?) "
-                "ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor",
-                (clave, valor),
-            )
+        upsert_config(conn, config_data)
 
     logger.info(f"Config backup actualizada: {list(config_data.keys())}")
     return jsonify({"ok": True})

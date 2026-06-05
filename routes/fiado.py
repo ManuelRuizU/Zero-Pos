@@ -251,7 +251,7 @@ def registrar_cargo():
 
         proximo = None
         if deuda_antes == 0:
-            proximo = calcular_proximo_vencimiento(c['frecuencia_pago'], c['fecha_pago_fija'])
+            proximo = calcular_proximo_vencimiento(c['frecuencia_pago'], c['fecha_pago_fija'], c.get('dia_pago'))
 
         if proximo:
             conn.execute(
@@ -294,7 +294,7 @@ def registrar_abono():
         deuda_despues = deuda_antes - monto
         proximo = None
         if deuda_despues == 0:
-            proximo = calcular_proximo_vencimiento(c['frecuencia_pago'], c['fecha_pago_fija'])
+            proximo = calcular_proximo_vencimiento(c['frecuencia_pago'], c['fecha_pago_fija'], c.get('dia_pago'))
 
         if proximo:
             conn.execute(
@@ -321,10 +321,22 @@ def editar_cliente(cid):
         return jsonify({"error": "Sin permisos"}), 403
     data = request.get_json(silent=True) or {}
     campos = {k: data[k] for k in ['nombre', 'apellido', 'telefono', 'email', 'rut', 'direccion',
-                                    'limite_credito', 'frecuencia_pago', 'fecha_pago_fija', 'notas']
+                                    'limite_credito', 'frecuencia_pago', 'fecha_pago_fija',
+                                    'dia_pago', 'notas']
               if k in data}
     if not campos:
         return jsonify({"error": "Sin campos"}), 400
+
+    # Recalcular proximo_vencimiento si cambia algún campo que lo determina
+    recalc_keys = {'frecuencia_pago', 'fecha_pago_fija', 'dia_pago'}
+    if recalc_keys & campos.keys():
+        with db_session() as conn:
+            base = dict(conn.execute("SELECT * FROM clientes_fiado WHERE id=?", (cid,)).fetchone() or {})
+        frecuencia = campos.get('frecuencia_pago', base.get('frecuencia_pago'))
+        fecha_fija = campos.get('fecha_pago_fija', base.get('fecha_pago_fija'))
+        dia_pago   = campos.get('dia_pago', base.get('dia_pago'))
+        campos['proximo_vencimiento'] = calcular_proximo_vencimiento(frecuencia, fecha_fija, dia_pago).isoformat()
+
     set_sql = ", ".join(f"{k}=?" for k in campos) + ", actualizado_en=CURRENT_TIMESTAMP"
     with db_session() as conn:
         conn.execute(f"UPDATE clientes_fiado SET {set_sql} WHERE id=?", [*campos.values(), cid])

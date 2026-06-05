@@ -1320,9 +1320,7 @@ async function guardarSeccion(seccion) {
   const data = {};
 
   for (const clave of claves) {
-    const elId = 'cfg_' + clave;
-    // banco_titular y rut_negocio_banco son especiales
-    const el = document.getElementById(elId) || document.getElementById('cfg_rut_negocio_banco');
+    const el = document.getElementById('cfg_' + clave);
     if (!el) continue;
 
     if (el.type === 'checkbox') {
@@ -1334,7 +1332,7 @@ async function guardarSeccion(seccion) {
     }
   }
 
-  // caso especial: rut en datos bancarios sincroniza rut_negocio
+  // El RUT en datos bancarios es el mismo que rut_negocio (campo compartido)
   if (seccion === 'banco') {
     const rutBanco = document.getElementById('cfg_rut_negocio_banco')?.value.trim();
     if (rutBanco) data['rut_negocio'] = rutBanco;

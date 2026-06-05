@@ -1,9 +1,17 @@
 import logging
+import time
+from collections import defaultdict
 from flask import Blueprint, request, jsonify, session
 from database import db_session
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 logger = logging.getLogger("zero_pos.auth")
+
+_MAX_INTENTOS = 10
+_BLOQUEO_SEGUNDOS = 300  # 5 minutos
+
+_intentos: dict[str, int]   = defaultdict(int)
+_bloqueado_hasta: dict[str, float] = {}
 
 
 def _usuario_activo(conn, usuario_id: int):
@@ -45,6 +53,14 @@ def _contar_sesiones_activas() -> int:
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
+    ip = request.remote_addr or "unknown"
+    ahora = time.time()
+
+    if _bloqueado_hasta.get(ip, 0) > ahora:
+        restante = int(_bloqueado_hasta[ip] - ahora)
+        logger.warning(f"Login bloqueado por fuerza bruta: ip={ip} restante={restante}s")
+        return jsonify({"error": f"Demasiados intentos. Espera {restante} segundos."}), 429
+
     data = request.get_json(silent=True) or {}
     pin = str(data.get("pin", "")).strip()
 
@@ -88,6 +104,10 @@ def login():
                             "upgrade": True,
                         }), 403
 
+                # Login exitoso — limpiar contador
+                _intentos.pop(ip, None)
+                _bloqueado_hasta.pop(ip, None)
+
                 session["usuario_id"]       = u["id"]
                 session["usuario_nombre"]   = u["nombre"]
                 session["usuario_rol"]      = u["rol"]
@@ -114,6 +134,13 @@ def login():
                 })
             except Exception:
                 continue
+
+    _intentos[ip] += 1
+    if _intentos[ip] >= _MAX_INTENTOS:
+        _bloqueado_hasta[ip] = time.time() + _BLOQUEO_SEGUNDOS
+        _intentos.pop(ip, None)
+        logger.warning(f"IP bloqueada por fuerza bruta: {ip}")
+        return jsonify({"error": f"Demasiados intentos. Bloqueado por {_BLOQUEO_SEGUNDOS // 60} minutos."}), 429
 
     return jsonify({"error": "PIN incorrecto"}), 401
 

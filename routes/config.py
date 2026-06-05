@@ -45,6 +45,16 @@ CLAVES_PERMITIDAS = {
 }
 
 
+def upsert_config(conn, data: dict) -> None:
+    """Escribe claves de configuración usando la misma lógica de upsert en ambas rutas."""
+    for clave, valor in data.items():
+        conn.execute(
+            "INSERT INTO config (clave, valor) VALUES (?,?) "
+            "ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor",
+            (clave, str(valor) if valor is not None else "")
+        )
+
+
 @config_bp.route("", methods=["GET"])
 def obtener():
     if not session.get("usuario_id"):
@@ -65,12 +75,7 @@ def guardar():
         return jsonify({"error": f"Claves no permitidas: {rechazadas}"}), 400
 
     with db_session() as conn:
-        for clave, valor in data.items():
-            conn.execute(
-                "INSERT INTO config (clave, valor) VALUES (?,?) "
-                "ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor",
-                (clave, str(valor) if valor is not None else "")
-            )
+        upsert_config(conn, data)
 
     logger.info(f"Config actualizada: {list(data.keys())}")
     return jsonify({"ok": True})
