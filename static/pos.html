@@ -1270,6 +1270,32 @@ const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
 let productos = [];
 let carrito = [];
 let cfgApp = {};  // config del negocio cargada al inicio
+let _meId = null;
+
+// ── Cart localStorage ────────────────────────────────────────
+const _CARRITO_KEY = 'zero_carrito_v1';
+function guardarCarritoLocal(items, uid) {
+  try {
+    if (!uid) return;
+    if (!items.length) { limpiarCarritoLocal(); return; }
+    localStorage.setItem(_CARRITO_KEY, JSON.stringify({
+      items, usuario_id: uid, timestamp: Date.now()
+    }));
+  } catch(e) {}
+}
+function recuperarCarritoLocal(uid) {
+  try {
+    const raw = localStorage.getItem(_CARRITO_KEY);
+    if (!raw) return [];
+    const d = JSON.parse(raw);
+    if (d.usuario_id !== uid) { limpiarCarritoLocal(); return []; }
+    if (Date.now() - d.timestamp > 86400000) { limpiarCarritoLocal(); return []; }
+    return d.items || [];
+  } catch(e) { return []; }
+}
+function limpiarCarritoLocal() {
+  localStorage.removeItem(_CARRITO_KEY);
+}
 let modoVista = localStorage.getItem('modo_vista') || 'grid';
 let categoriaActual = '';
 let subcatActual = '';
@@ -1918,6 +1944,7 @@ let _permisosPOS = {};
 async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
+  _meId = me.id;
   document.getElementById('cajeroNombre').textContent = `👤 ${me.nombre}`;
   _permisosPOS = me.permisos || {};
   _aplicarPermisosPOS(me);
@@ -2460,6 +2487,8 @@ let _pantallaTimer = null;
 function limpiarCarrito() { carrito = []; renderCarrito(); }
 
 function renderCarrito() {
+  guardarCarritoLocal(carrito, _meId);
+
   const el = document.getElementById('carritoItems');
   const totalItems = carrito.reduce((s, i) => s + i.cantidad, 0);
   document.getElementById('itemCount').textContent = totalItems;
@@ -3833,6 +3862,7 @@ function abrirEscaner() {
 }
 function abrirScanner() { abrirEscaner(); }
 async function cerrarSesion() {
+  limpiarCarritoLocal();
   await fetch('/api/auth/logout', {method:'POST', credentials:'include'});
   location.href = 'login.html';
 }
