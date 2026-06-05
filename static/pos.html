@@ -2290,6 +2290,7 @@ function abrirModalPrecio(prod) {
 function cerrarPrecioRapido() {
   _prodPrecioRapido = null;
   document.getElementById('modalPrecioRapido').classList.remove('active');
+  cerrarPanelSinTeclado();
 }
 
 async function confirmarPrecioRapido() {
@@ -2412,6 +2413,7 @@ function confirmarModificadores() {
 function cerrarModalModificadores() {
   document.getElementById('modalModificadores').style.display = 'none';
   _modifProd = null;
+  cerrarPanelSinTeclado();
 }
 
 function _agregarProdAlCarrito(prod, modifDesc, precioExtra) {
@@ -2611,6 +2613,7 @@ function abrirCobro() {
 
 function cerrarEntregaModal() {
   document.getElementById('modalEntrega').classList.remove('active');
+  cerrarPanelSinTeclado();
 }
 
 function selEntrega(tipo) {
@@ -3531,6 +3534,7 @@ async function abrirVariantes(prod) {
 function cerrarVariantes() {
   document.getElementById('modalVariantes').classList.remove('active');
   productoActual = null;
+  cerrarPanelSinTeclado();
 }
 
 function agregarAlCarritoConVariante(prod, variante) {
@@ -3565,7 +3569,7 @@ function abrirVentaRapida() {
   document.getElementById('modalRapida').classList.add('active');
 }
 
-function cerrarVentaRapida() { document.getElementById('modalRapida').classList.remove('active'); }
+function cerrarVentaRapida() { document.getElementById('modalRapida').classList.remove('active'); cerrarPanelSinTeclado(); }
 
 function lookupRapida(codigo) {
   clearTimeout(lookupTimer);
@@ -4227,6 +4231,7 @@ async function abrirHistorial() {
 
 function cerrarHistorial() {
   document.getElementById('drawerHistorial').style.display = 'none';
+  cerrarPanelSinTeclado();
 }
 
 function _renderHistorial(ventas) {
