@@ -140,12 +140,27 @@ def generar_portal_html(cliente: dict, negocio: dict, movimientos: list) -> str:
     qr_token = cliente.get('qr_token', '')
     tema_color = negocio.get('tema_color', '#6366f1')
 
-    # Banner PWA (instalar app)
-    pwa_banner = """
-    <div id="pwa-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1e1e2e;border-top:1px solid #333;padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:1000">
-      <div style="flex:1;font-size:13px">📲 Instala esta app para ver tu deuda sin internet</div>
-      <button onclick="installPWA()" style="background:#6366f1;border:none;color:white;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px">Instalar</button>
-      <button onclick="document.getElementById('pwa-banner').style.display='none'" style="background:none;border:none;color:#888;cursor:pointer;font-size:18px">×</button>
+    # Banner instalar (instrucciones por dispositivo)
+    instalar_banner = """
+    <div id="bannerInstalar" style="background:#1e1e2e;border:1px solid #2d2d3d;border-radius:12px;padding:14px 16px;margin:12px 0;">
+      <div style="font-size:13px;font-weight:600;color:white;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+        📲 Guardar en tu teléfono
+      </div>
+      <div id="instruccionesIOS" style="display:none">
+        <div style="font-size:12px;color:#64748b;line-height:1.6;">
+          En Safari toca <strong style="color:white">[⬆️ Compartir]</strong> y luego <strong style="color:white">"Añadir a pantalla de inicio"</strong>
+        </div>
+      </div>
+      <div id="instruccionesAndroid" style="display:none">
+        <div style="font-size:12px;color:#64748b;line-height:1.6;">
+          En Chrome toca <strong style="color:white">[⋮ Menú]</strong> y luego <strong style="color:white">"Añadir a pantalla de inicio"</strong>
+        </div>
+      </div>
+      <div id="instruccionesGeneral" style="display:none">
+        <div style="font-size:12px;color:#64748b;">
+          Abre el menú de tu navegador y toca "Añadir a pantalla de inicio"
+        </div>
+      </div>
     </div>"""
 
     html = f"""<!DOCTYPE html>
@@ -324,7 +339,7 @@ def generar_portal_html(cliente: dict, negocio: dict, movimientos: list) -> str:
   <div class="main">
     <div class="deuda-card">
       <div class="deuda-label">Tu deuda actual</div>
-      <div class="deuda-monto">${deuda:,}</div>
+      <div class="deuda-monto" id="montoDeuda">${deuda:,}</div>
       <div class="estado-badge {estado_css}">{estado_label}</div>
       <div class="progress-track">
         <div class="progress-fill"></div>
@@ -340,6 +355,7 @@ def generar_portal_html(cliente: dict, negocio: dict, movimientos: list) -> str:
         </div>
       </div>
       {f'<div class="venc-texto">{venc_texto}</div>' if venc_texto else ''}
+      <div id="estadoConexion" style="text-align:center;font-size:11px;color:#64748b;padding:4px;margin-top:4px;">✅ Datos actualizados</div>
     </div>
 
     <div class="seccion">
@@ -350,15 +366,18 @@ def generar_portal_html(cliente: dict, negocio: dict, movimientos: list) -> str:
     {banco_html}
     {wa_html}
 
+    {instalar_banner}
+
     <div class="footer">
       Actualizado: {date.today().strftime('%d/%m/%Y')} · ZERO CREDIT
+      <p style="text-align:center;font-size:11px;color:#64748b;padding:8px 16px;line-height:1.5;margin-top:6px;">
+        💡 Al guardar esta página en tu pantalla de inicio podrás consultar tu cuenta aunque no tengas internet.
+      </p>
     </div>
   </div>
 
-  {pwa_banner}
-
   <script>
-    // Estado de conexión
+    // Estado de conexión (banner superior)
     function mostrarEstadoConexion() {{
       const banner = document.getElementById('bannerConexion');
       if (!banner) return;
@@ -375,24 +394,82 @@ def generar_portal_html(cliente: dict, negocio: dict, movimientos: list) -> str:
     window.addEventListener('online',  mostrarEstadoConexion);
     window.addEventListener('offline', mostrarEstadoConexion);
 
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', e => {{
-      e.preventDefault();
-      deferredPrompt = e;
-      const banner = document.getElementById('pwa-banner');
-      if (banner) banner.style.display = 'flex';
-    }});
+    // Auto-actualización cada 30s
+    let intervaloActualizacion = null;
 
-    function installPWA() {{
-      if (deferredPrompt) {{
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => {{
-          deferredPrompt = null;
-          const banner = document.getElementById('pwa-banner');
-          if (banner) banner.style.display = 'none';
-        }});
+    function iniciarAutoActualizacion() {{
+      actualizarDatos();
+      intervaloActualizacion = setInterval(actualizarDatos, 30000);
+    }}
+
+    async function actualizarDatos() {{
+      if (!navigator.onLine) return;
+      try {{
+        const resp = await fetch(window.location.href, {{ cache: 'no-store' }});
+        if (!resp.ok) return;
+        const html = await resp.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const nuevoMonto = doc.getElementById('montoDeuda')?.textContent;
+        const montoActual = document.getElementById('montoDeuda')?.textContent;
+        if (nuevoMonto && nuevoMonto !== montoActual) {{
+          location.reload();
+        }}
+        const indicador = document.getElementById('estadoConexion');
+        if (indicador) {{
+          indicador.textContent = '✅ Actualizado: ' + new Date().toLocaleTimeString('es-CL');
+          localStorage.setItem('zc_ultima_actualizacion', new Date().toLocaleString('es-CL'));
+        }}
+      }} catch(e) {{
+        const indicador = document.getElementById('estadoConexion');
+        if (indicador) {{
+          const ultima = localStorage.getItem('zc_ultima_actualizacion') || 'desconocida';
+          indicador.textContent = '📵 Sin conexión · ' + ultima;
+        }}
       }}
     }}
+
+    iniciarAutoActualizacion();
+    document.addEventListener('visibilitychange', () => {{
+      if (document.hidden) {{
+        clearInterval(intervaloActualizacion);
+      }} else {{
+        iniciarAutoActualizacion();
+      }}
+    }});
+
+    // Instrucciones instalar por dispositivo
+    let deferredPrompt;
+
+    function instalarPWA() {{
+      if (deferredPrompt) {{
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {{ deferredPrompt = null; }});
+      }}
+    }}
+
+    function mostrarInstruccionesInstalar() {{
+      const ua = navigator.userAgent;
+      const esIOS = /iPhone|iPad|iPod/i.test(ua);
+      const esAndroid = /Android/i.test(ua);
+      const esSafari = /Safari/i.test(ua) && !/Chrome/i.test(ua);
+      if (esIOS && esSafari) {{
+        document.getElementById('instruccionesIOS').style.display = 'block';
+      }} else if (esAndroid) {{
+        document.getElementById('instruccionesAndroid').style.display = 'block';
+      }} else {{
+        document.getElementById('instruccionesGeneral').style.display = 'block';
+      }}
+      window.addEventListener('beforeinstallprompt', (e) => {{
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById('bannerInstalar').innerHTML = `
+          <button onclick="instalarPWA()" style="width:100%;padding:12px;background:{tema_color};color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;">
+            📲 Instalar en este teléfono
+          </button>`;
+      }});
+    }}
+    mostrarInstruccionesInstalar();
 
     if ('serviceWorker' in navigator) {{
       navigator.serviceWorker.register('/credit/sw/{qr_token}.js', {{scope: '/credit/'}})
