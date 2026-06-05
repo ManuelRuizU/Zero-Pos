@@ -180,12 +180,12 @@ def obtener_cliente(cid):
         c = conn.execute("SELECT * FROM clientes_fiado WHERE id=?", (cid,)).fetchone()
         if not c:
             return jsonify({"error": "No encontrado"}), 404
-        movs = conn.execute(
+        c = dict(c)
+        movs = [dict(m) for m in conn.execute(
             "SELECT * FROM fiado_movimientos WHERE cliente_id=? ORDER BY creado_en DESC LIMIT 20",
             (cid,)
-        ).fetchall()
-    cliente = dict(c)
-    return jsonify({**cliente, **_estado_cliente(cliente), 'movimientos': [dict(m) for m in movs]})
+        ).fetchall()]
+    return jsonify({**c, **_estado_cliente(c), 'movimientos': movs})
 
 
 @fiado_bp.route("/token/<qr_token>", methods=["GET"])
@@ -418,9 +418,11 @@ def imprimir_tarjeta(cid):
         return jsonify({"error": "No autenticado"}), 401
     with db_session() as conn:
         c = conn.execute("SELECT * FROM clientes_fiado WHERE id=?", (cid,)).fetchone()
+        if c:
+            c = dict(c)
         cfg_rows = conn.execute("SELECT clave,valor FROM config").fetchall()
     if not c:
         return jsonify({"error": "No encontrado"}), 404
     config = {r['clave']: r['valor'] for r in cfg_rows}
     from utils.impresora import imprimir_tarjeta_credit
-    return jsonify(imprimir_tarjeta_credit(dict(c), config))
+    return jsonify(imprimir_tarjeta_credit(c, config))
