@@ -1972,6 +1972,25 @@ async function init() {
   _initVista();
   await cargarCategorias();
   await cargarProductos();
+
+  // Recuperar carrito guardado (validar que los productos siguen existiendo)
+  const itemsGuardados = recuperarCarritoLocal(_meId);
+  if (itemsGuardados.length > 0) {
+    itemsGuardados.forEach(item => {
+      const prod = indiceId.get(item.id);
+      if (prod) {
+        const existente = carrito.find(c => c.id === item.id);
+        if (existente) { existente.cantidad += item.cantidad; }
+        else { carrito.push({...prod, cantidad: item.cantidad, precio_unit: item.precio_unit ?? prod.precio}); }
+      }
+    });
+    if (carrito.length > 0) {
+      renderCarrito();
+      const n = carrito.length;
+      setTimeout(() => showToast(`🛒 Carrito recuperado — ${n} producto${n>1?'s':''}`, 'info'), 800);
+    }
+  }
+
   verificarAlertas();
   verificarTurno(me);
   initVoz();
