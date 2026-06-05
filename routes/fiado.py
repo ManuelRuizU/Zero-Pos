@@ -54,7 +54,9 @@ def generar_qr_base64(contenido: str):
         return None
 
 
-def _estado_cliente(c: dict) -> dict:
+def _estado_cliente(c) -> dict:
+    if not isinstance(c, dict):
+        c = dict(c)
     hoy = date.today()
     deuda = c.get('deuda_actual', 0) or 0
     limite = c.get('limite_credito', 10000) or 10000
@@ -239,6 +241,7 @@ def registrar_cargo():
         c = conn.execute("SELECT * FROM clientes_fiado WHERE id=? AND activo=1", (cliente_id,)).fetchone()
         if not c:
             return jsonify({"error": "Cliente no encontrado"}), 404
+        c = dict(c)
         deuda_antes = c['deuda_actual']
         deuda_despues = deuda_antes + monto
         if deuda_despues > c['limite_credito']:
@@ -288,6 +291,7 @@ def registrar_abono():
         c = conn.execute("SELECT * FROM clientes_fiado WHERE id=? AND activo=1", (cliente_id,)).fetchone()
         if not c:
             return jsonify({"error": "Cliente no encontrado"}), 404
+        c = dict(c)
         deuda_antes = c['deuda_actual']
         if monto > deuda_antes:
             return jsonify({"error": f"No puede abonar más de la deuda actual (${deuda_antes:,})"}), 400
@@ -388,6 +392,7 @@ def generar_tarjeta(cid):
         ).fetchall()
     if not c:
         return jsonify({"error": "No encontrado"}), 404
+    c = dict(c)
     negocio = {r['clave']: r['valor'] for r in cfg_rows}
     ip = negocio.get('ip_local', '127.0.0.1')
     url = f"http://{ip}:5000/credit/{c['qr_token']}"
