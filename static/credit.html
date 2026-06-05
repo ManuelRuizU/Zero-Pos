@@ -155,6 +155,7 @@
       <div id="modalClienteContenido"></div>
       <div class="modal-btns" style="margin-top:16px">
         <button class="btn" onclick="cerrarModalCliente()">Cerrar</button>
+        <button class="btn" id="btnReimprimirTarjeta" onclick="reimprimirTarjeta()">🖨️ Reimprimir tarjeta</button>
         <button class="btn primary" onclick="abrirModalAbono()">💳 Registrar abono</button>
       </div>
     </div>
@@ -414,6 +415,44 @@
       cargarResumen();
     } else {
       showToast(r.error || 'Error al crear', 'error');
+    }
+  }
+
+  async function reimprimirTarjeta() {
+    if (!_clienteActual) return;
+    const btn = document.getElementById('btnReimprimirTarjeta');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando…'; }
+    try {
+      // Obtener QR actualizado (puerto :5000)
+      const r = await fetch(`/api/fiado/clientes/${_clienteActual.id}/tarjeta`, {
+        method: 'POST', credentials: 'include'
+      }).then(res => res.json()).catch(() => ({}));
+
+      if (!r.qr_imagen) { showToast('Error al obtener tarjeta', 'error'); return; }
+
+      // Mostrar popup para imprimir manualmente (siempre)
+      const w = window.open('', '_blank', 'width=420,height=560');
+      if (w) {
+        w.document.write(`<!DOCTYPE html><html><head><title>ZERO CREDIT — ${escH(_clienteActual.nombre)}</title></head>
+          <body style="text-align:center;font-family:sans-serif;padding:20px;background:#fff">
+            <h2 style="margin-bottom:4px">ZERO CREDIT</h2>
+            <h3 style="margin-top:0">${escH(_clienteActual.nombre)} ${escH(_clienteActual.apellido||'')}</h3>
+            <img src="data:image/png;base64,${r.qr_imagen}" style="width:200px;height:200px;display:block;margin:0 auto">
+            <p style="font-size:14px">Límite: ${fmt(_clienteActual.limite_credito||0)}</p>
+            <p style="font-size:11px;word-break:break-all"><a href="${r.url_portal}">${r.url_portal}</a></p>
+            <button onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;margin-top:8px">🖨️ Imprimir</button>
+          </body></html>`);
+        w.document.close();
+      }
+
+      // Intentar también enviar a impresora térmica (silencioso si falla)
+      fetch(`/api/fiado/clientes/${_clienteActual.id}/imprimir_tarjeta`, {
+        method: 'POST', credentials: 'include'
+      }).then(res => res.json()).then(res => {
+        if (res.ok) showToast('✓ Tarjeta enviada a impresora térmica');
+      }).catch(() => {});
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🖨️ Reimprimir tarjeta'; }
     }
   }
 

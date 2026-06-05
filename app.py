@@ -141,6 +141,98 @@ def find_free_port(preferred: int = 5000) -> int:
     return preferred
 
 
+def _run_mux(host: str, mux_port: int, https_int_port: int, http_port: int) -> None:
+    """
+    Protocol multiplexer (blocks forever).
+    TLS connections  → TCP-proxied to 127.0.0.1:https_int_port (HTTPS interno)
+    HTTP connections → 301 redirect a http://<host>:http_port<path>
+    """
+    mux = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    mux.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    mux.bind((host, mux_port))
+    mux.listen(256)
+    logger.info(f"Mux :{mux_port}  HTTP→:{http_port}  TLS→:127.0.0.1:{https_int_port}")
+
+    def _pipe(src: socket.socket, dst: socket.socket) -> None:
+        try:
+            while chunk := src.recv(32768):
+                dst.sendall(chunk)
+        except Exception:
+            pass
+        for s in (src, dst):
+            try:
+                s.shutdown(socket.SHUT_RDWR)
+            except Exception:
+                pass
+            try:
+                s.close()
+            except Exception:
+                pass
+
+    def _redirect(conn: socket.socket, client_ip: str) -> None:
+        try:
+            conn.settimeout(5)
+            raw = b""
+            while b"\r\n\r\n" not in raw and len(raw) < 8192:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    break
+                raw += chunk
+            path, host_hdr = "/", client_ip
+            for i, line in enumerate(raw.decode("utf-8", "replace").split("\r\n")):
+                if i == 0:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        path = parts[1]
+                elif line.lower().startswith("host:"):
+                    host_hdr = line.split(":", 1)[1].strip().split(":")[0]
+            conn.sendall((
+                f"HTTP/1.1 301 Moved Permanently\r\n"
+                f"Location: http://{host_hdr}:{http_port}{path}\r\n"
+                f"Content-Length: 0\r\nConnection: close\r\n\r\n"
+            ).encode())
+        except Exception:
+            pass
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    def _handle(conn: socket.socket, addr: tuple) -> None:
+        try:
+            probe = conn.recv(1, socket.MSG_PEEK)
+            if not probe:
+                conn.close()
+                return
+            if probe[0] == 0x16:   # TLS ClientHello
+                try:
+                    backend = socket.create_connection(("127.0.0.1", https_int_port), timeout=3)
+                    threading.Thread(target=_pipe, args=(conn, backend), daemon=True).start()
+                    _pipe(backend, conn)
+                except Exception:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+            else:                  # Plain HTTP
+                _redirect(conn, addr[0])
+        except Exception:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    while True:
+        try:
+            conn, addr = mux.accept()
+            threading.Thread(target=_handle, args=(conn, addr), daemon=True).start()
+        except Exception as exc:
+            if mux.fileno() == -1:
+                break
+            logger.warning(f"Mux accept error: {exc}")
+
+
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", static_url_path="/static")
 
@@ -680,29 +772,38 @@ if __name__ == "__main__":
         logger.info(f"  URL: {scheme}://{HOTSPOT_IP}:{port}")
     if ssl_ctx:
         logger.info("  HTTPS activo — acepta el certificado en Chrome una vez")
-        logger.info(f"  QR Clientes:  http://{local_ip}:5000/credit/")
-        logger.info("  (Puerto HTTP para Android y otros, sin certificado)")
+        logger.info(f"  QR Clientes:  http://{local_ip}:5000/credit/  (HTTP, sin cert)")
+        logger.info(f"  QR antiguos:  http://{local_ip}:5001 → redirect automático a :5000")
     else:
         logger.info("  HTTP (micrófono solo en localhost)")
     logger.info("=" * 60)
 
     if ssl_ctx:
-        # Hilo HTTP en puerto 5000 para QR de clientes (Android rechaza cert autofirmado)
-        def _iniciar_http(flask_app):
-            from werkzeug.serving import make_server
+        from werkzeug.serving import make_server as _ws
+
+        # 1. Servidor HTTPS interno (loopback) — proxeado a través del mux
+        _int_port = find_free_port(5099)
+        _srv_https = _ws("127.0.0.1", _int_port, app, ssl_context=ssl_ctx)
+        threading.Thread(
+            target=_srv_https.serve_forever, daemon=True, name="HTTPS-int"
+        ).start()
+        logger.info(f"Servidor HTTPS interno en 127.0.0.1:{_int_port}")
+
+        # 2. Servidor HTTP en puerto 5000 (para QR de clientes — sin cert)
+        def _http_5000(flask_app: Flask) -> None:
             try:
-                srv = make_server("0.0.0.0", 5000, flask_app)
-                logger.info("Servidor HTTP iniciado en puerto 5000 (para QR de clientes)")
+                srv = _ws("0.0.0.0", 5000, flask_app)
+                logger.info("Servidor HTTP iniciado en :5000 (QR clientes)")
                 srv.serve_forever()
-            except Exception as e:
-                logger.warning(f"Servidor HTTP puerto 5000 no disponible: {e}")
+            except Exception as exc:
+                logger.warning(f"Servidor HTTP :5000 no disponible: {exc}")
 
-        hilo_http = threading.Thread(target=_iniciar_http, args=(app,), daemon=True)
-        hilo_http.start()
+        threading.Thread(
+            target=_http_5000, args=(app,), daemon=True, name="HTTP-5000"
+        ).start()
 
-        # Servidor principal HTTPS en Werkzeug
-        app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False,
-                ssl_context=ssl_ctx)
+        # 3. Mux :5001 — detecta HTTP vs TLS y redirige/proxea (bloquea main thread)
+        _run_mux("0.0.0.0", port, _int_port, 5000)
     else:
         try:
             from waitress import serve
