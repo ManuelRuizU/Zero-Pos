@@ -149,12 +149,12 @@
   </div>
 
   <!-- Modal detalle cliente -->
-  <div class="modal-overlay" id="modalCliente">
-    <div class="modal" style="max-width:600px">
+  <div class="modal-overlay" id="modalCliente" onclick="if(event.target===this)cerrarModalCliente()">
+    <div class="modal" style="max-width:600px" onclick="event.stopPropagation()">
       <div class="modal-title" id="modalClienteTitulo">Cliente</div>
       <div id="modalClienteContenido"></div>
       <div class="modal-btns" style="margin-top:16px">
-        <button class="btn" onclick="cerrarModalCliente()">Cerrar</button>
+        <button class="btn" id="btnCerrarModalCliente" onclick="cerrarModalCliente()">Cerrar</button>
         <button class="btn" id="btnReimprimirTarjeta" onclick="reimprimirTarjeta()">🖨️ Reimprimir tarjeta</button>
         <button class="btn primary" onclick="abrirModalAbono()">💳 Registrar abono</button>
       </div>
@@ -336,11 +336,14 @@
       <div style="max-height:200px;overflow-y:auto">${movs||'<div style="color:var(--text-dim);font-size:12px">Sin movimientos</div>'}</div>
     `;
     document.getElementById('modalCliente').classList.add('active');
+    document.body.style.overflow = 'hidden';
   }
 
   function cerrarModalCliente() {
     document.getElementById('modalCliente').classList.remove('active');
+    document.body.style.overflow = '';
     _clienteActual = null;
+    if (document.activeElement) document.activeElement.blur();
   }
 
   function abrirModalAbono() {
@@ -421,16 +424,16 @@
   async function reimprimirTarjeta() {
     if (!_clienteActual) return;
     const btn = document.getElementById('btnReimprimirTarjeta');
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando…'; }
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Generando…'; btn.style.background = ''; }
+
     try {
-      // Obtener QR actualizado (puerto :5000)
       const r = await fetch(`/api/fiado/clientes/${_clienteActual.id}/tarjeta`, {
         method: 'POST', credentials: 'include'
-      }).then(res => res.json()).catch(() => ({}));
+      }).then(res => res.json());
 
-      if (!r.qr_imagen) { showToast('Error al obtener tarjeta', 'error'); return; }
+      if (!r.qr_imagen) throw new Error('Sin QR');
 
-      // Mostrar popup para imprimir manualmente (siempre)
+      // Popup para imprimir manualmente
       const w = window.open('', '_blank', 'width=420,height=560');
       if (w) {
         w.document.write(`<!DOCTYPE html><html><head><title>ZERO CREDIT — ${escH(_clienteActual.nombre)}</title></head>
@@ -445,20 +448,33 @@
         w.document.close();
       }
 
-      // Intentar también enviar a impresora térmica (silencioso si falla)
+      // Impresora térmica (silenciosa)
       fetch(`/api/fiado/clientes/${_clienteActual.id}/imprimir_tarjeta`, {
         method: 'POST', credentials: 'include'
       }).then(res => res.json()).then(res => {
         if (res.ok) showToast('✓ Tarjeta enviada a impresora térmica');
       }).catch(() => {});
+
+      if (btn) { btn.textContent = '✅ Impreso'; btn.style.background = '#22c55e'; }
+
+    } catch(e) {
+      showToast('Error al obtener tarjeta', 'error');
+      if (btn) { btn.textContent = '❌ Error'; btn.style.background = '#ef4444'; }
+
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '🖨️ Reimprimir tarjeta'; }
+      setTimeout(() => {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = '🖨️ Reimprimir tarjeta';
+          btn.style.background = '';
+        }
+      }, 2000);
     }
   }
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      document.getElementById('modalCliente').classList.remove('active');
+      cerrarModalCliente();
       document.getElementById('modalAbono').classList.remove('active');
       document.getElementById('modalNuevoCliente').classList.remove('active');
     }
