@@ -357,11 +357,6 @@ def _m010_zero_credit(conn):
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_cliente ON fiado_movimientos(cliente_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_vencimiento ON clientes_fiado(proximo_vencimiento)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_fiado_deuda ON clientes_fiado(deuda_actual) WHERE deuda_actual > 0")
-    # Migración: columna dia_pago para día fijo del mes
-    try:
-        conn.execute("ALTER TABLE clientes_fiado ADD COLUMN dia_pago INTEGER DEFAULT 15")
-    except Exception:
-        pass
 
 
 def _m009_modificadores(conn):
@@ -395,6 +390,15 @@ def _m009_modificadores(conn):
         conn.execute("ALTER TABLE venta_items ADD COLUMN modificadores_desc TEXT")
 
 
+def _m011_dia_pago(conn):
+    """Agrega columna dia_pago a clientes_fiado para cobros mensuales en día fijo."""
+    try:
+        conn.execute("ALTER TABLE clientes_fiado ADD COLUMN dia_pago INTEGER DEFAULT 15")
+        logger.info("Migración: dia_pago agregado a clientes_fiado")
+    except Exception as e:
+        logger.debug(f"dia_pago ya existe: {e}")
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -406,6 +410,7 @@ _MIGRACIONES = [
     (8, "vocabulario_local: expresiones coloquiales aprendidas sin TinyLlama",   _m008_vocabulario_local),
     (9, "modificadores: toppings y opciones para sushi/food trucks",             _m009_modificadores),
     (10, "ZERO CREDIT: clientes_fiado y fiado_movimientos",                      _m010_zero_credit),
+    (11, "dia_pago: día de cobro fijo mensual en clientes_fiado",               _m011_dia_pago),
 ]
 
 
