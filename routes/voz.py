@@ -6,7 +6,7 @@ import urllib.request
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from flask import Blueprint, request, jsonify, session
-from database import db_session
+from database import db_session, registrar_movimiento_stock
 from utils.consultas_rapidas import (
     ventas_hoy as _cq_ventas_hoy,
     ventas_ayer as _cq_ventas_ayer,
@@ -1814,3 +1814,203 @@ def historial():
             "ORDER BY vh.creado_en DESC LIMIT 50"
         ).fetchall()
         return jsonify([dict(r) for r in rows])
+
+
+# ── Comando de stock por voz ──────────────────────────────────────────────────
+
+def _regex_stock(texto: str):
+    """
+    Extrae cantidad, producto y precio_costo con expresión regular.
+    Cubre: '20 Coca-Cola', 'llegaron 20 Coca-Cola a $850',
+           'recibí 12 pan molde', '20 unidades de Coca-Cola 1.5L'
+    """
+    texto = texto.strip()
+
+    # Quitar verbo introductorio si existe
+    texto_norm = re.sub(
+        r'^(?:llegaron|llegó|recib[ií]|sumar?|agregar?|entró|entraron|compré?)\s+',
+        '', texto, flags=re.IGNORECASE,
+    ).strip()
+
+    # Patrón principal: <cantidad> [unidades de] <producto> [a $<precio>]
+    m = re.match(
+        r'^(\d+)\s+(?:unidades?\s+de\s+)?'
+        r'(.+?)'
+        r'(?:\s+a\s+\$?\s*(\d+))?\s*$',
+        texto_norm, re.IGNORECASE,
+    )
+    if not m:
+        return None
+
+    cantidad_str = m.group(1)
+    producto = m.group(2).strip()
+    precio_str = m.group(3)
+
+    # Limpiar artículos/preposiciones finales sueltos
+    producto = re.sub(
+        r'\s+(?:a|al|por|cada|el|la|los|las)\s*$', '', producto, flags=re.IGNORECASE,
+    ).strip()
+
+    return {
+        "cantidad": int(cantidad_str),
+        "producto": producto,
+        "precio_costo": int(precio_str) if precio_str else None,
+    }
+
+
+def _ia_stock(texto: str):
+    """
+    Fallback TinyLlama para comandos que regex no puede resolver.
+    Ej: 'media docena de jugos', 'una caja de 24 Coca-Colas'.
+    """
+    if not _ollama_ok():
+        return None
+
+    prompt = (
+        f'Extrae datos de inventario del siguiente texto en español.\n'
+        f'Texto: "{texto}"\n'
+        f'Responde SOLO con JSON con estas claves:\n'
+        f'- producto: nombre del producto (string)\n'
+        f'- cantidad: entero positivo\n'
+        f'- precio_costo: precio unitario entero o null\n'
+        f'Reglas: "media docena"=6, "una caja de 24"=24, "docena"=12.\n'
+        f'JSON:'
+    )
+    payload = json.dumps({
+        "model": "tinyllama",
+        "prompt": prompt,
+        "stream": False,
+        "format": "json",
+        "options": {"temperature": 0.1, "num_predict": 80, "num_ctx": 256},
+    }).encode()
+    try:
+        req = urllib.request.Request(
+            "http://localhost:11434/api/generate",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as r:
+            body = json.loads(r.read().decode())
+        datos = json.loads(body.get("response", "{}"))
+        cantidad = datos.get("cantidad")
+        producto = str(datos.get("producto", "")).strip()
+        if not producto or not cantidad:
+            return None
+        if not isinstance(cantidad, (int, float)) or int(cantidad) <= 0:
+            return None
+        precio = datos.get("precio_costo")
+        return {
+            "cantidad": int(cantidad),
+            "producto": producto,
+            "precio_costo": int(precio) if precio and str(precio).isdigit() else None,
+        }
+    except Exception as e:
+        logger.debug(f"_ia_stock error: {e}")
+        return None
+
+
+@voz_bp.route("/comando-stock", methods=["POST"])
+def comando_stock():
+    if not session.get("usuario_id"):
+        return jsonify({"status": "error", "mensaje": "No autorizado"}), 401
+
+    texto = (request.get_json(silent=True) or {}).get("texto", "").strip()
+    if not texto or len(texto) < 3:
+        return jsonify({"status": "error", "mensaje": "Comando muy corto"}), 400
+
+    datos = _regex_stock(texto)
+    metodo = "rapido"
+    if not datos:
+        datos = _ia_stock(texto)
+        metodo = "ia"
+
+    if not datos:
+        return jsonify({
+            "status": "error",
+            "mensaje": "No entendí. Intenta: '20 Coca-Cola' o 'llegaron 12 pan molde'",
+        })
+
+    cantidad = datos.get("cantidad")
+    producto_nombre = datos.get("producto", "")
+    precio_costo = datos.get("precio_costo") or 0
+
+    if not isinstance(cantidad, int) or cantidad <= 0 or cantidad > 10000:
+        return jsonify({
+            "status": "error",
+            "mensaje": f"Cantidad inválida: {cantidad}. Debe ser entre 1 y 10.000",
+        })
+    if not producto_nombre or len(producto_nombre) < 2:
+        return jsonify({"status": "error", "mensaje": "No identifiqué el producto"})
+
+    try:
+        with db_session() as conn:
+            prod = conn.execute("""
+                SELECT id, nombre, stock, precio_costo, tiene_variantes
+                FROM productos
+                WHERE activo=1
+                AND (LOWER(nombre)=LOWER(?) OR LOWER(nombre) LIKE LOWER(?))
+                ORDER BY CASE WHEN LOWER(nombre)=LOWER(?) THEN 0 ELSE 1 END,
+                         LENGTH(nombre) ASC
+                LIMIT 1
+            """, (producto_nombre, f"%{producto_nombre}%", producto_nombre)).fetchone()
+
+            if not prod:
+                return jsonify({
+                    "status": "error",
+                    "mensaje": f"No encontré '{producto_nombre}' en el inventario",
+                })
+
+            if prod["tiene_variantes"]:
+                return jsonify({
+                    "status": "error",
+                    "mensaje": (
+                        f"{prod['nombre']} tiene variantes. "
+                        f"Actualiza el stock por variante en el inventario."
+                    ),
+                })
+
+            stock_antes = prod["stock"]
+            stock_despues = stock_antes + cantidad
+
+            conn.execute(
+                "UPDATE productos SET stock=? WHERE id=?",
+                (stock_despues, prod["id"]),
+            )
+            if precio_costo and precio_costo > 0:
+                conn.execute(
+                    "UPDATE productos SET precio_costo=? WHERE id=?",
+                    (precio_costo, prod["id"]),
+                )
+
+            registrar_movimiento_stock(
+                conn=conn,
+                producto_id=prod["id"],
+                variante_id=None,
+                tipo="entrada",
+                cantidad=cantidad,
+                motivo="ajuste_manual",
+                usuario_id=session["usuario_id"],
+                notas=f"Comando de voz ({metodo}): {texto}",
+            )
+
+            costo_msg = ""
+            if precio_costo and precio_costo > 0:
+                costo_msg = f" Costo actualizado a ${precio_costo:,}".replace(",", ".")
+
+            return jsonify({
+                "status": "success",
+                "metodo": metodo,
+                "producto": prod["nombre"],
+                "cantidad_agregada": cantidad,
+                "stock_antes": stock_antes,
+                "stock_despues": stock_despues,
+                "mensaje": (
+                    f"✅ {prod['nombre']}: "
+                    f"{stock_antes} → {stock_despues} unidades.{costo_msg}"
+                ),
+            })
+
+    except Exception as e:
+        logger.error(f"Error comando-stock: {e}")
+        return jsonify({"status": "error", "mensaje": "Error interno"}), 500
