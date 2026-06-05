@@ -680,12 +680,27 @@ if __name__ == "__main__":
         logger.info(f"  URL: {scheme}://{HOTSPOT_IP}:{port}")
     if ssl_ctx:
         logger.info("  HTTPS activo — acepta el certificado en Chrome una vez")
+        logger.info(f"  QR Clientes:  http://{local_ip}:5000/credit/")
+        logger.info("  (Puerto HTTP para Android y otros, sin certificado)")
     else:
         logger.info("  HTTP (micrófono solo en localhost)")
     logger.info("=" * 60)
 
     if ssl_ctx:
-        # Waitress no soporta SSL nativo — Werkzeug maneja HTTPS
+        # Hilo HTTP en puerto 5000 para QR de clientes (Android rechaza cert autofirmado)
+        def _iniciar_http(flask_app):
+            from werkzeug.serving import make_server
+            try:
+                srv = make_server("0.0.0.0", 5000, flask_app)
+                logger.info("Servidor HTTP iniciado en puerto 5000 (para QR de clientes)")
+                srv.serve_forever()
+            except Exception as e:
+                logger.warning(f"Servidor HTTP puerto 5000 no disponible: {e}")
+
+        hilo_http = threading.Thread(target=_iniciar_http, args=(app,), daemon=True)
+        hilo_http.start()
+
+        # Servidor principal HTTPS en Werkzeug
         app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False,
                 ssl_context=ssl_ctx)
     else:

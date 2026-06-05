@@ -138,7 +138,7 @@ def crear_cliente():
         cliente = dict(conn.execute("SELECT * FROM clientes_fiado WHERE id=?", (cliente_id,)).fetchone())
 
     ip = _get_ip_local()
-    url_portal = f"http://{ip}:5001/credit/{qr_token}"
+    url_portal = f"http://{ip}:5000/credit/{qr_token}"
     qr_img = generar_qr_base64(url_portal)
     logger.info(f"Cliente fiado creado: {nombre} (id={cliente_id})")
     return jsonify({**cliente, 'qr_imagen': qr_img, 'url_portal': url_portal}), 201
@@ -378,7 +378,7 @@ def generar_tarjeta(cid):
         return jsonify({"error": "No encontrado"}), 404
     negocio = {r['clave']: r['valor'] for r in cfg_rows}
     ip = negocio.get('ip_local', '127.0.0.1')
-    url = f"http://{ip}:5001/credit/{c['qr_token']}"
+    url = f"http://{ip}:5000/credit/{c['qr_token']}"
     qr_img = generar_qr_base64(url)
     lines = [
         "=" * 32, "       ZERO CREDIT", "=" * 32, "",

@@ -363,7 +363,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
                 f"{fiado_info.get('nombre','')} {fiado_info.get('apellido','') or ''}"
             ).strip()
             qr_token   = fiado_info.get("qr_token", "")
-            url_credit = f"http://{_obtener_ip_local()}:5001/credit/{qr_token}"
+            url_credit = f"http://{_obtener_ip_local()}:5000/credit/{qr_token}"
             compra     = int(fiado_info.get('monto', 0))
             deuda_ant  = int(fiado_info.get('deuda_antes', 0))
             deuda_tot  = int(fiado_info.get('deuda_despues', 0))
@@ -800,7 +800,7 @@ def imprimir_tarjeta_credit(cliente: dict, config: dict) -> dict:
     }
 
     ip = _obtener_ip_local()
-    url_portal = f"http://{ip}:5001/credit/{cliente.get('qr_token', '')}"
+    url_portal = f"http://{ip}:5000/credit/{cliente.get('qr_token', '')}"
     N = ANCHO
 
     # Texto plano para fallback cuando no hay escpos

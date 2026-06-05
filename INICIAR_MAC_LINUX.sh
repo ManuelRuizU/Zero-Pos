@@ -26,4 +26,8 @@ tesseract --version 2>/dev/null || {
 }
 
 # Arrancar ZERO POS
+IP_LOCAL=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "192.168.x.x")
+echo "  ZERO POS iniciando..."
+echo "  QR Clientes: http://$IP_LOCAL:5000/credit/"
+echo "  (Puerto HTTP para Android y otros, sin certificado)"
 python3 app.py
