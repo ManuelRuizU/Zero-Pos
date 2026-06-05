@@ -1273,29 +1273,37 @@ let cfgApp = {};  // config del negocio cargada al inicio
 let _meId = null;
 
 // ── Cart localStorage ────────────────────────────────────────
-const _CARRITO_KEY = 'zero_carrito_v1';
-function guardarCarritoLocal(items, uid) {
+window.guardarCarritoLocal = function(items, usuarioId) {
   try {
-    if (!uid) return;
-    if (!items.length) { limpiarCarritoLocal(); return; }
-    localStorage.setItem(_CARRITO_KEY, JSON.stringify({
-      items, usuario_id: uid, timestamp: Date.now()
+    localStorage.setItem('zero_carrito_v1', JSON.stringify({
+      items: items.map(item => ({
+        id: item.id,
+        nombre: item.nombre,
+        precio: item.precio,
+        precio_unit: item.precio_unit,
+        cantidad: item.cantidad,
+        variante_id: item.variante_id || null,
+        variante_nombre: item.variante_nombre || null,
+        imagen_url: item.imagen_url || null
+      })),
+      usuario_id: usuarioId,
+      timestamp: Date.now()
     }));
-  } catch(e) {}
-}
-function recuperarCarritoLocal(uid) {
+  } catch(e) { console.warn('Error guardando carrito', e); }
+};
+window.recuperarCarritoLocal = function(usuarioId) {
   try {
-    const raw = localStorage.getItem(_CARRITO_KEY);
+    const raw = localStorage.getItem('zero_carrito_v1');
     if (!raw) return [];
-    const d = JSON.parse(raw);
-    if (d.usuario_id !== uid) { limpiarCarritoLocal(); return []; }
-    if (Date.now() - d.timestamp > 86400000) { limpiarCarritoLocal(); return []; }
-    return d.items || [];
+    const data = JSON.parse(raw);
+    if (data.usuario_id !== usuarioId) return [];
+    if (Date.now() - data.timestamp > 86400000) return [];
+    return data.items || [];
   } catch(e) { return []; }
-}
-function limpiarCarritoLocal() {
-  localStorage.removeItem(_CARRITO_KEY);
-}
+};
+window.limpiarCarritoLocal = function() {
+  localStorage.removeItem('zero_carrito_v1');
+};
 let modoVista = localStorage.getItem('modo_vista') || 'grid';
 let categoriaActual = '';
 let subcatActual = '';
@@ -1973,21 +1981,35 @@ async function init() {
   await cargarCategorias();
   await cargarProductos();
 
-  // Recuperar carrito guardado (validar que los productos siguen existiendo)
+  // Recuperar carrito guardado (validar que los productos siguen en el índice)
   const itemsGuardados = recuperarCarritoLocal(_meId);
   if (itemsGuardados.length > 0) {
+    let recuperados = 0;
     itemsGuardados.forEach(item => {
-      const prod = indiceId.get(item.id);
+      const prod = indiceId.get(parseInt(item.id));
       if (prod) {
-        const existente = carrito.find(c => c.id === item.id);
-        if (existente) { existente.cantidad += item.cantidad; }
-        else { carrito.push({...prod, cantidad: item.cantidad, precio_unit: item.precio_unit ?? prod.precio}); }
+        const existente = carrito.find(c =>
+          c.id === item.id && c.variante_id === item.variante_id
+        );
+        if (existente) {
+          existente.cantidad = item.cantidad;
+        } else {
+          carrito.push({
+            ...prod,
+            cantidad: item.cantidad,
+            precio_unit: item.precio_unit ?? item.precio ?? prod.precio,
+            variante_id: item.variante_id || null,
+            variante_nombre: item.variante_nombre || null
+          });
+        }
+        recuperados++;
       }
     });
-    if (carrito.length > 0) {
+    if (recuperados > 0) {
       renderCarrito();
-      const n = carrito.length;
-      setTimeout(() => showToast(`🛒 Carrito recuperado — ${n} producto${n>1?'s':''}`, 'info'), 800);
+      setTimeout(() => showToast(
+        `🛒 ${recuperados} producto${recuperados > 1 ? 's' : ''} en tu carrito`, 'info'
+      ), 1500);
     }
   }
 
@@ -2506,7 +2528,11 @@ let _pantallaTimer = null;
 function limpiarCarrito() { carrito = []; renderCarrito(); }
 
 function renderCarrito() {
-  guardarCarritoLocal(carrito, _meId);
+  const _uid = _meId || null;
+  if (_uid) {
+    if (carrito.length) guardarCarritoLocal(carrito, _uid);
+    else limpiarCarritoLocal();
+  }
 
   const el = document.getElementById('carritoItems');
   const totalItems = carrito.reduce((s, i) => s + i.cantidad, 0);
