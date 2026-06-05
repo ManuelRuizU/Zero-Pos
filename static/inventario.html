@@ -2625,18 +2625,24 @@ function activarVozStock() {
   const recognition = new SR();
   recognition.lang = 'es-CL';
   recognition.continuous = false;
-  recognition.interimResults = false;
+  recognition.interimResults = true;
 
   btn.innerHTML = '🔴 Escuchando...';
   btn.style.background = '#ef4444';
   btn.style.border = '1px solid #ef4444';
 
+  const input = document.getElementById('inputComandoStock');
+
   recognition.onresult = (e) => {
-    document.getElementById('inputComandoStock').value = e.results[0][0].transcript;
-    btn.innerHTML = '🎤 Hablar';
-    btn.style.background = '';
-    btn.style.border = '';
-    procesarComandoStock();
+    const interino = Array.from(e.results).map(r => r[0].transcript).join('');
+    input.value = interino;
+    // Auto-procesar cuando el resultado es final
+    if (e.results[e.results.length - 1].isFinal) {
+      btn.innerHTML = '🎤 Hablar';
+      btn.style.background = '';
+      btn.style.border = '';
+      procesarComandoStock();
+    }
   };
   recognition.onerror = () => {
     btn.innerHTML = '🎤 Hablar';

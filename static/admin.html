@@ -2345,18 +2345,23 @@ function activarVozStockAdmin() {
   const recognition = new SR();
   recognition.lang = 'es-CL';
   recognition.continuous = false;
-  recognition.interimResults = false;
+  recognition.interimResults = true;
 
   btn.innerHTML = '🔴 Escuchando...';
   btn.style.background = '#ef4444';
   btn.style.border = '1px solid #ef4444';
 
+  const inputA = document.getElementById('inputComandoStockAdmin');
+
   recognition.onresult = (e) => {
-    document.getElementById('inputComandoStockAdmin').value = e.results[0][0].transcript;
-    btn.innerHTML = '🎤 Hablar';
-    btn.style.background = '';
-    btn.style.border = '';
-    procesarComandoStockAdmin();
+    const interino = Array.from(e.results).map(r => r[0].transcript).join('');
+    inputA.value = interino;
+    if (e.results[e.results.length - 1].isFinal) {
+      btn.innerHTML = '🎤 Hablar';
+      btn.style.background = '';
+      btn.style.border = '';
+      procesarComandoStockAdmin();
+    }
   };
   recognition.onerror = () => {
     btn.innerHTML = '🎤 Hablar';
