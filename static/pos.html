@@ -372,7 +372,7 @@ body {
 }
 .totales { display: flex; flex-direction: column; gap: 4px; }
 .total-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-dim); }
-.total-row.main { font-size: 20px; font-weight: 700; color: var(--text); margin-top: 4px; }
+.total-row.main { font-size: 20px; font-weight: 900; color: white; margin-top: 4px; }
 .descuento-row { display: flex; gap: 8px; align-items: center; }
 .descuento-input {
   flex: 1; background: var(--surface); border: 1px solid var(--border);
@@ -380,7 +380,7 @@ body {
 }
 .descuento-input:focus { border-color: var(--accent); }
 .btn-cobrar {
-  background: var(--accent); border: none; color: #fff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: #fff;
   border-radius: 14px; padding: 16px; font-size: 17px; font-weight: 700;
   cursor: pointer; transition: all .2s; width: 100%;
   box-shadow: 0 4px 20px rgba(99,102,241,.4);
@@ -433,8 +433,8 @@ body {
 @keyframes slideUp { from{transform:translateY(20px);opacity:0;} to{transform:translateY(0);opacity:1;} }
 .modal-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
 .modal-total {
-  font-size: 36px; font-weight: 800; text-align: center;
-  color: var(--accent2); margin: 12px 0 24px; letter-spacing: -1px;
+  font-size: 36px; font-weight: 900; text-align: center;
+  color: white; margin: 12px 0 24px; letter-spacing: -1px;
 }
 .metodos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
 .metodo-btn {
