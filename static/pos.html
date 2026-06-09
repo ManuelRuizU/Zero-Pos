@@ -234,7 +234,7 @@ body {
 }
 .prod-card:active { transform: scale(0.96); background: var(--surface-hover); }
 .prod-card:hover { background: var(--surface-hover); border-color: rgba(99,102,241,.4); }
-.prod-card.sin-stock { opacity: .45; cursor: not-allowed; }
+.prod-card.sin-stock { opacity: .45; cursor: not-allowed; filter: grayscale(30%); pointer-events: none; }
 @keyframes prodFlash { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 3px #22c55e;} }
 .prod-card.flash { animation: prodFlash 0.2s ease; }
 .prod-emoji {
@@ -2296,6 +2296,15 @@ function renderProductos(lista) {
   const grid = document.getElementById('productosGrid');
   grid.innerHTML = '';
   productoMap = {};
+
+  // Ordenar: con stock > 0 primero, variantes (stock=-1) segundo, sin stock al final
+  lista = [...lista].sort((a, b) => {
+    const aDisp = a.stock > 0 || a.stock === -1 || a.tiene_variantes;
+    const bDisp = b.stock > 0 || b.stock === -1 || b.tiene_variantes;
+    if (aDisp && !bDisp) return -1;
+    if (!aDisp && bDisp) return 1;
+    return 0;
+  });
 
   // Sync list/grid class
   if (modoVista === 'lista') {
