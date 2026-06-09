@@ -476,6 +476,24 @@ body {
 }
 .btn-confirmar:hover { filter: brightness(1.1); }
 
+/* Divider crédito */
+.credito-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 4px 0 12px;
+}
+.credito-divider-line { flex: 1; height: 1px; background: var(--border); }
+.credito-divider-text { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.metodo-credito-btn {
+  width: 100%; background: var(--surface); border: 2px solid var(--border);
+  border-radius: 12px; padding: 12px 10px;
+  color: var(--text); cursor: pointer; transition: all .15s;
+  text-align: center; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  margin-bottom: 20px;
+}
+.metodo-credito-btn:hover { background: var(--surface-hover); }
+.metodo-credito-btn.selected { background: rgba(99,102,241,.2); border-color: var(--accent); color: var(--accent2); }
+
 /* QR */
 .qr-container { text-align: center; padding: 10px 0; }
 .qr-container img { border-radius: 12px; max-width: 180px; }
@@ -1027,10 +1045,15 @@ body {
       <div class="metodo-btn" data-met="khipu" onclick="selMetodo(this)">
         <div class="metodo-icon">🏦</div>Khipu
       </div>
-      <div class="metodo-btn" data-met="credito" onclick="selMetodo(this)">
-        <div class="metodo-icon">📒</div>Crédito
-      </div>
     </div>
+    <div class="credito-divider">
+      <div class="credito-divider-line"></div>
+      <div class="credito-divider-text">O pagar con ZERO CREDIT</div>
+      <div class="credito-divider-line"></div>
+    </div>
+    <button class="metodo-credito-btn" data-met="credito" onclick="selMetodo(this)">
+      📒 Crédito / Fiado
+    </button>
     <div class="efectivo-section" id="secEfectivo">
       <div class="label">Monto recibido</div>
       <input class="monto-input" type="number" id="montoRecibido"
@@ -3059,7 +3082,7 @@ function _abrirModalCobro() {
   document.getElementById('vueltoRow').style.display = 'none';
   document.getElementById('modalCobro').classList.add('active');
   // No pre-seleccionar — el cajero debe elegir explícitamente el método
-  document.querySelectorAll('.metodo-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.metodo-btn, .metodo-credito-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('secEfectivo').style.display = 'none';
   document.getElementById('secTransferencia').style.display = 'none';
   document.getElementById('secKhipu').style.display = 'none';
@@ -3081,7 +3104,7 @@ function cerrarCobro() {
 }
 
 function selMetodo(btn) {
-  document.querySelectorAll('.metodo-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.metodo-btn, .metodo-credito-btn').forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
   metodoPago = btn.dataset.met;
   document.getElementById('secEfectivo').style.display = metodoPago === 'efectivo' ? 'block' : 'none';
