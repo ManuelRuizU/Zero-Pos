@@ -14,26 +14,36 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-  background: #1a1a2e;
+  background: #0f0f1a;
+  background-image:
+    radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.1) 0%, transparent 50%);
   min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ── Logo ────────────────────────────────────────────────── */
+.logo-top {
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  color: white;
+  margin-bottom: 32px;
+  text-align: center;
+}
+.logo-top .pos { color: #6366f1; }
 
 /* ── Pantalla 1: selección de usuario ───────────────────────── */
 #pantallaUsuarios {
   position: fixed; inset: 0;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  background: #1a1a2e;
   transition: opacity .25s;
 }
-.logo-top {
-  font-size: 28px; font-weight: 900; letter-spacing: -1px;
-  margin-bottom: 8px;
-}
-.logo-top .zero { color: #fff; }
-.logo-top .pos  { color: #6366f1; }
 .login-subtitle {
   color: #64748b; font-size: 14px; margin-bottom: 40px;
 }
@@ -49,15 +59,17 @@ body {
   display: flex; flex-direction: column;
   align-items: center; gap: 10px;
   padding: 24px 12px 20px;
-  background: #24243e;
-  border: 1px solid #2d2d44;
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 16px;
   cursor: pointer;
   transition: all .15s;
   user-select: none;
 }
 .usuario-card:active  { transform: scale(.96); }
-.usuario-card:hover   { border-color: #6366f1; background: #2a2a4a; }
+.usuario-card:hover   { border-color: rgba(99,102,241,0.5); background: rgba(99,102,241,0.1); }
 .usuario-avatar {
   width: 56px; height: 56px;
   border-radius: 50%;
@@ -77,16 +89,40 @@ body {
   position: fixed; inset: 0;
   display: none; flex-direction: column;
   align-items: center; justify-content: center;
-  background: #1a1a2e;
 }
 #pantallaPin.activa { display: flex; }
 
-#pinAvatar {
-  width: 64px; height: 64px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 26px; font-weight: 700; color: #fff;
-  margin-bottom: 14px;
+.login-wrapper {
+  display: flex; flex-direction: column;
+  align-items: center;
 }
+.login-wrapper.error {
+  animation: shakeScreen 0.4s ease;
+}
+@keyframes shakeScreen {
+  0%,100% { transform: translateX(0) }
+  25%      { transform: translateX(-10px) }
+  75%      { transform: translateX(10px) }
+}
+
+/* Avatar con glow */
+.avatar-usuario {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  font-weight: 700;
+  color: white;
+  margin: 0 auto 12px;
+  box-shadow:
+    0 0 0 3px rgba(99,102,241,0.2),
+    0 0 30px rgba(99,102,241,0.35);
+}
+
 #pinNombreUsuario {
   color: #e2e8f0; font-size: 18px; font-weight: 600;
   margin-bottom: 4px;
@@ -95,59 +131,168 @@ body {
   color: #64748b; font-size: 13px; margin-bottom: 32px;
 }
 
-/* Círculos de dígitos */
+/* PIN dots */
 .pin-circulos {
   display: flex; gap: 18px; margin-bottom: 40px;
 }
 .circulo-pin {
-  width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid #6366f1;
-  transition: background .12s;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(99,102,241,0.5);
+  background: transparent;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.circulo-pin.activo { background: #6366f1; }
+.circulo-pin.activo {
+  background: #6366f1;
+  border-color: #6366f1;
+  box-shadow: 0 0 12px rgba(99,102,241,0.8);
+  transform: scale(1.2);
+}
+.circulo-pin.correcto {
+  background: #22c55e;
+  border-color: #22c55e;
+  box-shadow: 0 0 12px rgba(34,197,94,0.8);
+  transform: scale(1.2);
+}
+.circulo-pin.error {
+  background: #ef4444;
+  border-color: #ef4444;
+  box-shadow: 0 0 12px rgba(239,68,68,0.8);
+  animation: shakeDot 0.4s ease;
+}
+@keyframes shakeDot {
+  0%,100% { transform: translateX(0) }
+  20%      { transform: translateX(-6px) }
+  40%      { transform: translateX(6px) }
+  60%      { transform: translateX(-4px) }
+  80%      { transform: translateX(4px) }
+}
 
-/* Teclado */
+/* Teclado PIN — Liquid Glass */
 .teclado-pin {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px; width: min(280px, 85vw);
+  grid-template-columns: repeat(3, 82px);
+  gap: 14px;
+  width: fit-content;
 }
 .btn-pin {
-  height: 72px;
-  background: #2d2d44;
-  color: #f1f5f9;
-  border: none; border-radius: 12px;
-  font-size: 24px; font-weight: 500;
+  width: 82px;
+  height: 82px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 26px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.2),
+    inset 0 -1px 0 rgba(0,0,0,0.3),
+    0 4px 16px rgba(0,0,0,0.4);
+  color: white;
+  font-size: 28px;
+  font-weight: 300;
   cursor: pointer;
-  transition: background .1s;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
-.btn-pin:active { background: #6366f1; }
-.btn-pin.btn-borrar {
-  font-size: 20px; background: #1e1e2e; color: #94a3b8;
+.btn-pin::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%);
+  border-radius: 26px 26px 0 0;
+  pointer-events: none;
 }
-.btn-pin.btn-volver {
-  font-size: 12px; background: #1e1e2e; color: #64748b;
-  height: 40px; margin-top: 20px;
-  grid-column: 1 / -1;
+.btn-pin::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.15) 0%, transparent 60%);
+  pointer-events: none;
 }
-.btn-pin.btn-volver:active { background: #2d2d44; color: #94a3b8; }
+.btn-pin:hover {
+  transform: scale(1.06) translateY(-2px);
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.25);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.3),
+    inset 0 -1px 0 rgba(0,0,0,0.3),
+    0 8px 24px rgba(99,102,241,0.3),
+    0 0 0 1px rgba(99,102,241,0.2);
+}
+.btn-pin:active {
+  transform: scale(0.92) translateY(1px);
+  background: rgba(99,102,241,0.2);
+  border-color: rgba(99,102,241,0.4);
+  box-shadow:
+    inset 0 2px 6px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 2px 8px rgba(0,0,0,0.3);
+}
+.btn-pin .ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  transform: scale(0);
+  animation: rippleAnim 0.4s ease-out;
+  pointer-events: none;
+}
+@keyframes rippleAnim {
+  to { transform: scale(4); opacity: 0; }
+}
 
-/* Error */
+.btn-borrar {
+  font-size: 24px;
+  color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.03);
+}
+
+/* Cambiar usuario — ghost sutil */
+.btn-volver {
+  width: auto;
+  height: auto;
+  grid-column: 1 / -1;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  color: rgba(255,255,255,0.4);
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.2s;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+.btn-volver::before,
+.btn-volver::after { content: none; }
+.btn-volver:hover {
+  border-color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.7);
+  transform: none;
+  background: transparent;
+  box-shadow: none;
+}
+.btn-volver:active {
+  transform: none;
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.15);
+  box-shadow: none;
+}
+
 #pinError {
   height: 20px; font-size: 13px; color: #ef4444;
   margin-top: 16px; text-align: center;
-  animation: shake .35s ease;
-}
-@keyframes shake {
-  0%,100% { transform: translateX(0); }
-  25%      { transform: translateX(-8px); }
-  75%      { transform: translateX(8px); }
 }
 .pin-footer {
   position: fixed; bottom: 16px;
-  color: #2d2d44; font-size: 11px;
+  color: rgba(255,255,255,0.1); font-size: 11px;
 }
 </style>
 </head>
@@ -155,9 +300,7 @@ body {
 
 <!-- ── Pantalla 1: usuarios ─────────────────────────────────── -->
 <div id="pantallaUsuarios">
-  <div class="logo-top">
-    <span class="zero">ZERO</span><span class="pos">POS</span>
-  </div>
+  <div class="logo-top">ZERO<span class="pos">POS</span></div>
   <div class="login-subtitle">¿Quién eres?</div>
   <div class="usuarios-grid" id="usuariosGrid"></div>
   <p class="pin-footer">ZERO POS v1.0</p>
@@ -165,38 +308,38 @@ body {
 
 <!-- ── Pantalla 2: PIN ──────────────────────────────────────── -->
 <div id="pantallaPin">
-  <div class="logo-top">
-    <span class="zero">ZERO</span><span class="pos">POS</span>
+  <div class="login-wrapper" id="loginWrapper">
+    <div class="logo-top">ZERO<span class="pos">POS</span></div>
+
+    <div class="avatar-usuario" id="pinAvatar"></div>
+    <div id="pinNombreUsuario">Introduce tu PIN</div>
+    <div id="pinSubtitulo">4 dígitos</div>
+
+    <div class="pin-circulos">
+      <div class="circulo-pin" id="pc0"></div>
+      <div class="circulo-pin" id="pc1"></div>
+      <div class="circulo-pin" id="pc2"></div>
+      <div class="circulo-pin" id="pc3"></div>
+    </div>
+
+    <div class="teclado-pin">
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('1')">1</button>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('2')">2</button>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('3')">3</button>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('4')">4</button>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('5')">5</button>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('6')">6</button>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('7')">7</button>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('8')">8</button>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('9')">9</button>
+      <div></div>
+      <button class="btn-pin" onclick="crearRipple(this,event);presionarPin('0')">0</button>
+      <button class="btn-pin btn-borrar" onclick="crearRipple(this,event);borrarPin()">⌫</button>
+      <button class="btn-pin btn-volver" onclick="volverUsuarios()">← Cambiar usuario</button>
+    </div>
+
+    <div id="pinError"></div>
   </div>
-
-  <div id="pinAvatar"></div>
-  <div id="pinNombreUsuario">Introduce tu PIN</div>
-  <div id="pinSubtitulo">4 dígitos</div>
-
-  <div class="pin-circulos">
-    <div class="circulo-pin" id="pc0"></div>
-    <div class="circulo-pin" id="pc1"></div>
-    <div class="circulo-pin" id="pc2"></div>
-    <div class="circulo-pin" id="pc3"></div>
-  </div>
-
-  <div class="teclado-pin">
-    <button class="btn-pin" onclick="presionarPin('1')">1</button>
-    <button class="btn-pin" onclick="presionarPin('2')">2</button>
-    <button class="btn-pin" onclick="presionarPin('3')">3</button>
-    <button class="btn-pin" onclick="presionarPin('4')">4</button>
-    <button class="btn-pin" onclick="presionarPin('5')">5</button>
-    <button class="btn-pin" onclick="presionarPin('6')">6</button>
-    <button class="btn-pin" onclick="presionarPin('7')">7</button>
-    <button class="btn-pin" onclick="presionarPin('8')">8</button>
-    <button class="btn-pin" onclick="presionarPin('9')">9</button>
-    <div></div>
-    <button class="btn-pin" onclick="presionarPin('0')">0</button>
-    <button class="btn-pin btn-borrar" onclick="borrarPin()">⌫</button>
-    <button class="btn-pin btn-volver" onclick="volverUsuarios()">← Cambiar usuario</button>
-  </div>
-
-  <div id="pinError"></div>
 </div>
 
 <script>
@@ -212,6 +355,18 @@ function _avatarColor(nombre) {
   return _COLORES[Math.abs(h) % _COLORES.length];
 }
 
+function crearRipple(btn, event) {
+  const rect = btn.getBoundingClientRect();
+  const ripple = document.createElement('span');
+  ripple.classList.add('ripple');
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.width = ripple.style.height = size + 'px';
+  ripple.style.left = (event.clientX - rect.left - size / 2) + 'px';
+  ripple.style.top  = (event.clientY - rect.top  - size / 2) + 'px';
+  btn.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 400);
+}
+
 async function cargarUsuarios() {
   try {
     const usuarios = await fetch('/api/auth/usuarios/publico', {credentials:'include'})
@@ -219,7 +374,6 @@ async function cargarUsuarios() {
     const grid = document.getElementById('usuariosGrid');
     grid.innerHTML = '';
     if (!usuarios || !usuarios.length) {
-      // Sin usuarios → ir directo al PIN genérico
       mostrarPin(null);
       return;
     }
@@ -247,16 +401,17 @@ function mostrarPin(u) {
   actualizarCirculos();
   setError('');
 
+  const avatar = document.getElementById('pinAvatar');
   if (u) {
     const inicial = (u.nombre || '?')[0].toUpperCase();
     const color   = _avatarColor(u.nombre);
-    document.getElementById('pinAvatar').textContent = inicial;
-    document.getElementById('pinAvatar').style.background = color;
+    avatar.textContent = inicial;
+    avatar.style.background = `linear-gradient(135deg, ${color}, #8b5cf6)`;
     document.getElementById('pinNombreUsuario').textContent = u.nombre;
     document.getElementById('pinSubtitulo').textContent = u.rol || 'Introduce tu PIN';
   } else {
-    document.getElementById('pinAvatar').textContent = '🔑';
-    document.getElementById('pinAvatar').style.background = '#2d2d44';
+    avatar.textContent = '🔑';
+    avatar.style.background = 'rgba(255,255,255,0.08)';
     document.getElementById('pinNombreUsuario').textContent = 'Introduce tu PIN';
     document.getElementById('pinSubtitulo').textContent = '4 dígitos';
   }
@@ -275,9 +430,17 @@ function volverUsuarios() {
   document.getElementById('pantallaUsuarios').style.pointerEvents = '';
 }
 
-function actualizarCirculos() {
+function actualizarCirculos(estado) {
   for (let i = 0; i < 4; i++) {
-    document.getElementById('pc' + i).classList.toggle('activo', i < pin.length);
+    const dot = document.getElementById('pc' + i);
+    dot.classList.remove('activo', 'correcto', 'error');
+    if (estado === 'correcto') {
+      dot.classList.add('correcto');
+    } else if (estado === 'error') {
+      dot.classList.add('error');
+    } else if (i < pin.length) {
+      dot.classList.add('activo');
+    }
   }
 }
 
@@ -297,13 +460,20 @@ function borrarPin() {
 }
 
 function setError(msg) {
-  const el = document.getElementById('pinError');
-  el.textContent = msg;
-  if (msg) {
-    el.style.animation = 'none';
-    void el.offsetHeight;
-    el.style.animation = 'shake .35s ease';
-  }
+  document.getElementById('pinError').textContent = msg;
+}
+
+function triggerError() {
+  actualizarCirculos('error');
+  const wrapper = document.getElementById('loginWrapper');
+  wrapper.classList.remove('error');
+  void wrapper.offsetHeight;
+  wrapper.classList.add('error');
+  setTimeout(() => {
+    wrapper.classList.remove('error');
+    pin = '';
+    actualizarCirculos();
+  }, 500);
 }
 
 async function intentarLogin() {
@@ -319,21 +489,25 @@ async function intentarLogin() {
     });
     const data = await r.json();
     if (r.ok) {
-      const destino = data.usuario.rol === 'cocina' ? 'cocina.html'
-                    : data.usuario.rol === 'admin'  ? 'admin.html'
-                    : 'pos.html';
-      window.location.href = destino;
+      actualizarCirculos('correcto');
+      setTimeout(() => {
+        const destino = data.usuario.rol === 'cocina' ? 'cocina.html'
+                      : data.usuario.rol === 'admin'  ? 'admin.html'
+                      : 'pos.html';
+        window.location.href = destino;
+      }, 300);
     } else if (data.upgrade) {
       setError('Límite de sesiones alcanzado. Pide al admin que cierre una.');
-      pin = ''; actualizarCirculos();
+      triggerError();
+      if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
     } else {
       setError(data.error || 'PIN incorrecto');
-      pin = ''; actualizarCirculos();
+      triggerError();
       if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
     }
   } catch(e) {
     setError('Error de conexión');
-    pin = ''; actualizarCirculos();
+    triggerError();
   }
 }
 
