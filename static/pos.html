@@ -374,11 +374,12 @@ body {
 .item-controles { display: flex; align-items: center; gap: 6px; }
 .qty-btn {
   background: var(--surface2); border: 1px solid var(--border);
-  color: var(--text); border-radius: 6px;
-  width: 28px; height: 28px; cursor: pointer; font-size: 16px;
-  display: flex; align-items: center; justify-content: center; transition: all .15s;
+  color: var(--text); border-radius: 10px;
+  width: 44px; height: 44px; cursor: pointer; font-size: 20px;
+  display: flex; align-items: center; justify-content: center; transition: all .1s;
 }
 .qty-btn:hover { background: var(--accent); }
+.qty-btn:active { transform: scale(0.9); background: var(--accent); }
 .qty-num { font-size: 14px; font-weight: 700; min-width: 20px; text-align: center; }
 .item-subtotal { font-size: 13px; font-weight: 600; color: var(--accent2); min-width: 60px; text-align: right; }
 .item-del {
@@ -827,12 +828,26 @@ body {
     <div class="carrito-footer">
       <div class="totales">
         <div class="total-row"><span>Subtotal</span><span id="subtotalDisp">$0</span></div>
-        <div class="total-row">
-          <span>Descuento</span>
-          <input class="descuento-input" type="number" id="descuentoInput"
-            min="0" placeholder="0" oninput="recalcular()" style="width:90px;text-align:right;">
+        <!-- Descuento: solo visible cuando desc > 0 -->
+        <div class="total-row" id="descuentoBadgeRow" style="display:none">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:12px;color:var(--success);background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:99px;padding:2px 8px">Descuento</span>
+            <button onclick="quitarDescuento()" style="background:none;border:none;color:var(--text-dim);font-size:13px;cursor:pointer;padding:0;line-height:1" title="Quitar descuento">✕</button>
+          </div>
+          <span id="descuentoBadgeVal" style="color:var(--success);font-weight:700">-$0</span>
         </div>
         <div class="total-row main"><span>TOTAL</span><span id="totalDisp">$0</span></div>
+        <!-- Input oculto — lo usa recalcular() y confirmarPago() -->
+        <input type="number" id="descuentoInput" style="display:none" min="0" oninput="recalcular()">
+      </div>
+      <!-- Botón descuento (solo admin/supervisor — mostrado por _aplicarPermisosPOS) -->
+      <div id="descuentoBtnRow" style="display:none">
+        <div id="descuentoInputRow" style="display:none;margin-bottom:6px">
+          <input id="descuentoInputVisible" type="number" min="0" placeholder="Monto de descuento"
+            style="width:100%;background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;color:var(--text);font-size:14px;outline:none;box-sizing:border-box"
+            oninput="document.getElementById('descuentoInput').value=this.value;recalcular()">
+        </div>
+        <button onclick="abrirInputDescuento()" style="width:100%;background:none;border:1px solid rgba(255,255,255,.1);border-radius:99px;color:rgba(255,255,255,.4);font-size:12px;padding:5px 12px;cursor:pointer;transition:all .2s;font-family:inherit" onmouseenter="this.style.color='rgba(255,255,255,.7)';this.style.borderColor='rgba(255,255,255,.2)'" onmouseleave="this.style.color='rgba(255,255,255,.4)';this.style.borderColor='rgba(255,255,255,.1)'">% Aplicar descuento</button>
       </div>
       <button class="btn-cobrar" id="btnCobrar" onclick="abrirCobro()" disabled>
         ✓ Cobrar →
@@ -2110,17 +2125,16 @@ function _aplicarPermisosPOS(me) {
   if (['bodega', 'delivery', 'cocina'].includes(me.rol)) {
     document.getElementById('navCredito')?.remove();
   }
-  // Limitar input de descuento al máximo permitido
-  const descInput = document.getElementById('descuentoInput');
-  if (descInput) {
-    const maxPct = typeof p.descuento_maximo_pct === 'number' ? p.descuento_maximo_pct : 100;
-    if (!p.puede_hacer_descuentos) {
-      descInput.disabled = true;
-      descInput.placeholder = 'Sin permiso';
-      descInput.title = 'No tienes permiso para aplicar descuentos';
-    } else if (maxPct > 0) {
-      descInput.dataset.maxPct = maxPct;
-      descInput.title = `Descuento máximo: ${maxPct}%`;
+  // Mostrar botón descuento solo si tiene permiso
+  const descBtnRow = document.getElementById('descuentoBtnRow');
+  if (descBtnRow) {
+    if (p.puede_hacer_descuentos) {
+      descBtnRow.style.display = 'block';
+      const descInput = document.getElementById('descuentoInput');
+      if (descInput) {
+        const maxPct = typeof p.descuento_maximo_pct === 'number' ? p.descuento_maximo_pct : 100;
+        if (maxPct > 0) descInput.dataset.maxPct = maxPct;
+      }
     }
   }
 }
@@ -2677,7 +2691,31 @@ function recalcular() {
   total = Math.max(0, subtotal - desc);
   document.getElementById('subtotalDisp').textContent = fmt(subtotal);
   document.getElementById('totalDisp').textContent = fmt(total);
+  // Descuento badge
+  const badgeRow = document.getElementById('descuentoBadgeRow');
+  if (badgeRow) {
+    badgeRow.style.display = desc > 0 ? 'flex' : 'none';
+    const badgeVal = document.getElementById('descuentoBadgeVal');
+    if (badgeVal) badgeVal.textContent = '-' + fmt(desc);
+  }
   actualizarFAB();
+}
+
+function quitarDescuento() {
+  document.getElementById('descuentoInput').value = '';
+  const vis = document.getElementById('descuentoInputVisible');
+  if (vis) vis.value = '';
+  document.getElementById('descuentoInputRow').style.display = 'none';
+  recalcular();
+}
+
+function abrirInputDescuento() {
+  const row = document.getElementById('descuentoInputRow');
+  if (!row) return;
+  row.style.display = row.style.display === 'block' ? 'none' : 'block';
+  if (row.style.display === 'block') {
+    setTimeout(() => document.getElementById('descuentoInputVisible')?.focus(), 50);
+  }
 }
 
 function actualizarFAB() {
@@ -3343,6 +3381,8 @@ async function confirmarPago() {
     if (document.getElementById('carrito').classList.contains('open')) toggleCarritoMobile();
     limpiarCarrito();
     document.getElementById('descuentoInput').value = '';
+    const _dv = document.getElementById('descuentoInputVisible'); if (_dv) _dv.value = '';
+    const _dr = document.getElementById('descuentoInputRow'); if (_dr) _dr.style.display = 'none';
     showToast(`✓ Venta #${ventaId} — ${fmt(total)}`, 'success');
     setTimeout(() => cargarProductos(), 500);
   } catch(e) {
