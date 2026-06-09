@@ -3058,7 +3058,13 @@ function _abrirModalCobro() {
   document.getElementById('montoRecibido').value = '';
   document.getElementById('vueltoRow').style.display = 'none';
   document.getElementById('modalCobro').classList.add('active');
-  selMetodo(document.querySelector('[data-met="efectivo"]'));
+  // No pre-seleccionar — el cajero debe elegir explícitamente el método
+  document.querySelectorAll('.metodo-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('secEfectivo').style.display = 'none';
+  document.getElementById('secTransferencia').style.display = 'none';
+  document.getElementById('secKhipu').style.display = 'none';
+  document.getElementById('secCredito').style.display = 'none';
+  metodoPago = '';
 }
 
 function _resetFooterCobro() {
@@ -3126,6 +3132,7 @@ function calcularVuelto() {
 }
 
 async function confirmarPago() {
+  if (!metodoPago) { showToast('Selecciona un método de pago', 'error'); return; }
   if (metodoPago === 'efectivo') {
     const recibido = parseFloat(document.getElementById('montoRecibido').value) || 0;
     if (recibido < total) { showToast('Monto insuficiente', 'error'); return; }
