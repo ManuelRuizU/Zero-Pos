@@ -809,6 +809,59 @@ async function cargarPublicidad() {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   BROADCAST CHANNEL + SSE
+══════════════════════════════════════════════════════════ */
+let _timestampPublicidad = 0;
+
+function procesarMensajePantalla(msg) {
+  switch (msg.tipo) {
+    case 'carrito_actualizado':
+      if (_pagadoTimer) { clearTimeout(_pagadoTimer); _pagadoTimer = null; }
+      if (estadoActual !== 'venta') mostrarEstadoVenta();
+      actualizarDatosVenta(msg);
+      _estadoAnterior = 'venta';
+      break;
+    case 'venta_confirmada':
+      if (_estadoAnterior === 'venta' && !_pagadoTimer) {
+        _pagadoTimer = setTimeout(() => { _pagadoTimer = null; _estadoAnterior = 'idle'; }, 3500);
+        mostrarEstadoGracias(msg.total || 0, msg.vuelto || 0);
+      }
+      _estadoAnterior = null;
+      break;
+    case 'cobrando':
+      if (estadoActual !== 'venta') mostrarEstadoVenta();
+      break;
+    case 'idle':
+      if (_pagadoTimer) { clearTimeout(_pagadoTimer); _pagadoTimer = null; }
+      if (estadoActual !== 'idle' && estadoActual !== 'gracias') mostrarEstadoIdle();
+      _estadoAnterior = 'idle';
+      verificarPublicidadNueva();
+      break;
+  }
+}
+
+function conectarSSE() {
+  const es = new EventSource('/api/ventas/stream-pantalla');
+  es.onmessage = (e) => {
+    try { procesarMensajePantalla(JSON.parse(e.data)); } catch(err) {}
+  };
+  es.onerror = () => {
+    es.close();
+    setTimeout(conectarSSE, 5000);
+  };
+}
+
+async function verificarPublicidadNueva() {
+  try {
+    const cfg = await fetch('/api/publicidad/config', { cache: 'no-store' }).then(r => r.json());
+    if ((cfg.actualizado_en || 0) > _timestampPublicidad) {
+      _timestampPublicidad = cfg.actualizado_en || Date.now();
+      await cargarPublicidad();
+    }
+  } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════════════════════
    CARGA CONFIG NEGOCIO
 ══════════════════════════════════════════════════════════ */
 async function cargarConfigNegocio() {
@@ -835,10 +888,12 @@ async function cargarConfigNegocio() {
    INICIALIZACIÓN
 ══════════════════════════════════════════════════════════ */
 cargarConfigNegocio();
-cargarPublicidad();
+cargarPublicidad().then(() => { _timestampPublicidad = Date.now(); });
 sincronizar();
-setInterval(sincronizar, 2000);
-setInterval(cargarPublicidad, 30000);
+conectarSSE();
+
+const CANAL = new BroadcastChannel('zero_pantalla_cliente');
+CANAL.onmessage = (e) => procesarMensajePantalla(e.data);
 </script>
 
 <script>
