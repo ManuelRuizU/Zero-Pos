@@ -168,11 +168,25 @@ def get_config():
             f"SELECT clave, valor FROM config WHERE clave IN ({','.join('?'*len(claves))})",
             claves,
         ).fetchall()
+        ts_row = conn.execute(
+            "SELECT MAX(creado_en) as ts FROM publicidad WHERE activo=1"
+        ).fetchone()
     cfg = {r["clave"]: r["valor"] for r in rows}
+    import time as _time
+    ts_str = ts_row["ts"] if ts_row and ts_row["ts"] else None
+    if ts_str:
+        try:
+            from datetime import datetime as _dt
+            actualizado_en = int(_dt.fromisoformat(ts_str).timestamp() * 1000)
+        except Exception:
+            actualizado_en = int(_time.time() * 1000)
+    else:
+        actualizado_en = 0
     return jsonify({
-        "intervalo":    int(cfg.get("pub_intervalo", 5)),
-        "transicion":   cfg.get("pub_transicion", "fade"),
+        "intervalo":     int(cfg.get("pub_intervalo", 5)),
+        "transicion":    cfg.get("pub_transicion", "fade"),
         "mostrar_texto": cfg.get("pub_mostrar_texto", "1") == "1",
+        "actualizado_en": actualizado_en,
     })
 
 
