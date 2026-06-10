@@ -1,9 +1,6 @@
-import json
 import logging
-import queue
-import threading
 from datetime import datetime
-from flask import Blueprint, request, jsonify, session, Response
+from flask import Blueprint, request, jsonify, session
 from database import (db_session, pesos, registrar_movimiento_stock, tiene_permiso,
                        encolar_ticket, marcar_ticket_impreso, marcar_ticket_fallido)
 from routes.productos import cache_invalidate as _invalidate_productos
@@ -16,24 +13,6 @@ _pantalla: dict = {
     "metodo_pago": "", "monto_recibido": 0, "vuelto": 0,
     "estado": "idle", "activa": False,
 }
-
-# SSE: lista de colas activas (una por tablet/cliente conectado)
-MAX_CLIENTES_SSE = 4
-_clientes_sse: list = []
-_sse_lock = threading.Lock()
-
-
-def notificar_pantallas(mensaje: dict):
-    data = json.dumps(mensaje, ensure_ascii=False)
-    muertos = []
-    with _sse_lock:
-        for q in _clientes_sse:
-            try:
-                q.put_nowait(data)
-            except queue.Full:
-                muertos.append(q)
-        for q in muertos:
-            _clientes_sse.remove(q)
 
 @ventas_bp.after_request
 def _invalidate_on_venta(response):
@@ -236,8 +215,6 @@ def crear_venta():
     # La transacción ya está committed. Imprimir sin afectar la respuesta.
     _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
                            config_negocio, config_imp, pedido_data, empleado)
-
-    notificar_pantallas({"tipo": "venta_confirmada", "total": total})
 
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
@@ -603,42 +580,6 @@ def pantalla_cliente_set():
         "activa":         bool(items),
     }
     return jsonify({"ok": True})
-
-
-@ventas_bp.route("/stream-pantalla", methods=["GET"])
-def stream_pantalla():
-    """SSE push para tablets remotas. Sin autenticación — red local = perímetro."""
-    with _sse_lock:
-        if len(_clientes_sse) >= MAX_CLIENTES_SSE:
-            return jsonify({"error": "Máximo de pantallas conectadas alcanzado"}), 503
-
-    q: queue.Queue = queue.Queue(maxsize=10)
-    with _sse_lock:
-        _clientes_sse.append(q)
-
-    def generar():
-        try:
-            while True:
-                try:
-                    data = q.get(timeout=25)
-                    yield f"data: {data}\n\n"
-                except queue.Empty:
-                    yield ": keep-alive\n\n"
-        except GeneratorExit:
-            pass
-        finally:
-            with _sse_lock:
-                if q in _clientes_sse:
-                    _clientes_sse.remove(q)
-
-    return Response(
-        generar(),
-        mimetype="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "X-Accel-Buffering": "no",
-        },
-    )
 
 
 @ventas_bp.route("/resumen/hoy", methods=["GET"])

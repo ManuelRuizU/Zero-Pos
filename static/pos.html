@@ -1403,7 +1403,6 @@ let metodoPago = 'efectivo';
 let total = 0;
 let _creditClienteId = null;
 let _creditClienteNuevo = false;
-const CANAL_PANTALLA = new BroadcastChannel('zero_pantalla_cliente');
 
 // Smart emoji: category icon → category name map → name-based keyword → fallback
 function getProductEmoji(prod) {
@@ -2673,8 +2672,6 @@ function pushPantallaCliente(extra = {}) {
     iva,
     ...extra,
   };
-  const tipo = extra.estado === 'pagado' ? 'venta_confirmada' : 'carrito_actualizado';
-  try { CANAL_PANTALLA.postMessage({ tipo, ...payload }); } catch(e) {}
   fetch('/api/ventas/pantalla-cliente/estado', {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type': 'application/json'},
@@ -2683,7 +2680,6 @@ function pushPantallaCliente(extra = {}) {
 }
 
 function _pushPantallaIdle() {
-  try { CANAL_PANTALLA.postMessage({ tipo: 'idle' }); } catch(e) {}
   fetch('/api/ventas/pantalla-cliente/estado', {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type': 'application/json'},
@@ -3161,7 +3157,6 @@ function _iniciarDistanciaRow() {
 }
 
 function _abrirModalCobro() {
-  try { CANAL_PANTALLA.postMessage({ tipo: 'cobrando', total }); } catch(e) {}
   document.getElementById('modalTotal').textContent = fmt(total);
   document.getElementById('montoRecibido').value = '';
   document.getElementById('vueltoRow').style.display = 'none';

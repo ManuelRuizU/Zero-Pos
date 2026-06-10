@@ -811,7 +811,7 @@ if __name__ == "__main__":
         try:
             from waitress import serve
             print(f"[ZERO POS] Servidor producción (Waitress) → puerto {port}")
-            serve(app, host="0.0.0.0", port=port, threads=16)
+            serve(app, host="0.0.0.0", port=port, threads=8)
         except ImportError:
             print("[ZERO POS] Waitress no disponible, usando Werkzeug")
             app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
