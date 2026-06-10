@@ -2668,6 +2668,7 @@ function pushPantallaCliente(extra = {}) {
         cantidad: i.cantidad,
         precio_unit: i.precio_unit,
         subtotal: i.precio_unit * i.cantidad,
+        imagen_url: i.imagen_url || null,
       })),
       total: t,
       subtotal: subtotalBruto,

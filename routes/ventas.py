@@ -567,6 +567,7 @@ def pantalla_cliente_set():
                 "cantidad":    int(i.get("cantidad", 1)),
                 "precio_unit": pesos(i.get("precio_unit", 0)),
                 "subtotal":    pesos(i.get("subtotal", 0)),
+                "imagen_url":  i.get("imagen_url") or None,
             }
             for i in items
         ],
