@@ -3250,6 +3250,7 @@ async function confirmarPago() {
   const btn = document.getElementById('btnConfirmar') || document.getElementById('btnConfirmarCredito');
   if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
 
+  let ventaRealizada = false;
   const desc = parseFloat(document.getElementById('descuentoInput').value) || 0;
   // Validar descuento máximo por permisos
   if (desc > 0) {
@@ -3347,8 +3348,25 @@ async function confirmarPago() {
         body: JSON.stringify(payload),
       });
       const data = await r.json();
-      if (!r.ok) { showToast(data.error || 'Error al registrar venta', 'error'); return; }
-      ventaId = data.venta_id;
+      if (!r.ok) {
+        if (r.status === 409) {
+          // 409 en reintento puede significar que la venta anterior sí se guardó
+          try {
+            const recientes = await fetch('/api/ventas?limit=1', {credentials:'include'})
+              .then(rr => rr.ok ? rr.json() : []).catch(() => []);
+            if (Array.isArray(recientes) && recientes.length > 0 &&
+                Date.now() - new Date(recientes[0].creado_en).getTime() < 15000) {
+              ventaId = recientes[0].id;
+            } else {
+              showToast(data.error || 'Stock insuficiente', 'error'); return;
+            }
+          } catch(e2) { showToast(data.error || 'Stock insuficiente', 'error'); return; }
+        } else {
+          showToast(data.error || 'Error al registrar venta', 'error'); return;
+        }
+      } else {
+        ventaId = data.venta_id;
+      }
     }
 
     if (itemsRapidosCarrito.length) {
@@ -3370,29 +3388,35 @@ async function confirmarPago() {
       ventaId = ventaId || data2.venta_id;
     }
 
-    // Push estado "pagado" a pantalla cliente antes de limpiar carrito
-    const _recibido = metodoPago === 'efectivo' ? (parseFloat(document.getElementById('montoRecibido').value) || 0) : 0;
-    const _vuelto = metodoPago === 'efectivo' ? Math.max(0, _recibido - total) : 0;
-    pushPantallaCliente({estado: 'pagado', metodo_pago: metodoPago, monto_recibido: _recibido, vuelto: _vuelto});
-    _pantallaLock = true;
-    if (_pantallaTimer) clearTimeout(_pantallaTimer);
-    _pantallaTimer = setTimeout(() => { _pantallaLock = false; _pushPantallaIdle(); }, 10000);
-
-    if (metodoPago === 'credito' && _creditClienteId && ventaId) {
-      await _postVentaCredito(ventaId);
+    ventaRealizada = true;
+    try {
+      const _recibido = metodoPago === 'efectivo' ? (parseFloat(document.getElementById('montoRecibido').value) || 0) : 0;
+      const _vuelto = metodoPago === 'efectivo' ? Math.max(0, _recibido - total) : 0;
+      pushPantallaCliente({estado: 'pagado', metodo_pago: metodoPago, monto_recibido: _recibido, vuelto: _vuelto});
+      _pantallaLock = true;
+      if (_pantallaTimer) clearTimeout(_pantallaTimer);
+      _pantallaTimer = setTimeout(() => { _pantallaLock = false; _pushPantallaIdle(); }, 10000);
+      if (metodoPago === 'credito' && _creditClienteId && ventaId) {
+        await _postVentaCredito(ventaId);
+      }
+      cerrarCobro();
+      if (document.getElementById('carrito').classList.contains('open')) toggleCarritoMobile();
+      limpiarCarrito();
+      document.getElementById('descuentoInput').value = '';
+      const _dv = document.getElementById('descuentoInputVisible'); if (_dv) _dv.value = '';
+      const _dr = document.getElementById('descuentoInputRow'); if (_dr) _dr.style.display = 'none';
+      showToast(`✓ Venta #${ventaId} — ${fmt(total)}`, 'success');
+      setTimeout(() => cargarProductos(), 500);
+    } catch(postErr) {
+      console.error('Error post-venta (venta guardada):', postErr);
+      try { cerrarCobro(); } catch(e2) {}
+      try { limpiarCarrito(); } catch(e2) {}
+      showToast(`✓ Venta #${ventaId} completada`, 'success');
     }
-    cerrarCobro();
-    if (document.getElementById('carrito').classList.contains('open')) toggleCarritoMobile();
-    limpiarCarrito();
-    document.getElementById('descuentoInput').value = '';
-    const _dv = document.getElementById('descuentoInputVisible'); if (_dv) _dv.value = '';
-    const _dr = document.getElementById('descuentoInputRow'); if (_dr) _dr.style.display = 'none';
-    showToast(`✓ Venta #${ventaId} — ${fmt(total)}`, 'success');
-    setTimeout(() => cargarProductos(), 500);
   } catch(e) {
-    showToast('Error de conexión', 'error');
+    if (!ventaRealizada) showToast('Error de conexión', 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar pago'; }
+    if (!ventaRealizada && btn) { btn.disabled = false; btn.textContent = '✓ Confirmar pago'; }
   }
 }
 
