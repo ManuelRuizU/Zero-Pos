@@ -10,14 +10,11 @@
  * Formatea un número como precio en pesos chilenos.
  * $1.890  →  fmt(1890)
  */
-function fmt(n) {
+window.fmt = function(n) {
   return '$' + Math.round(Number(n) || 0).toLocaleString('es-CL');
-}
+};
 
-/**
- * Alias para compatibilidad con código legacy.
- */
-const formatearPrecio = fmt;
+window.formatearPrecio = window.fmt;
 
 /**
  * Normaliza texto para búsquedas: elimina tildes, convierte a minúsculas.

@@ -490,7 +490,7 @@ body {
 /* ═══════════════════════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════════════════════ */
-const fmt = n => '$' + (Math.round(Number(n)) || 0).toLocaleString('es-CL');
+window.fmt = window.fmt || (n => '$' + (Math.round(Number(n)) || 0).toLocaleString('es-CL'));
 
 /* ═══════════════════════════════════════════════════════════
    CARRUSEL PUBLICIDAD
