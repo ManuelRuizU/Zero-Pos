@@ -58,19 +58,22 @@ def crear():
     if not _require_admin():
         return jsonify({"error": "No autorizado"}), 403
 
-    titulo     = request.form.get("titulo", "")
-    subtitulo  = request.form.get("subtitulo", "")
-    color      = request.form.get("color", "#6366f1")
-    color2     = request.form.get("color2", "#8b5cf6")
-    duracion   = int(request.form.get("duracion", 5))
-    imagen_url = _save_file(request.files.get("imagen"))
+    titulo         = request.form.get("titulo", "")
+    subtitulo      = request.form.get("subtitulo", "")
+    color          = request.form.get("color", "#6366f1")
+    color2         = request.form.get("color2", "#8b5cf6")
+    duracion       = int(request.form.get("duracion", 5))
+    plantilla_id   = request.form.get("plantilla_id") or None
+    datos_plantilla = request.form.get("datos_plantilla", "{}")
+    imagen_url     = _save_file(request.files.get("imagen"))
 
     with db_session() as conn:
         orden = (conn.execute("SELECT COALESCE(MAX(orden),0)+1 FROM publicidad").fetchone()[0])
         conn.execute(
-            """INSERT INTO publicidad (titulo, subtitulo, imagen_url, color, color2, orden, duracion)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (titulo, subtitulo, imagen_url, color, color2, orden, duracion),
+            """INSERT INTO publicidad
+               (titulo, subtitulo, imagen_url, color, color2, orden, duracion, plantilla_id, datos_plantilla)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (titulo, subtitulo, imagen_url, color, color2, orden, duracion, plantilla_id, datos_plantilla),
         )
         conn.commit()
         row = conn.execute(
@@ -100,19 +103,22 @@ def actualizar(pub_id: int):
                 _delete_file(imagen_url)
                 imagen_url = nueva_url
 
-        titulo    = request.form.get("titulo",    actual["titulo"])
-        subtitulo = request.form.get("subtitulo", actual["subtitulo"])
-        color     = request.form.get("color",     actual["color"])
-        color2    = request.form.get("color2",    actual["color2"])
-        duracion  = int(request.form.get("duracion", actual["duracion"]))
-        activo    = int(request.form.get("activo",   actual["activo"]))
+        titulo          = request.form.get("titulo",          actual["titulo"])
+        subtitulo       = request.form.get("subtitulo",       actual["subtitulo"])
+        color           = request.form.get("color",           actual["color"])
+        color2          = request.form.get("color2",          actual["color2"])
+        duracion        = int(request.form.get("duracion",    actual["duracion"]))
+        activo          = int(request.form.get("activo",      actual["activo"]))
+        plantilla_id    = request.form.get("plantilla_id",    actual.get("plantilla_id")) or None
+        datos_plantilla = request.form.get("datos_plantilla", actual.get("datos_plantilla") or "{}")
 
         conn.execute(
             """UPDATE publicidad
                SET titulo=?, subtitulo=?, imagen_url=?, color=?, color2=?,
-                   duracion=?, activo=?
+                   duracion=?, activo=?, plantilla_id=?, datos_plantilla=?
                WHERE id=?""",
-            (titulo, subtitulo, imagen_url, color, color2, duracion, activo, pub_id),
+            (titulo, subtitulo, imagen_url, color, color2, duracion, activo,
+             plantilla_id, datos_plantilla, pub_id),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM publicidad WHERE id=?", (pub_id,)).fetchone()
@@ -193,3 +199,28 @@ def put_config():
                 )
         conn.commit()
     return jsonify({"ok": True})
+
+
+# ── GET /api/publicidad/qr  (público, sin auth) ───────────────────────────────
+@publicidad_bp.route("/qr", methods=["GET"])
+def generar_qr():
+    """Genera un QR PNG para cualquier texto. Usado por plantillas (wifi, etc.)."""
+    data = request.args.get("d", "")
+    if not data:
+        return "", 400
+    try:
+        import io as _io
+        import qrcode as _qr
+        qr = _qr.QRCode(version=None, box_size=8, border=3)
+        qr.add_data(data)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        buf = _io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        from flask import send_file
+        return send_file(buf, mimetype="image/png",
+                         max_age=3600, conditional=True)
+    except Exception as e:
+        logger.warning(f"generar_qr: {e}")
+        return "", 500

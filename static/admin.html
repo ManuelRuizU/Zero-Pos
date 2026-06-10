@@ -1030,46 +1030,37 @@ input:checked + .slider:before{transform:translateX(20px);}
   </div>
 
   <!-- Modal Slide Publicidad -->
-  <div id="pubModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center">
-    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(480px,95vw);max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px">
+  <div id="pubModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto">
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(560px,100%);margin:auto;display:flex;flex-direction:column;gap:16px">
+
+      <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h3 id="pubModalTitulo" style="margin:0;font-size:18px">Nuevo slide</h3>
         <button onclick="pubCerrarModal()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer">✕</button>
       </div>
       <input type="hidden" id="pubModalId">
+      <input type="hidden" id="pubModalPlantillaSeleccionada">
+
+      <!-- Paso 1: selector de plantilla -->
       <div>
-        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Título</label>
-        <input id="pubModalTituloInput" type="text" placeholder="Ej: Oferta del día"
-          style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;font-weight:600">Elige una plantilla:</div>
+        <div id="pubGridPlantillas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px"></div>
       </div>
-      <div>
-        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Subtítulo</label>
-        <input id="pubModalSubtitulo" type="text" placeholder="Ej: 20% de descuento en lácteos"
-          style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
-      </div>
-      <div style="display:flex;gap:12px">
-        <div style="flex:1">
-          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Color 1</label>
-          <input id="pubModalColor1" type="color" value="#6366f1"
-            style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px">
-        </div>
-        <div style="flex:1">
-          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Color 2</label>
-          <input id="pubModalColor2" type="color" value="#8b5cf6"
-            style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px">
-        </div>
+
+      <!-- Campos dinámicos por plantilla -->
+      <div id="pubCamposDinamicos" style="display:flex;flex-direction:column;gap:12px"></div>
+
+      <!-- Duración (siempre visible) -->
+      <div style="display:flex;gap:12px;align-items:flex-end">
         <div style="flex:1">
           <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Duración (s)</label>
           <input id="pubModalDuracion" type="number" value="5" min="2" max="60"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
         </div>
       </div>
-      <div>
-        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Imagen (JPG/PNG/WebP/GIF/MP4)</label>
-        <input id="pubModalImagen" type="file" accept="image/*,video/mp4"
-          style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;box-sizing:border-box">
-        <img id="pubModalPreview" src="" alt="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;object-fit:cover;width:100%">
-      </div>
+      <!-- Preview imagen actual -->
+      <img id="pubModalPreview" src="" alt="" style="display:none;max-height:120px;border-radius:8px;object-fit:cover;width:100%">
+
       <div style="display:flex;gap:10px;margin-top:4px">
         <button class="btn" style="flex:1" onclick="pubCerrarModal()">Cancelar</button>
         <button class="btn primary" style="flex:1" onclick="pubGuardarSlide()">Guardar</button>
@@ -1091,6 +1082,9 @@ input:checked + .slider:before{transform:translateX(20px);}
 
 <script>
 const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+function _esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 async function init() {
   const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
@@ -2514,32 +2508,197 @@ function pubRenderLista() {
   `).join('');
 }
 
+// ── Metadata de plantillas ────────────────────────────────────────────────────
+const PUB_PLANTILLAS = [
+  {id:null,                  icono:'🖼️',  nombre:'Sin plantilla', color:'#6366f1',
+   campos:[
+    {key:'titulo',    label:'Título',    type:'text', src:'slide', ph:'Oferta del día'},
+    {key:'subtitulo', label:'Subtítulo', type:'text', src:'slide', ph:'20% de descuento'},
+    {key:'color',     label:'Color 1',  type:'color', src:'slide', def:'#6366f1'},
+    {key:'color2',    label:'Color 2',  type:'color', src:'slide', def:'#8b5cf6'},
+    {key:'imagen',    label:'Imagen',   type:'file',  src:'slide'},
+  ]},
+  {id:'producto_destacado',  icono:'🛍️',  nombre:'Producto',  color:'#6366f1',
+   campos:[
+    {key:'titulo',    label:'Nombre producto', type:'text', src:'slide', ph:'Manzana Roja'},
+    {key:'subtitulo', label:'Descripción',     type:'text', src:'slide', ph:'Oferta de hoy'},
+    {key:'precio',    label:'Precio',          type:'text', src:'datos', ph:'$990'},
+    {key:'color_texto',label:'Color texto',    type:'color',src:'datos', def:'#ffffff'},
+    {key:'imagen',    label:'Imagen',          type:'file', src:'slide'},
+  ]},
+  {id:'oferta_2x1',          icono:'🎯',  nombre:'2×1',       color:'#ef4444',
+   campos:[
+    {key:'titulo',    label:'Producto',      type:'text', src:'slide', ph:'Bebida 500ml'},
+    {key:'precio_unit',label:'Precio c/u',   type:'text', src:'datos', ph:'$1.200 c/u'},
+    {key:'color1',    label:'Color 1',       type:'color',src:'datos', def:'#ef4444'},
+    {key:'color2',    label:'Color 2',       type:'color',src:'datos', def:'#f97316'},
+  ]},
+  {id:'precio_especial',     icono:'💰',  nombre:'Descuento', color:'#f59e0b',
+   campos:[
+    {key:'titulo',      label:'Producto',        type:'text', src:'slide', ph:'Queso Mantecoso'},
+    {key:'precio_antes',label:'Precio anterior', type:'text', src:'datos', ph:'$2.500'},
+    {key:'precio_hoy',  label:'Precio hoy',      type:'text', src:'datos', ph:'$1.890'},
+    {key:'color1',      label:'Color acento',    type:'color',src:'datos', def:'#f59e0b'},
+  ]},
+  {id:'wifi_gratis',         icono:'📶',  nombre:'WiFi',      color:'#06b6d4',
+   campos:[
+    {key:'ssid',     label:'Red WiFi (SSID)', type:'text', src:'datos', ph:'MiNegocioWiFi'},
+    {key:'password', label:'Contraseña',      type:'text', src:'datos', ph:'mi_clave'},
+    {key:'color1',   label:'Color 1',         type:'color',src:'datos', def:'#06b6d4'},
+    {key:'color2',   label:'Color 2',         type:'color',src:'datos', def:'#0ea5e9'},
+  ]},
+  {id:'metodos_pago',        icono:'💳',  nombre:'Pagos',     color:'#8b5cf6',
+   campos:[
+    {key:'titulo',        label:'Título',        type:'text',    src:'datos', ph:'Aceptamos'},
+    {key:'efectivo',      label:'Efectivo',      type:'checkbox',src:'datos', def:true},
+    {key:'transferencia', label:'Transferencia', type:'checkbox',src:'datos', def:true},
+    {key:'tarjeta',       label:'Tarjeta',       type:'checkbox',src:'datos', def:false},
+    {key:'khipu',         label:'Khipu',         type:'checkbox',src:'datos', def:false},
+    {key:'color1',        label:'Color 1',       type:'color',   src:'datos', def:'#6366f1'},
+    {key:'color2',        label:'Color 2',       type:'color',   src:'datos', def:'#8b5cf6'},
+  ]},
+  {id:'horario',             icono:'🕐',  nombre:'Horario',   color:'#10b981',
+   campos:[
+    {key:'titulo',        label:'Título',        type:'text', src:'slide', ph:'Horario de atención'},
+    {key:'lunes_viernes', label:'Lun–Vie',       type:'text', src:'datos', ph:'08:00 – 21:00'},
+    {key:'sabado',        label:'Sábado',        type:'text', src:'datos', ph:'09:00 – 20:00'},
+    {key:'domingo',       label:'Domingo',       type:'text', src:'datos', ph:'Cerrado'},
+    {key:'color1',        label:'Color 1',       type:'color',src:'datos', def:'#10b981'},
+    {key:'color2',        label:'Color 2',       type:'color',src:'datos', def:'#059669'},
+  ]},
+  {id:'promocion_semana',    icono:'⏰',  nombre:'Promoción', color:'#f97316',
+   campos:[
+    {key:'titulo',    label:'Título',       type:'text', src:'slide', ph:'Oferta de la semana'},
+    {key:'subtitulo', label:'Descripción',  type:'text', src:'slide', ph:'En lácteos seleccionados'},
+    {key:'fecha_fin', label:'Válido hasta', type:'date', src:'datos'},
+    {key:'color1',    label:'Color 1',      type:'color',src:'datos', def:'#f97316'},
+    {key:'color2',    label:'Color 2',      type:'color',src:'datos', def:'#ef4444'},
+  ]},
+  {id:'nuevo_producto',      icono:'✨',  nombre:'Nuevo',     color:'#ec4899',
+   campos:[
+    {key:'titulo',      label:'Nombre producto', type:'text', src:'slide', ph:'Granola Artesanal'},
+    {key:'descripcion', label:'Descripción',     type:'text', src:'datos', ph:'Sin azúcar agregada'},
+    {key:'precio',      label:'Precio',          type:'text', src:'datos', ph:'$1.490'},
+    {key:'color1',      label:'Color 1',         type:'color',src:'datos', def:'#ec4899'},
+    {key:'color2',      label:'Color 2',         type:'color',src:'datos', def:'#8b5cf6'},
+    {key:'imagen',      label:'Imagen',          type:'file', src:'slide'},
+  ]},
+  {id:'solo_imagen',         icono:'🖼️', nombre:'Imagen',    color:'#64748b',
+   campos:[
+    {key:'imagen', label:'Imagen (pantalla completa)', type:'file', src:'slide'},
+  ]},
+  {id:'bienvenida',          icono:'👋',  nombre:'Bienvenida',color:'#0ea5e9',
+   campos:[
+    {key:'nombre_negocio', label:'Nombre del negocio', type:'text', src:'datos', ph:'Mi Tienda'},
+    {key:'frase',          label:'Frase del día',      type:'text', src:'datos', ph:'Tu compra de confianza'},
+    {key:'color1',         label:'Color 1',            type:'color',src:'datos', def:'#6366f1'},
+    {key:'color2',         label:'Color 2',            type:'color',src:'datos', def:'#8b5cf6'},
+  ]},
+];
+
+const _INPUT_STYLE = 'width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box';
+const _LABEL_STYLE = 'font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px';
+
+function pubRenderGrid() {
+  const grid = document.getElementById('pubGridPlantillas');
+  if (!grid) return;
+  grid.innerHTML = PUB_PLANTILLAS.map(p => `
+    <div class="pub-plantilla-card" data-pid="${p.id||''}"
+      onclick="pubSeleccionarPlantilla('${p.id||''}')"
+      style="cursor:pointer;border-radius:10px;padding:10px 6px;text-align:center;
+             background:var(--surface2);border:2px solid var(--border);transition:all .15s;
+             display:flex;flex-direction:column;gap:4px;align-items:center">
+      <div style="font-size:22px;line-height:1">${p.icono}</div>
+      <div style="font-size:11px;font-weight:600;color:var(--text-dim);line-height:1.2">${p.nombre}</div>
+    </div>
+  `).join('');
+}
+
+function pubSeleccionarPlantilla(pid) {
+  const plantilla = PUB_PLANTILLAS.find(p => (p.id||'') === (pid||''));
+  if (!plantilla) return;
+  document.getElementById('pubModalPlantillaSeleccionada').value = pid;
+  // Highlight
+  document.querySelectorAll('.pub-plantilla-card').forEach(c => {
+    const sel = c.dataset.pid === (pid||'');
+    c.style.borderColor = sel ? plantilla.color : 'var(--border)';
+    c.style.background  = sel ? `${plantilla.color}22` : 'var(--surface2)';
+  });
+  // Render campos
+  const datos = _pubDatosActuales || {};
+  const slide = _pubSlideActual || {};
+  const cont = document.getElementById('pubCamposDinamicos');
+  cont.innerHTML = '';
+  const colorRow = [];
+  plantilla.campos.forEach(campo => {
+    if (campo.type === 'color') { colorRow.push(campo); return; }
+    const wrap = document.createElement('div');
+    if (campo.type === 'file') {
+      wrap.innerHTML = `
+        <label style="${_LABEL_STYLE}">${campo.label}</label>
+        <input id="pubField_${campo.key}" type="file" accept="image/*,video/mp4"
+          style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;box-sizing:border-box"
+          onchange="pubOnImagenChange(this)">`;
+    } else if (campo.type === 'checkbox') {
+      const val = campo.src==='datos' ? datos[campo.key] : slide[campo.key];
+      const checked = val !== undefined ? !!val : (campo.def !== undefined ? campo.def : false);
+      wrap.style.cssText = 'display:flex;align-items:center;gap:10px';
+      wrap.innerHTML = `
+        <input id="pubField_${campo.key}" type="checkbox" ${checked?'checked':''} style="width:18px;height:18px;cursor:pointer">
+        <label for="pubField_${campo.key}" style="font-size:14px;cursor:pointer">${campo.label}</label>`;
+    } else {
+      const val = campo.src==='datos' ? datos[campo.key] : (campo.src==='slide' ? slide[campo.key] : '');
+      wrap.innerHTML = `
+        <label style="${_LABEL_STYLE}">${campo.label}</label>
+        <input id="pubField_${campo.key}" type="${campo.type}" placeholder="${campo.ph||''}"
+          value="${_esc(val||campo.def||'')}"
+          style="${_INPUT_STYLE}">`;
+    }
+    cont.appendChild(wrap);
+  });
+  // Color fields in one row
+  if (colorRow.length) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:12px';
+    colorRow.forEach(campo => {
+      const val = campo.src==='datos' ? datos[campo.key] : (slide[campo.key] || campo.def || '#6366f1');
+      const div = document.createElement('div');
+      div.style.flex = '1';
+      div.innerHTML = `
+        <label style="${_LABEL_STYLE}">${campo.label}</label>
+        <input id="pubField_${campo.key}" type="color" value="${val||campo.def||'#6366f1'}"
+          style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px">`;
+      row.appendChild(div);
+    });
+    cont.appendChild(row);
+  }
+}
+
+function pubOnImagenChange(input) {
+  const file = input.files[0];
+  const prev = document.getElementById('pubModalPreview');
+  if (file) { prev.src = URL.createObjectURL(file); prev.style.display = 'block'; }
+}
+
+let _pubDatosActuales = {};
+let _pubSlideActual = {};
+
 function pubAbrirModal(id) {
   _pubEditId = id;
   const slide = id ? _pubSlides.find(s => s.id === id) : null;
+  _pubSlideActual = slide || {};
+  try { _pubDatosActuales = JSON.parse(slide?.datos_plantilla || '{}'); } catch(e) { _pubDatosActuales = {}; }
   document.getElementById('pubModalTitulo').textContent = slide ? 'Editar slide' : 'Nuevo slide';
   document.getElementById('pubModalId').value = id || '';
-  document.getElementById('pubModalTituloInput').value = slide?.titulo || '';
-  document.getElementById('pubModalSubtitulo').value = slide?.subtitulo || '';
-  document.getElementById('pubModalColor1').value = slide?.color || '#6366f1';
-  document.getElementById('pubModalColor2').value = slide?.color2 || '#8b5cf6';
   document.getElementById('pubModalDuracion').value = slide?.duracion || 5;
-  document.getElementById('pubModalImagen').value = '';
   const prev = document.getElementById('pubModalPreview');
   prev.src = slide?.imagen_url || '';
   prev.style.display = slide?.imagen_url ? 'block' : 'none';
-  const modal = document.getElementById('pubModal');
-  modal.style.display = 'flex';
+  pubRenderGrid();
+  const pid = slide?.plantilla_id || '';
+  pubSeleccionarPlantilla(pid);
+  document.getElementById('pubModal').style.display = 'flex';
 }
-
-document.getElementById('pubModalImagen')?.addEventListener('change', function() {
-  const file = this.files[0];
-  const prev = document.getElementById('pubModalPreview');
-  if (file) {
-    prev.src = URL.createObjectURL(file);
-    prev.style.display = 'block';
-  }
-});
 
 function pubCerrarModal() {
   document.getElementById('pubModal').style.display = 'none';
@@ -2547,14 +2706,33 @@ function pubCerrarModal() {
 
 async function pubGuardarSlide() {
   const id = document.getElementById('pubModalId').value;
+  const pid = document.getElementById('pubModalPlantillaSeleccionada').value || null;
+  const plantilla = PUB_PLANTILLAS.find(p => (p.id||'') === (pid||'')) || PUB_PLANTILLAS[0];
   const fd = new FormData();
-  fd.append('titulo', document.getElementById('pubModalTituloInput').value);
-  fd.append('subtitulo', document.getElementById('pubModalSubtitulo').value);
-  fd.append('color', document.getElementById('pubModalColor1').value);
-  fd.append('color2', document.getElementById('pubModalColor2').value);
+  const datosObj = {};
+
+  plantilla.campos.forEach(campo => {
+    const el = document.getElementById('pubField_' + campo.key);
+    if (!el) return;
+    if (campo.type === 'file') {
+      if (el.files[0]) fd.append('imagen', el.files[0]);
+    } else if (campo.type === 'checkbox') {
+      if (campo.src === 'slide') fd.append(campo.key, el.checked ? '1' : '0');
+      else datosObj[campo.key] = el.checked;
+    } else {
+      if (campo.src === 'slide') fd.append(campo.key, el.value);
+      else datosObj[campo.key] = el.value;
+    }
+  });
+
+  // Slide-level defaults
+  if (!fd.has('titulo'))    fd.append('titulo',    _pubSlideActual.titulo || '');
+  if (!fd.has('subtitulo')) fd.append('subtitulo', _pubSlideActual.subtitulo || '');
+  if (!fd.has('color'))     fd.append('color',     _pubSlideActual.color || '#6366f1');
+  if (!fd.has('color2'))    fd.append('color2',    _pubSlideActual.color2 || '#8b5cf6');
   fd.append('duracion', document.getElementById('pubModalDuracion').value);
-  const img = document.getElementById('pubModalImagen').files[0];
-  if (img) fd.append('imagen', img);
+  if (pid) fd.append('plantilla_id', pid);
+  fd.append('datos_plantilla', JSON.stringify(datosObj));
 
   try {
     const url = id ? `/api/publicidad/${id}` : '/api/publicidad';

@@ -415,6 +415,18 @@ def _m012_publicidad(conn):
     )""")
 
 
+def _m013_publicidad_plantillas(conn):
+    """Agrega columnas plantilla_id y datos_plantilla a publicidad."""
+    for stmt in [
+        "ALTER TABLE publicidad ADD COLUMN plantilla_id TEXT DEFAULT NULL",
+        "ALTER TABLE publicidad ADD COLUMN datos_plantilla TEXT DEFAULT '{}'",
+    ]:
+        try:
+            conn.execute(stmt)
+        except Exception as e:
+            logger.debug(f"_m013: {e}")
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -428,6 +440,7 @@ _MIGRACIONES = [
     (10, "ZERO CREDIT: clientes_fiado y fiado_movimientos",                      _m010_zero_credit),
     (11, "dia_pago: día de cobro fijo mensual en clientes_fiado",               _m011_dia_pago),
     (12, "publicidad: slides configurables para pantalla cliente",               _m012_publicidad),
+    (13, "publicidad: plantilla_id y datos_plantilla para plantillas HTML",       _m013_publicidad_plantillas),
 ]
 
 
