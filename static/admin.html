@@ -1031,7 +1031,7 @@ input:checked + .slider:before{transform:translateX(20px);}
 
   <!-- Modal Slide Publicidad -->
   <div id="pubModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto">
-    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(560px,100%);margin:auto;display:flex;flex-direction:column;gap:16px">
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(580px,100%);margin:auto;display:flex;flex-direction:column;gap:16px">
 
       <!-- Header -->
       <div style="display:flex;justify-content:space-between;align-items:center">
@@ -1041,25 +1041,72 @@ input:checked + .slider:before{transform:translateX(20px);}
       <input type="hidden" id="pubModalId">
       <input type="hidden" id="pubModalPlantillaSeleccionada">
 
-      <!-- Paso 1: selector de plantilla -->
-      <div>
-        <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;font-weight:600">Elige una plantilla:</div>
-        <div id="pubGridPlantillas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px"></div>
+      <!-- Selector de modo: A = plantilla / B = imagen propia -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button id="pubBtnModoA" onclick="pubSeleccionarModo('plantilla')"
+          style="padding:14px 10px;border-radius:12px;border:2px solid var(--border);
+                 background:var(--surface2);color:var(--text);cursor:pointer;font-size:13px;
+                 display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s">
+          <span style="font-size:22px">🎨</span>
+          <span style="font-weight:700">Usar plantilla ZERO</span>
+          <span style="font-size:11px;color:var(--text-dim);font-weight:400">10 diseños listos</span>
+        </button>
+        <button id="pubBtnModoB" onclick="pubSeleccionarModo('imagen')"
+          style="padding:14px 10px;border-radius:12px;border:2px solid var(--border);
+                 background:var(--surface2);color:var(--text);cursor:pointer;font-size:13px;
+                 display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .15s">
+          <span style="font-size:22px">🖼️</span>
+          <span style="font-weight:700">Subir mi imagen</span>
+          <span style="font-size:11px;color:var(--text-dim);font-weight:400">Imagen + título + colores</span>
+        </button>
       </div>
 
-      <!-- Campos dinámicos por plantilla -->
-      <div id="pubCamposDinamicos" style="display:flex;flex-direction:column;gap:12px"></div>
+      <!-- SECCIÓN A: Plantillas -->
+      <div id="pubSeccionA" style="display:none;flex-direction:column;gap:14px">
+        <div style="font-size:13px;color:var(--text-dim);font-weight:600">Elige una plantilla:</div>
+        <div id="pubGridPlantillas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px"></div>
+        <div id="pubCamposDinamicos" style="display:flex;flex-direction:column;gap:12px"></div>
+      </div>
 
-      <!-- Duración (siempre visible) -->
-      <div style="display:flex;gap:12px;align-items:flex-end">
-        <div style="flex:1">
-          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Duración (s)</label>
-          <input id="pubModalDuracion" type="number" value="5" min="2" max="60"
+      <!-- SECCIÓN B: Imagen propia (flujo original) -->
+      <div id="pubSeccionB" style="display:none;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Título</label>
+          <input id="pubB_titulo" type="text" placeholder="Ej: Oferta del día"
             style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
         </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Subtítulo</label>
+          <input id="pubB_subtitulo" type="text" placeholder="Ej: 20% de descuento en lácteos"
+            style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+        </div>
+        <div style="display:flex;gap:10px">
+          <div style="flex:1">
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Color 1</label>
+            <input id="pubB_color1" type="color" value="#6366f1"
+              style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px">
+          </div>
+          <div style="flex:1">
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Color 2</label>
+            <input id="pubB_color2" type="color" value="#8b5cf6"
+              style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Imagen (JPG/PNG/WebP/GIF/MP4)</label>
+          <input id="pubB_imagen" type="file" accept="image/*,video/mp4"
+            style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;box-sizing:border-box"
+            onchange="pubOnImagenChange(this)">
+        </div>
+        <img id="pubModalPreview" src="" alt="" style="display:none;max-height:120px;border-radius:8px;object-fit:cover;width:100%">
       </div>
-      <!-- Preview imagen actual -->
-      <img id="pubModalPreview" src="" alt="" style="display:none;max-height:120px;border-radius:8px;object-fit:cover;width:100%">
+
+      <!-- Duración (siempre visible) -->
+      <div>
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Duración (s)</label>
+        <input id="pubModalDuracion" type="number" value="5" min="2" max="60"
+          style="width:160px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
 
       <div style="display:flex;gap:10px;margin-top:4px">
         <button class="btn" style="flex:1" onclick="pubCerrarModal()">Cancelar</button>
@@ -2491,33 +2538,36 @@ function pubRenderLista() {
     lista.innerHTML = '<div style="color:var(--text-dim);font-size:14px;padding:12px 0">Sin slides. Agrega uno con el botón +.</div>';
     return;
   }
-  lista.innerHTML = _pubSlides.map(s => `
+  lista.innerHTML = _pubSlides.map(s => {
+    const plantInfo = s.plantilla_id ? PUB_PLANTILLAS.find(p => p.id === s.plantilla_id) : null;
+    const miniatura = s.imagen_url
+      ? `<img src="${s.imagen_url}" style="width:60px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">`
+      : plantInfo
+        ? `<div style="width:60px;height:40px;border-radius:6px;background:linear-gradient(135deg,${plantInfo.color},${plantInfo.color}99);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${plantInfo.icono}</div>`
+        : `<div style="width:60px;height:40px;border-radius:6px;background:linear-gradient(135deg,${s.color||'#6366f1'},${s.color2||'#8b5cf6'});flex-shrink:0"></div>`;
+    const badge = plantInfo
+      ? `<span style="font-size:10px;background:#6366f122;color:#818cf8;border-radius:6px;padding:1px 6px;border:1px solid #6366f140">🎨 ${plantInfo.nombre}</span>`
+      : `<span style="font-size:10px;background:#ffffff0a;color:var(--text-dim);border-radius:6px;padding:1px 6px;border:1px solid var(--border)">🖼️ Imagen</span>`;
+    return `
     <div style="display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:10px;padding:10px 14px">
-      ${s.imagen_url
-        ? `<img src="${s.imagen_url}" style="width:60px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">`
-        : `<div style="width:60px;height:40px;border-radius:6px;background:linear-gradient(135deg,${s.color},${s.color2});flex-shrink:0"></div>`}
+      ${miniatura}
       <div style="flex:1;min-width:0">
-        <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.titulo || '(sin título)'}</div>
-        <div style="font-size:12px;color:var(--text-dim)">${s.subtitulo || ''} · ${s.duracion}s</div>
+        <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${_esc(s.titulo) || '(sin título)'}</div>
+        <div style="font-size:12px;color:var(--text-dim);display:flex;gap:6px;align-items:center;margin-top:2px">
+          ${badge}
+          <span>${s.duracion}s</span>
+        </div>
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn" style="padding:4px 10px;font-size:12px" onclick="pubAbrirModal(${s.id})">✏️</button>
         <button class="btn" style="padding:4px 10px;font-size:12px;background:#dc2626" onclick="pubEliminar(${s.id})">🗑️</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 // ── Metadata de plantillas ────────────────────────────────────────────────────
 const PUB_PLANTILLAS = [
-  {id:null,                  icono:'🖼️',  nombre:'Sin plantilla', color:'#6366f1',
-   campos:[
-    {key:'titulo',    label:'Título',    type:'text', src:'slide', ph:'Oferta del día'},
-    {key:'subtitulo', label:'Subtítulo', type:'text', src:'slide', ph:'20% de descuento'},
-    {key:'color',     label:'Color 1',  type:'color', src:'slide', def:'#6366f1'},
-    {key:'color2',    label:'Color 2',  type:'color', src:'slide', def:'#8b5cf6'},
-    {key:'imagen',    label:'Imagen',   type:'file',  src:'slide'},
-  ]},
   {id:'producto_destacado',  icono:'🛍️',  nombre:'Producto',  color:'#6366f1',
    campos:[
     {key:'titulo',    label:'Nombre producto', type:'text', src:'slide', ph:'Manzana Roja'},
@@ -2599,12 +2649,35 @@ const PUB_PLANTILLAS = [
 const _INPUT_STYLE = 'width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box';
 const _LABEL_STYLE = 'font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px';
 
+let _pubModoActual = 'imagen'; // 'plantilla' | 'imagen'
+let _pubDatosActuales = {};
+let _pubSlideActual = {};
+
+// ── Selector de modo A / B ────────────────────────────────────────────────────
+function pubSeleccionarModo(modo) {
+  _pubModoActual = modo;
+  const btnA = document.getElementById('pubBtnModoA');
+  const btnB = document.getElementById('pubBtnModoB');
+  const secA = document.getElementById('pubSeccionA');
+  const secB = document.getElementById('pubSeccionB');
+  const ACTIVE = 'border-color:#6366f1;background:#6366f130;';
+  const IDLE   = 'border-color:var(--border);background:var(--surface2);';
+  if (btnA) btnA.style.cssText += modo === 'plantilla' ? ACTIVE : IDLE;
+  if (btnB) btnB.style.cssText += modo === 'imagen'    ? ACTIVE : IDLE;
+  if (secA) secA.style.display = modo === 'plantilla' ? 'flex' : 'none';
+  if (secB) secB.style.display = modo === 'imagen'    ? 'flex' : 'none';
+  if (modo === 'plantilla' && !document.querySelector('.pub-plantilla-card')) {
+    pubRenderGrid();
+  }
+}
+
+// ── Grid de plantillas (Sección A) ────────────────────────────────────────────
 function pubRenderGrid() {
   const grid = document.getElementById('pubGridPlantillas');
   if (!grid) return;
   grid.innerHTML = PUB_PLANTILLAS.map(p => `
-    <div class="pub-plantilla-card" data-pid="${p.id||''}"
-      onclick="pubSeleccionarPlantilla('${p.id||''}')"
+    <div class="pub-plantilla-card" data-pid="${p.id}"
+      onclick="pubSeleccionarPlantilla('${p.id}')"
       style="cursor:pointer;border-radius:10px;padding:10px 6px;text-align:center;
              background:var(--surface2);border:2px solid var(--border);transition:all .15s;
              display:flex;flex-direction:column;gap:4px;align-items:center">
@@ -2615,19 +2688,17 @@ function pubRenderGrid() {
 }
 
 function pubSeleccionarPlantilla(pid) {
-  const plantilla = PUB_PLANTILLAS.find(p => (p.id||'') === (pid||''));
+  const plantilla = PUB_PLANTILLAS.find(p => p.id === pid);
   if (!plantilla) return;
   document.getElementById('pubModalPlantillaSeleccionada').value = pid;
-  // Highlight
   document.querySelectorAll('.pub-plantilla-card').forEach(c => {
-    const sel = c.dataset.pid === (pid||'');
+    const sel = c.dataset.pid === pid;
     c.style.borderColor = sel ? plantilla.color : 'var(--border)';
     c.style.background  = sel ? `${plantilla.color}22` : 'var(--surface2)';
   });
-  // Render campos
   const datos = _pubDatosActuales || {};
   const slide = _pubSlideActual || {};
-  const cont = document.getElementById('pubCamposDinamicos');
+  const cont  = document.getElementById('pubCamposDinamicos');
   cont.innerHTML = '';
   const colorRow = [];
   plantilla.campos.forEach(campo => {
@@ -2641,22 +2712,20 @@ function pubSeleccionarPlantilla(pid) {
           onchange="pubOnImagenChange(this)">`;
     } else if (campo.type === 'checkbox') {
       const val = campo.src==='datos' ? datos[campo.key] : slide[campo.key];
-      const checked = val !== undefined ? !!val : (campo.def !== undefined ? campo.def : false);
+      const chk = val !== undefined ? !!val : (campo.def !== undefined ? campo.def : false);
       wrap.style.cssText = 'display:flex;align-items:center;gap:10px';
       wrap.innerHTML = `
-        <input id="pubField_${campo.key}" type="checkbox" ${checked?'checked':''} style="width:18px;height:18px;cursor:pointer">
+        <input id="pubField_${campo.key}" type="checkbox" ${chk?'checked':''} style="width:18px;height:18px;cursor:pointer">
         <label for="pubField_${campo.key}" style="font-size:14px;cursor:pointer">${campo.label}</label>`;
     } else {
       const val = campo.src==='datos' ? datos[campo.key] : (campo.src==='slide' ? slide[campo.key] : '');
       wrap.innerHTML = `
         <label style="${_LABEL_STYLE}">${campo.label}</label>
         <input id="pubField_${campo.key}" type="${campo.type}" placeholder="${campo.ph||''}"
-          value="${_esc(val||campo.def||'')}"
-          style="${_INPUT_STYLE}">`;
+          value="${_esc(val||campo.def||'')}" style="${_INPUT_STYLE}">`;
     }
     cont.appendChild(wrap);
   });
-  // Color fields in one row
   if (colorRow.length) {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:12px';
@@ -2680,23 +2749,48 @@ function pubOnImagenChange(input) {
   if (file) { prev.src = URL.createObjectURL(file); prev.style.display = 'block'; }
 }
 
-let _pubDatosActuales = {};
-let _pubSlideActual = {};
-
+// ── Abrir / cerrar modal ──────────────────────────────────────────────────────
 function pubAbrirModal(id) {
   _pubEditId = id;
   const slide = id ? _pubSlides.find(s => s.id === id) : null;
   _pubSlideActual = slide || {};
   try { _pubDatosActuales = JSON.parse(slide?.datos_plantilla || '{}'); } catch(e) { _pubDatosActuales = {}; }
+
   document.getElementById('pubModalTitulo').textContent = slide ? 'Editar slide' : 'Nuevo slide';
-  document.getElementById('pubModalId').value = id || '';
+  document.getElementById('pubModalId').value   = id || '';
   document.getElementById('pubModalDuracion').value = slide?.duracion || 5;
+  document.getElementById('pubModalPlantillaSeleccionada').value = '';
+
+  // Preview imagen
   const prev = document.getElementById('pubModalPreview');
   prev.src = slide?.imagen_url || '';
-  prev.style.display = slide?.imagen_url ? 'block' : 'none';
-  pubRenderGrid();
-  const pid = slide?.plantilla_id || '';
-  pubSeleccionarPlantilla(pid);
+  prev.style.display = slide?.imagen_url && !slide?.plantilla_id ? 'block' : 'none';
+
+  // Modo inicial según si tiene plantilla o no
+  const modoInicial = slide?.plantilla_id ? 'plantilla' : 'imagen';
+  // Reset botones antes de aplicar modo
+  ['pubBtnModoA','pubBtnModoB'].forEach(bid => {
+    const b = document.getElementById(bid);
+    if (b) b.style.cssText = b.getAttribute('style') || '';
+  });
+  pubSeleccionarModo(modoInicial);
+
+  // Si tenía plantilla, pre-seleccionarla
+  if (modoInicial === 'plantilla') {
+    pubRenderGrid();
+    pubSeleccionarPlantilla(slide.plantilla_id);
+  }
+
+  // Pre-rellenar campos Sección B
+  const tEl = document.getElementById('pubB_titulo');
+  const sEl = document.getElementById('pubB_subtitulo');
+  const c1El = document.getElementById('pubB_color1');
+  const c2El = document.getElementById('pubB_color2');
+  if (tEl)  tEl.value  = slide?.titulo    || '';
+  if (sEl)  sEl.value  = slide?.subtitulo || '';
+  if (c1El) c1El.value = slide?.color     || '#6366f1';
+  if (c2El) c2El.value = slide?.color2    || '#8b5cf6';
+
   document.getElementById('pubModal').style.display = 'flex';
 }
 
@@ -2704,38 +2798,52 @@ function pubCerrarModal() {
   document.getElementById('pubModal').style.display = 'none';
 }
 
+// ── Guardar ───────────────────────────────────────────────────────────────────
 async function pubGuardarSlide() {
-  const id = document.getElementById('pubModalId').value;
-  const pid = document.getElementById('pubModalPlantillaSeleccionada').value || null;
-  const plantilla = PUB_PLANTILLAS.find(p => (p.id||'') === (pid||'')) || PUB_PLANTILLAS[0];
-  const fd = new FormData();
-  const datosObj = {};
-
-  plantilla.campos.forEach(campo => {
-    const el = document.getElementById('pubField_' + campo.key);
-    if (!el) return;
-    if (campo.type === 'file') {
-      if (el.files[0]) fd.append('imagen', el.files[0]);
-    } else if (campo.type === 'checkbox') {
-      if (campo.src === 'slide') fd.append(campo.key, el.checked ? '1' : '0');
-      else datosObj[campo.key] = el.checked;
-    } else {
-      if (campo.src === 'slide') fd.append(campo.key, el.value);
-      else datosObj[campo.key] = el.value;
-    }
-  });
-
-  // Slide-level defaults
-  if (!fd.has('titulo'))    fd.append('titulo',    _pubSlideActual.titulo || '');
-  if (!fd.has('subtitulo')) fd.append('subtitulo', _pubSlideActual.subtitulo || '');
-  if (!fd.has('color'))     fd.append('color',     _pubSlideActual.color || '#6366f1');
-  if (!fd.has('color2'))    fd.append('color2',    _pubSlideActual.color2 || '#8b5cf6');
+  const id  = document.getElementById('pubModalId').value;
+  const fd  = new FormData();
   fd.append('duracion', document.getElementById('pubModalDuracion').value);
-  if (pid) fd.append('plantilla_id', pid);
-  fd.append('datos_plantilla', JSON.stringify(datosObj));
+
+  if (_pubModoActual === 'plantilla') {
+    // Sección A
+    const pid = document.getElementById('pubModalPlantillaSeleccionada').value;
+    if (!pid) { alert('Elige una plantilla antes de guardar.'); return; }
+    const plantilla = PUB_PLANTILLAS.find(p => p.id === pid);
+    const datosObj  = {};
+    plantilla?.campos.forEach(campo => {
+      const el = document.getElementById('pubField_' + campo.key);
+      if (!el) return;
+      if (campo.type === 'file') {
+        if (el.files[0]) fd.append('imagen', el.files[0]);
+      } else if (campo.type === 'checkbox') {
+        if (campo.src === 'slide') fd.append(campo.key, el.checked ? '1' : '0');
+        else datosObj[campo.key] = el.checked;
+      } else {
+        if (campo.src === 'slide') fd.append(campo.key, el.value);
+        else datosObj[campo.key] = el.value;
+      }
+    });
+    if (!fd.has('titulo'))    fd.append('titulo',    _pubSlideActual.titulo    || '');
+    if (!fd.has('subtitulo')) fd.append('subtitulo', _pubSlideActual.subtitulo || '');
+    if (!fd.has('color'))     fd.append('color',     _pubSlideActual.color     || '#6366f1');
+    if (!fd.has('color2'))    fd.append('color2',    _pubSlideActual.color2    || '#8b5cf6');
+    fd.append('plantilla_id',    pid);
+    fd.append('datos_plantilla', JSON.stringify(datosObj));
+
+  } else {
+    // Sección B — flujo imagen original
+    fd.append('titulo',    document.getElementById('pubB_titulo').value);
+    fd.append('subtitulo', document.getElementById('pubB_subtitulo').value);
+    fd.append('color',     document.getElementById('pubB_color1').value);
+    fd.append('color2',    document.getElementById('pubB_color2').value);
+    const img = document.getElementById('pubB_imagen').files[0];
+    if (img) fd.append('imagen', img);
+    fd.append('datos_plantilla', '{}');
+    // plantilla_id vacío → NULL en el backend
+  }
 
   try {
-    const url = id ? `/api/publicidad/${id}` : '/api/publicidad';
+    const url    = id ? `/api/publicidad/${id}` : '/api/publicidad';
     const method = id ? 'PUT' : 'POST';
     const r = await fetch(url, {method, body: fd, credentials:'include'});
     if (!r.ok) throw new Error(await r.text());
