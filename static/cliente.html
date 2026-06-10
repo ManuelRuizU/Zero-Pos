@@ -841,13 +841,23 @@ function procesarMensajePantalla(msg) {
 }
 
 function conectarSSE() {
+  let _abierto = false;
   const es = new EventSource('/api/ventas/stream-pantalla');
+  es.onopen = () => { _abierto = true; };
   es.onmessage = (e) => {
+    _abierto = true;
     try { procesarMensajePantalla(JSON.parse(e.data)); } catch(err) {}
   };
   es.onerror = () => {
     es.close();
-    setTimeout(conectarSSE, 5000);
+    if (!_abierto) {
+      // Nunca se conectó → servidor lleno (503), usar polling como fallback
+      console.warn('SSE no disponible, usando polling');
+      setInterval(sincronizar, 5000);
+    } else {
+      // Se cayó la conexión → reintentar SSE
+      setTimeout(conectarSSE, 5000);
+    }
   };
 }
 

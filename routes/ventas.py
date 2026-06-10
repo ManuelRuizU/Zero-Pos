@@ -18,6 +18,7 @@ _pantalla: dict = {
 }
 
 # SSE: lista de colas activas (una por tablet/cliente conectado)
+MAX_CLIENTES_SSE = 4
 _clientes_sse: list = []
 _sse_lock = threading.Lock()
 
@@ -607,7 +608,11 @@ def pantalla_cliente_set():
 @ventas_bp.route("/stream-pantalla", methods=["GET"])
 def stream_pantalla():
     """SSE push para tablets remotas. Sin autenticación — red local = perímetro."""
-    q: queue.Queue = queue.Queue(maxsize=20)
+    with _sse_lock:
+        if len(_clientes_sse) >= MAX_CLIENTES_SSE:
+            return jsonify({"error": "Máximo de pantallas conectadas alcanzado"}), 503
+
+    q: queue.Queue = queue.Queue(maxsize=10)
     with _sse_lock:
         _clientes_sse.append(q)
 
