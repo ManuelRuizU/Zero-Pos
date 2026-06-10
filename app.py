@@ -307,9 +307,11 @@ def create_app() -> Flask:
         impresora_bp, backup_bp, inventario_bp, facturas_bp,
         comprobante_bp, qr_bp, khipu_bp, multi_bp, config_bp,
         onboarding_bp, voz_bp, pedidos_bp, direcciones_bp,
-        modificadores_bp, fiado_bp, publicidad_bp,
+        modificadores_bp, fiado_bp,
     ):
         app.register_blueprint(bp)
+
+    app.register_blueprint(publicidad_bp, url_prefix="/api/publicidad")
 
     @app.route('/credit/<qr_token>')
     def portal_credit(qr_token):
