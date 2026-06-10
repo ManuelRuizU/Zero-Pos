@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { margin:0;padding:0;box-sizing:border-box }
+:root { --c1:#10b981; --c2:#059669; }
+body {
+  width:100vw;height:100vh;overflow:hidden;
+  background:#0a0a14;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  color:white;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:clamp(16px,3vw,32px);
+  padding:clamp(16px,4vw,48px);
+  position:relative;
+}
+.bg-glow {
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 50% 40%, color-mix(in srgb,var(--c1),transparent 84%), transparent);
+}
+.icono { font-size:clamp(32px,5.5vw,60px);position:relative;z-index:1; }
+h1 {
+  font-size:clamp(22px,4vw,48px);font-weight:900;
+  background:linear-gradient(135deg,var(--c1),var(--c2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-align:center;position:relative;z-index:1;
+}
+.horario-card {
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:clamp(14px,2.2vw,22px);
+  padding:clamp(16px,2.8vw,30px) clamp(20px,4vw,48px);
+  width:100%;max-width:500px;
+  display:flex;flex-direction:column;gap:clamp(10px,1.8vw,18px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1);
+  position:relative;z-index:1;
+}
+.fila-dia {
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.fila-dia + .fila-dia {
+  border-top:1px solid rgba(255,255,255,.07);
+  padding-top:clamp(10px,1.8vw,18px);
+}
+.dia-nombre {
+  font-size:clamp(13px,2vw,20px);font-weight:600;
+  color:rgba(255,255,255,.7);flex:1;
+}
+.dia-hora {
+  font-size:clamp(14px,2.2vw,22px);font-weight:800;
+  color:var(--c1);
+}
+.dia-cerrado {
+  font-size:clamp(13px,2vw,19px);font-weight:600;
+  color:rgba(255,255,255,.3);
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="icono">🕐</div>
+<h1 id="titulo">Horario de atención</h1>
+<div class="horario-card">
+  <div class="fila-dia">
+    <span class="dia-nombre">Lunes — Viernes</span>
+    <span class="dia-hora" id="h-lv">08:00 – 21:00</span>
+  </div>
+  <div class="fila-dia">
+    <span class="dia-nombre">Sábado</span>
+    <span class="dia-hora" id="h-sa">09:00 – 20:00</span>
+  </div>
+  <div class="fila-dia">
+    <span class="dia-nombre">Domingo</span>
+    <span id="h-do" class="dia-hora">10:00 – 18:00</span>
+  </div>
+</div>
+<script>
+function render(d) {
+  const datos = d.datos || {};
+  document.documentElement.style.setProperty('--c1', datos.color1 || d.color || '#10b981');
+  document.documentElement.style.setProperty('--c2', datos.color2 || d.color2 || '#059669');
+  if (datos.titulo || d.titulo) document.getElementById('titulo').textContent = datos.titulo || d.titulo || 'Horario de atención';
+  const lv = datos.lunes_viernes;
+  const sa = datos.sabado;
+  const do_ = datos.domingo;
+  const elLV = document.getElementById('h-lv');
+  const elSA = document.getElementById('h-sa');
+  const elDO = document.getElementById('h-do');
+  if (lv) {
+    elLV.textContent = lv;
+    elLV.className = lv.toLowerCase() === 'cerrado' ? 'dia-cerrado' : 'dia-hora';
+  }
+  if (sa) {
+    elSA.textContent = sa;
+    elSA.className = sa.toLowerCase() === 'cerrado' ? 'dia-cerrado' : 'dia-hora';
+  }
+  if (do_) {
+    elDO.textContent = do_;
+    elDO.className = do_.toLowerCase() === 'cerrado' ? 'dia-cerrado' : 'dia-hora';
+  }
+}
+window.addEventListener('message', e => { if (e.data?.tipo === 'slide-data') render(e.data); });
+</script>
+</body>
+</html>

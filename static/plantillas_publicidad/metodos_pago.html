@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { margin:0;padding:0;box-sizing:border-box }
+:root { --c1:#6366f1; --c2:#8b5cf6; }
+body {
+  width:100vw;height:100vh;overflow:hidden;
+  background:#0a0a14;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  color:white;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:clamp(16px,3vw,36px);
+  padding:clamp(16px,4vw,40px);
+  position:relative;
+}
+.bg-glow {
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 50% at 50% 50%, color-mix(in srgb,var(--c1),transparent 85%), transparent);
+}
+h1 {
+  font-size:clamp(20px,3.5vw,42px);font-weight:900;
+  background:linear-gradient(135deg,var(--c1),var(--c2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-align:center;position:relative;z-index:1;
+}
+.grid-metodos {
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:clamp(10px,2vw,20px);
+  width:100%;max-width:560px;
+  position:relative;z-index:1;
+}
+.metodo-card {
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:clamp(12px,2vw,20px);
+  padding:clamp(14px,2.5vw,28px) clamp(12px,2vw,20px);
+  display:flex;flex-direction:column;align-items:center;
+  gap:clamp(8px,1.2vw,14px);
+  transition:all .3s ease;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+}
+.metodo-card.activo {
+  background:linear-gradient(135deg,color-mix(in srgb,var(--c1),transparent 75%),color-mix(in srgb,var(--c2),transparent 75%));
+  border-color:color-mix(in srgb,var(--c1),transparent 40%);
+  box-shadow:0 0 20px color-mix(in srgb,var(--c1),transparent 70%),inset 0 1px 0 rgba(255,255,255,.18);
+}
+.metodo-card.inactivo { opacity:.22; }
+.metodo-icono { font-size:clamp(28px,5vw,52px); }
+.metodo-nombre {
+  font-size:clamp(12px,1.8vw,20px);font-weight:700;
+  text-align:center;
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<h1 id="titulo">Aceptamos</h1>
+<div class="grid-metodos" id="grid">
+  <div class="metodo-card activo" data-key="efectivo">
+    <div class="metodo-icono">💵</div>
+    <div class="metodo-nombre">Efectivo</div>
+  </div>
+  <div class="metodo-card activo" data-key="transferencia">
+    <div class="metodo-icono">📲</div>
+    <div class="metodo-nombre">Transferencia</div>
+  </div>
+  <div class="metodo-card inactivo" data-key="tarjeta">
+    <div class="metodo-icono">💳</div>
+    <div class="metodo-nombre">Tarjeta</div>
+  </div>
+  <div class="metodo-card inactivo" data-key="khipu">
+    <div class="metodo-icono">🏦</div>
+    <div class="metodo-nombre">Khipu</div>
+  </div>
+</div>
+<script>
+function render(d) {
+  const datos = d.datos || {};
+  document.documentElement.style.setProperty('--c1', datos.color1 || d.color || '#6366f1');
+  document.documentElement.style.setProperty('--c2', datos.color2 || d.color2 || '#8b5cf6');
+  if (datos.titulo || d.titulo) document.getElementById('titulo').textContent = datos.titulo || d.titulo;
+  document.querySelectorAll('.metodo-card').forEach(card => {
+    const key = card.dataset.key;
+    const activo = datos[key] !== undefined ? datos[key] : (key === 'efectivo' || key === 'transferencia');
+    card.className = 'metodo-card ' + (activo ? 'activo' : 'inactivo');
+  });
+}
+window.addEventListener('message', e => { if (e.data?.tipo === 'slide-data') render(e.data); });
+</script>
+</body>
+</html>

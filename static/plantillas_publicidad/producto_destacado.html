@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { margin:0;padding:0;box-sizing:border-box }
+:root { --c1:#6366f1; --c2:#8b5cf6; --ct:white; }
+body {
+  width:100vw;height:100vh;overflow:hidden;
+  background:#0a0a14;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  color:white;display:flex;flex-direction:column;
+}
+.imagen {
+  flex:1;
+  background:var(--img-bg,linear-gradient(135deg,var(--c1),var(--c2))) center/cover no-repeat;
+  position:relative;
+}
+.imagen::after {
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(0deg,rgba(0,0,0,.88) 0%,rgba(0,0,0,.25) 55%,transparent 100%);
+}
+.contenido {
+  position:absolute;bottom:0;left:0;right:0;
+  padding:clamp(20px,4vw,40px);z-index:1;
+}
+#titulo {
+  font-size:clamp(26px,5vw,58px);font-weight:900;
+  line-height:1.05;margin-bottom:8px;
+  color:var(--ct,white);
+  text-shadow:0 2px 16px rgba(0,0,0,.6);
+}
+#subtitulo {
+  font-size:clamp(14px,2.2vw,26px);
+  color:rgba(255,255,255,.72);margin-bottom:18px;
+  text-shadow:0 1px 8px rgba(0,0,0,.5);
+}
+#precio {
+  display:inline-block;
+  font-size:clamp(22px,3.8vw,46px);font-weight:900;
+  background:rgba(255,255,255,.13);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:12px;padding:8px 22px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.2);
+  color:var(--ct,white);
+}
+</style>
+</head>
+<body>
+<div class="imagen" id="fondo">
+  <div class="contenido">
+    <div id="titulo">Producto del Día</div>
+    <div id="subtitulo">Oferta especial para ti</div>
+    <div id="precio">$990</div>
+  </div>
+</div>
+<script>
+function render(d) {
+  const datos = d.datos || {};
+  if (d.imagen_url) {
+    document.documentElement.style.setProperty('--img-bg', `url(${d.imagen_url})`);
+  } else {
+    document.documentElement.style.setProperty('--c1', d.color || '#6366f1');
+    document.documentElement.style.setProperty('--c2', d.color2 || '#8b5cf6');
+  }
+  if (datos.color_texto) document.documentElement.style.setProperty('--ct', datos.color_texto);
+  if (d.titulo)    document.getElementById('titulo').textContent   = d.titulo;
+  if (d.subtitulo) document.getElementById('subtitulo').textContent = d.subtitulo;
+  if (datos.precio) document.getElementById('precio').textContent  = datos.precio;
+}
+window.addEventListener('message', e => { if (e.data?.tipo === 'slide-data') render(e.data); });
+</script>
+</body>
+</html>

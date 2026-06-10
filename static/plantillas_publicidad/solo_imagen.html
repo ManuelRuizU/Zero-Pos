@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { margin:0;padding:0;box-sizing:border-box }
+body {
+  width:100vw;height:100vh;overflow:hidden;
+  background:#0a0a14;
+}
+#fondo {
+  position:absolute;inset:0;
+  background:center/cover no-repeat;
+  animation:kb1 14s ease-out forwards;
+}
+@keyframes kb1 {
+  0%   { transform:scale(1)    translateX(0)    translateY(0); }
+  100% { transform:scale(1.12) translateX(-1%)  translateY(-1%); }
+}
+@keyframes kb2 {
+  0%   { transform:scale(1)    translateX(0)  translateY(0); }
+  100% { transform:scale(1.10) translateX(1%) translateY(-1.5%); }
+}
+.placeholder {
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#1e1b4b,#312e81);
+  color:rgba(255,255,255,.3);font-size:clamp(18px,3vw,32px);
+  font-family:-apple-system,sans-serif;
+}
+</style>
+</head>
+<body>
+<div id="fondo">
+  <div class="placeholder" id="placeholder">Sin imagen configurada</div>
+</div>
+<script>
+let _kbAlt = false;
+function render(d) {
+  const fondo = document.getElementById('fondo');
+  if (d.imagen_url) {
+    document.getElementById('placeholder').remove();
+    fondo.style.backgroundImage = `url(${d.imagen_url})`;
+    _kbAlt = !_kbAlt;
+    fondo.style.animation = `${_kbAlt ? 'kb2' : 'kb1'} 14s ease-out forwards`;
+  }
+}
+window.addEventListener('message', e => { if (e.data?.tipo === 'slide-data') render(e.data); });
+</script>
+</body>
+</html>

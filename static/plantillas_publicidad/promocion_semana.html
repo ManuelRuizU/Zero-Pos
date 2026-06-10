@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { margin:0;padding:0;box-sizing:border-box }
+:root { --c1:#f97316; --c2:#ef4444; }
+body {
+  width:100vw;height:100vh;overflow:hidden;
+  background:#0a0a14;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  color:white;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:clamp(12px,2.5vw,28px);
+  padding:clamp(16px,4vw,48px);
+  position:relative;
+}
+.bg-layer {
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 0%, color-mix(in srgb,var(--c1),transparent 80%), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, color-mix(in srgb,var(--c2),transparent 80%), transparent 70%);
+}
+.label-promo {
+  background:linear-gradient(135deg,var(--c1),var(--c2));
+  color:white;font-weight:800;
+  font-size:clamp(11px,1.8vw,18px);
+  letter-spacing:3px;text-transform:uppercase;
+  padding:5px 18px;border-radius:100px;
+  box-shadow:0 4px 16px color-mix(in srgb,var(--c1),transparent 50%);
+  position:relative;z-index:1;
+}
+h1 {
+  font-size:clamp(24px,5vw,60px);font-weight:900;
+  text-align:center;line-height:1.05;
+  position:relative;z-index:1;
+  text-shadow:0 2px 20px rgba(0,0,0,.4);
+}
+#subtitulo {
+  font-size:clamp(15px,2.5vw,28px);
+  color:rgba(255,255,255,.72);text-align:center;
+  position:relative;z-index:1;
+}
+.glass-fecha {
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:clamp(12px,2vw,18px);
+  padding:clamp(12px,2vw,20px) clamp(20px,4vw,40px);
+  text-align:center;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14);
+  position:relative;z-index:1;
+}
+.fecha-label {
+  font-size:clamp(11px,1.4vw,14px);color:rgba(255,255,255,.45);
+  margin-bottom:4px;letter-spacing:1px;text-transform:uppercase;
+}
+#fecha-texto {
+  font-size:clamp(16px,2.5vw,26px);font-weight:800;
+  color:var(--c1);
+}
+</style>
+</head>
+<body>
+<div class="bg-layer"></div>
+<div class="label-promo">⏰ Tiempo limitado</div>
+<h1 id="titulo">Oferta de la semana</h1>
+<div id="subtitulo">En productos seleccionados</div>
+<div class="glass-fecha">
+  <div class="fecha-label">Válido hasta</div>
+  <div id="fecha-texto">próximo domingo</div>
+</div>
+<script>
+function _formatFecha(iso) {
+  if (!iso) return 'próximo domingo';
+  try {
+    const d = new Date(iso + 'T12:00:00');
+    return d.toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long' });
+  } catch(e) { return iso; }
+}
+function render(d) {
+  const datos = d.datos || {};
+  document.documentElement.style.setProperty('--c1', datos.color1 || d.color || '#f97316');
+  document.documentElement.style.setProperty('--c2', datos.color2 || d.color2 || '#ef4444');
+  if (d.titulo)    document.getElementById('titulo').textContent    = d.titulo;
+  if (d.subtitulo) document.getElementById('subtitulo').textContent = d.subtitulo;
+  document.getElementById('fecha-texto').textContent = _formatFecha(datos.fecha_fin);
+}
+window.addEventListener('message', e => { if (e.data?.tipo === 'slide-data') render(e.data); });
+</script>
+</body>
+</html>

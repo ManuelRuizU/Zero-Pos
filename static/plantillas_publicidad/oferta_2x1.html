@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { margin:0;padding:0;box-sizing:border-box }
+:root { --c1:#ef4444; --c2:#f97316; }
+body {
+  width:100vw;height:100vh;overflow:hidden;
+  background:linear-gradient(135deg,var(--c1),var(--c2));
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  color:white;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  position:relative;
+}
+.bg-circle {
+  position:absolute;
+  border-radius:50%;
+  background:rgba(255,255,255,.06);
+  pointer-events:none;
+}
+.badge-2x1 {
+  font-size:clamp(90px,20vw,200px);
+  font-weight:900;
+  letter-spacing:-4px;
+  line-height:1;
+  color:white;
+  text-shadow:0 4px 32px rgba(0,0,0,.35);
+  animation:pulso 2s ease-in-out infinite;
+  position:relative;z-index:1;
+  margin-bottom:8px;
+}
+@keyframes pulso {
+  0%,100% { transform:scale(1); }
+  50%      { transform:scale(1.04); }
+}
+.etiqueta {
+  font-size:clamp(13px,2.5vw,22px);
+  font-weight:700;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  opacity:.85;
+  position:relative;z-index:1;
+  margin-bottom:clamp(12px,2vw,24px);
+}
+.glass-strip {
+  background:rgba(0,0,0,.22);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:clamp(12px,2vw,20px);
+  padding:clamp(10px,1.8vw,18px) clamp(20px,3.5vw,40px);
+  position:relative;z-index:1;
+}
+#titulo {
+  font-size:clamp(18px,3vw,34px);font-weight:800;
+  margin-bottom:4px;
+}
+#precio_unit {
+  font-size:clamp(13px,2vw,22px);opacity:.8;
+}
+</style>
+</head>
+<body>
+<div class="bg-circle" style="width:500px;height:500px;top:-150px;right:-150px"></div>
+<div class="bg-circle" style="width:300px;height:300px;bottom:-80px;left:-80px"></div>
+
+<div class="etiqueta">Oferta especial</div>
+<div class="badge-2x1">2×1</div>
+<div class="glass-strip">
+  <div id="titulo">Bebida Coca Cola 500ml</div>
+  <div id="precio_unit">$1.200 c/u al llevar 2</div>
+</div>
+<script>
+function render(d) {
+  const datos = d.datos || {};
+  document.documentElement.style.setProperty('--c1', datos.color1 || d.color || '#ef4444');
+  document.documentElement.style.setProperty('--c2', datos.color2 || d.color2 || '#f97316');
+  document.body.style.background = `linear-gradient(135deg,var(--c1),var(--c2))`;
+  if (d.titulo)         document.getElementById('titulo').textContent     = d.titulo;
+  if (datos.precio_unit) document.getElementById('precio_unit').textContent = datos.precio_unit;
+}
+window.addEventListener('message', e => { if (e.data?.tipo === 'slide-data') render(e.data); });
+</script>
+</body>
+</html>

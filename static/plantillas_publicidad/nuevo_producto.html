@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+* { margin:0;padding:0;box-sizing:border-box }
+:root { --c1:#ec4899; --c2:#8b5cf6; }
+body {
+  width:100vw;height:100vh;overflow:hidden;
+  background:#0a0a14;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  color:white;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:clamp(12px,2.2vw,24px);
+  padding:clamp(16px,4vw,40px);
+  position:relative;
+}
+.bg-glow {
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 65% 55% at 50% 45%, color-mix(in srgb,var(--c1),transparent 83%), transparent);
+}
+.badge-nuevo {
+  background:linear-gradient(135deg,var(--c1),var(--c2));
+  color:white;font-weight:900;
+  font-size:clamp(14px,2vw,20px);
+  letter-spacing:3px;text-transform:uppercase;
+  padding:6px 22px;border-radius:100px;
+  box-shadow:0 4px 20px color-mix(in srgb,var(--c1),transparent 45%);
+  position:relative;z-index:1;
+  animation:aparecer .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes aparecer { from{transform:scale(.5);opacity:0} to{transform:scale(1);opacity:1} }
+.img-wrap {
+  width:clamp(110px,18vw,180px);
+  height:clamp(110px,18vw,180px);
+  border-radius:clamp(16px,2.5vw,24px);
+  background:rgba(255,255,255,.08);
+  border:2px solid color-mix(in srgb,var(--c1),transparent 50%);
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:1;
+  box-shadow:0 8px 32px color-mix(in srgb,var(--c1),transparent 60%);
+}
+.img-wrap img { width:100%;height:100%;object-fit:cover; }
+.img-wrap .emoji-fallback { font-size:clamp(40px,7vw,72px); }
+.info { text-align:center;position:relative;z-index:1; }
+#titulo {
+  font-size:clamp(20px,3.5vw,42px);font-weight:900;
+  line-height:1.1;margin-bottom:6px;
+}
+#descripcion {
+  font-size:clamp(13px,2vw,22px);color:rgba(255,255,255,.65);
+  margin-bottom:clamp(12px,2vw,20px);
+}
+.precio-badge {
+  display:inline-block;
+  background:linear-gradient(135deg,var(--c1),var(--c2));
+  font-size:clamp(20px,3.5vw,40px);font-weight:900;
+  padding:clamp(6px,1vw,10px) clamp(16px,2.5vw,28px);
+  border-radius:clamp(10px,1.5vw,16px);
+  box-shadow:0 4px 20px color-mix(in srgb,var(--c1),transparent 50%);
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="badge-nuevo">✨ Nuevo</div>
+<div class="img-wrap" id="img-wrap">
+  <span class="emoji-fallback">🛍️</span>
+</div>
+<div class="info">
+  <div id="titulo">Nuevo Producto</div>
+  <div id="descripcion">Disponible desde hoy</div>
+  <div class="precio-badge" id="precio">$0</div>
+</div>
+<script>
+function render(d) {
+  const datos = d.datos || {};
+  document.documentElement.style.setProperty('--c1', datos.color1 || d.color || '#ec4899');
+  document.documentElement.style.setProperty('--c2', datos.color2 || d.color2 || '#8b5cf6');
+  if (d.titulo)    document.getElementById('titulo').textContent    = d.titulo;
+  if (datos.descripcion) document.getElementById('descripcion').textContent = datos.descripcion;
+  if (datos.precio)      document.getElementById('precio').textContent      = datos.precio;
+  if (d.imagen_url) {
+    document.getElementById('img-wrap').innerHTML = `<img src="${d.imagen_url}" alt="">`;
+  }
+}
+window.addEventListener('message', e => { if (e.data?.tipo === 'slide-data') render(e.data); });
+</script>
+</body>
+</html>
