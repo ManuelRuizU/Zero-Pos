@@ -399,6 +399,22 @@ def _m011_dia_pago(conn):
         logger.debug(f"dia_pago ya existe: {e}")
 
 
+def _m012_publicidad(conn):
+    """Tabla publicidad: slides configurables para pantalla cliente."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS publicidad (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        titulo      TEXT    DEFAULT '',
+        subtitulo   TEXT    DEFAULT '',
+        imagen_url  TEXT,
+        color       TEXT    DEFAULT '#6366f1',
+        color2      TEXT    DEFAULT '#8b5cf6',
+        orden       INTEGER DEFAULT 0,
+        activo      INTEGER DEFAULT 1,
+        duracion    INTEGER DEFAULT 5,
+        creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -411,6 +427,7 @@ _MIGRACIONES = [
     (9, "modificadores: toppings y opciones para sushi/food trucks",             _m009_modificadores),
     (10, "ZERO CREDIT: clientes_fiado y fiado_movimientos",                      _m010_zero_credit),
     (11, "dia_pago: día de cobro fijo mensual en clientes_fiado",               _m011_dia_pago),
+    (12, "publicidad: slides configurables para pantalla cliente",               _m012_publicidad),
 ]
 
 

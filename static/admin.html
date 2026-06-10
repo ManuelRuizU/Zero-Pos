@@ -267,6 +267,7 @@ input:checked + .slider:before{transform:translateX(20px);}
     <button class="nav-btn" onclick="showTab('apariencia',this)">🎨 Apariencia</button>
     <button class="nav-btn" onclick="showTab('categorias',this)">🗂️ Categorías</button>
     <button class="nav-btn" onclick="showTab('equipo',this)">👥 Equipo</button>
+    <button class="nav-btn" onclick="showTab('publicidad',this)">📺 Publicidad</button>
     <button class="nav-btn" onclick="location.href='inventario.html'">📦 Inventario</button>
     <button class="nav-btn" onclick="location.href='pedidos.html'">🛵 Pedidos</button>
     <button class="nav-btn" onclick="location.href='credit.html'">💳 CREDIT</button>
@@ -988,6 +989,94 @@ input:checked + .slider:before{transform:translateX(20px);}
 
 </div>
 
+  <!-- Publicidad -->
+  <div class="tab-content" id="tab-publicidad">
+    <h2>📺 Publicidad en Pantalla Cliente</h2>
+    <div class="cfg-grid">
+
+      <div class="cfg-card" style="grid-column:1/-1">
+        <div class="cfg-card-title">🖼️ Slides activos</div>
+        <div id="pubListaSlides" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;min-height:60px">
+          <div style="color:var(--text-dim);font-size:14px">Cargando...</div>
+        </div>
+        <button class="btn primary" onclick="pubAbrirModal(null)">+ Nuevo slide</button>
+      </div>
+
+      <div class="cfg-card">
+        <div class="cfg-card-title">⚙️ Configuración del carrusel</div>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-top:8px">
+          <div>
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Intervalo por slide (segundos)</label>
+            <input type="number" id="pubIntervalo" min="2" max="60" value="5"
+              style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+          </div>
+          <div>
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Transición</label>
+            <select id="pubTransicion"
+              style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px">
+              <option value="fade">Fade</option>
+              <option value="slide">Slide</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <label style="font-size:13px;color:var(--text-dim);flex:1">Mostrar texto sobre imagen</label>
+            <input type="checkbox" id="pubMostrarTexto" checked style="width:18px;height:18px;cursor:pointer">
+          </div>
+          <button class="btn primary" onclick="pubGuardarConfig()">Guardar configuración</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Slide Publicidad -->
+  <div id="pubModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center">
+    <div style="background:var(--surface);border-radius:16px;padding:24px;width:min(480px,95vw);max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 id="pubModalTitulo" style="margin:0;font-size:18px">Nuevo slide</h3>
+        <button onclick="pubCerrarModal()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <input type="hidden" id="pubModalId">
+      <div>
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Título</label>
+        <input id="pubModalTituloInput" type="text" placeholder="Ej: Oferta del día"
+          style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Subtítulo</label>
+        <input id="pubModalSubtitulo" type="text" placeholder="Ej: 20% de descuento en lácteos"
+          style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1">
+          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Color 1</label>
+          <input id="pubModalColor1" type="color" value="#6366f1"
+            style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Color 2</label>
+          <input id="pubModalColor2" type="color" value="#8b5cf6"
+            style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Duración (s)</label>
+          <input id="pubModalDuracion" type="number" value="5" min="2" max="60"
+            style="width:100%;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;box-sizing:border-box">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Imagen (JPG/PNG/WebP/GIF/MP4)</label>
+        <input id="pubModalImagen" type="file" accept="image/*,video/mp4"
+          style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;box-sizing:border-box">
+        <img id="pubModalPreview" src="" alt="" style="display:none;margin-top:8px;max-height:120px;border-radius:8px;object-fit:cover;width:100%">
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn" style="flex:1" onclick="pubCerrarModal()">Cancelar</button>
+        <button class="btn primary" style="flex:1" onclick="pubGuardarSlide()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
 <!-- Modal Categorías -->
 <div class="cat-modal-overlay" id="catModalOverlay" onclick="if(event.target===this)catCerrarModal()">
   <div class="cat-modal">
@@ -1031,6 +1120,7 @@ function showTab(name, btn) {
   if (name==='voz') { cargarVozConfig(); cargarHistorialVoz(); cargarAprendizaje(); }
   if (name==='categorias') cargarCatArbol();
   if (name==='equipo') cargarEquipo();
+  if (name==='publicidad') pubCargar();
 }
 
 async function cargarDashboard() {
@@ -2375,6 +2465,127 @@ function activarVozStockAdmin() {
     btn.style.border = '';
   };
   recognition.start();
+}
+
+// ── Publicidad ────────────────────────────────────────────────────────────────
+let _pubSlides = [];
+let _pubEditId = null;
+
+async function pubCargar() {
+  const lista = document.getElementById('pubListaSlides');
+  if (!lista) return;
+  lista.innerHTML = '<div style="color:var(--text-dim);font-size:14px">Cargando...</div>';
+  try {
+    const r = await fetch('/api/publicidad', {credentials:'include'});
+    _pubSlides = await r.json();
+    pubRenderLista();
+  } catch(e) {
+    lista.innerHTML = '<div style="color:#ef4444">Error al cargar slides</div>';
+  }
+  try {
+    const cfg = await fetch('/api/publicidad/config', {credentials:'include'}).then(r=>r.json());
+    document.getElementById('pubIntervalo').value = cfg.intervalo || 5;
+    document.getElementById('pubTransicion').value = cfg.transicion || 'fade';
+    document.getElementById('pubMostrarTexto').checked = cfg.mostrar_texto !== false;
+  } catch(e) {}
+}
+
+function pubRenderLista() {
+  const lista = document.getElementById('pubListaSlides');
+  if (!lista) return;
+  if (!_pubSlides.length) {
+    lista.innerHTML = '<div style="color:var(--text-dim);font-size:14px;padding:12px 0">Sin slides. Agrega uno con el botón +.</div>';
+    return;
+  }
+  lista.innerHTML = _pubSlides.map(s => `
+    <div style="display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:10px;padding:10px 14px">
+      ${s.imagen_url
+        ? `<img src="${s.imagen_url}" style="width:60px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">`
+        : `<div style="width:60px;height:40px;border-radius:6px;background:linear-gradient(135deg,${s.color},${s.color2});flex-shrink:0"></div>`}
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.titulo || '(sin título)'}</div>
+        <div style="font-size:12px;color:var(--text-dim)">${s.subtitulo || ''} · ${s.duracion}s</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn" style="padding:4px 10px;font-size:12px" onclick="pubAbrirModal(${s.id})">✏️</button>
+        <button class="btn" style="padding:4px 10px;font-size:12px;background:#dc2626" onclick="pubEliminar(${s.id})">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function pubAbrirModal(id) {
+  _pubEditId = id;
+  const slide = id ? _pubSlides.find(s => s.id === id) : null;
+  document.getElementById('pubModalTitulo').textContent = slide ? 'Editar slide' : 'Nuevo slide';
+  document.getElementById('pubModalId').value = id || '';
+  document.getElementById('pubModalTituloInput').value = slide?.titulo || '';
+  document.getElementById('pubModalSubtitulo').value = slide?.subtitulo || '';
+  document.getElementById('pubModalColor1').value = slide?.color || '#6366f1';
+  document.getElementById('pubModalColor2').value = slide?.color2 || '#8b5cf6';
+  document.getElementById('pubModalDuracion').value = slide?.duracion || 5;
+  document.getElementById('pubModalImagen').value = '';
+  const prev = document.getElementById('pubModalPreview');
+  prev.src = slide?.imagen_url || '';
+  prev.style.display = slide?.imagen_url ? 'block' : 'none';
+  const modal = document.getElementById('pubModal');
+  modal.style.display = 'flex';
+}
+
+document.getElementById('pubModalImagen')?.addEventListener('change', function() {
+  const file = this.files[0];
+  const prev = document.getElementById('pubModalPreview');
+  if (file) {
+    prev.src = URL.createObjectURL(file);
+    prev.style.display = 'block';
+  }
+});
+
+function pubCerrarModal() {
+  document.getElementById('pubModal').style.display = 'none';
+}
+
+async function pubGuardarSlide() {
+  const id = document.getElementById('pubModalId').value;
+  const fd = new FormData();
+  fd.append('titulo', document.getElementById('pubModalTituloInput').value);
+  fd.append('subtitulo', document.getElementById('pubModalSubtitulo').value);
+  fd.append('color', document.getElementById('pubModalColor1').value);
+  fd.append('color2', document.getElementById('pubModalColor2').value);
+  fd.append('duracion', document.getElementById('pubModalDuracion').value);
+  const img = document.getElementById('pubModalImagen').files[0];
+  if (img) fd.append('imagen', img);
+
+  try {
+    const url = id ? `/api/publicidad/${id}` : '/api/publicidad';
+    const method = id ? 'PUT' : 'POST';
+    const r = await fetch(url, {method, body: fd, credentials:'include'});
+    if (!r.ok) throw new Error(await r.text());
+    pubCerrarModal();
+    pubCargar();
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+  }
+}
+
+async function pubEliminar(id) {
+  if (!confirm('¿Eliminar este slide?')) return;
+  await fetch(`/api/publicidad/${id}`, {method:'DELETE', credentials:'include'});
+  pubCargar();
+}
+
+async function pubGuardarConfig() {
+  const body = {
+    intervalo: parseInt(document.getElementById('pubIntervalo').value),
+    transicion: document.getElementById('pubTransicion').value,
+    mostrar_texto: document.getElementById('pubMostrarTexto').checked,
+  };
+  const r = await fetch('/api/publicidad/config', {
+    method:'PUT', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body),
+  });
+  if (r.ok) { const btn=event.target; const o=btn.textContent; btn.textContent='✓ Guardado'; setTimeout(()=>btn.textContent=o,1500); }
 }
 
 // Hover effect FAB admin
