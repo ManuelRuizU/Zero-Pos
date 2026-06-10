@@ -1403,6 +1403,7 @@ let metodoPago = 'efectivo';
 let total = 0;
 let _creditClienteId = null;
 let _creditClienteNuevo = false;
+const CANAL_PANTALLA = new BroadcastChannel('zero_pantalla_cliente');
 
 // Smart emoji: category icon → category name map → name-based keyword → fallback
 function getProductEmoji(prod) {
@@ -2659,26 +2660,30 @@ function pushPantallaCliente(extra = {}) {
   const t = Math.max(0, subtotalBruto - desc);
   const ivaPct = parseFloat(cfgApp.iva_porcentaje || 19);
   const iva = Math.round(t * ivaPct / (100 + ivaPct));
+  const payload = {
+    items: carrito.map(i => ({
+      nombre: i.nombre + (i.nombre_variante ? ' ' + i.nombre_variante : ''),
+      cantidad: i.cantidad,
+      precio_unit: i.precio_unit,
+      subtotal: i.precio_unit * i.cantidad,
+      imagen_url: i.imagen_url || null,
+    })),
+    total: t,
+    subtotal: subtotalBruto,
+    iva,
+    ...extra,
+  };
+  const tipo = extra.estado === 'pagado' ? 'venta_confirmada' : 'carrito_actualizado';
+  try { CANAL_PANTALLA.postMessage({ tipo, ...payload }); } catch(e) {}
   fetch('/api/ventas/pantalla-cliente/estado', {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      items: carrito.map(i => ({
-        nombre: i.nombre + (i.nombre_variante ? ' ' + i.nombre_variante : ''),
-        cantidad: i.cantidad,
-        precio_unit: i.precio_unit,
-        subtotal: i.precio_unit * i.cantidad,
-        imagen_url: i.imagen_url || null,
-      })),
-      total: t,
-      subtotal: subtotalBruto,
-      iva: iva,
-      ...extra,
-    })
+    body: JSON.stringify(payload)
   }).catch(() => {});
 }
 
 function _pushPantallaIdle() {
+  try { CANAL_PANTALLA.postMessage({ tipo: 'idle' }); } catch(e) {}
   fetch('/api/ventas/pantalla-cliente/estado', {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type': 'application/json'},
@@ -3156,6 +3161,7 @@ function _iniciarDistanciaRow() {
 }
 
 function _abrirModalCobro() {
+  try { CANAL_PANTALLA.postMessage({ tipo: 'cobrando', total }); } catch(e) {}
   document.getElementById('modalTotal').textContent = fmt(total);
   document.getElementById('montoRecibido').value = '';
   document.getElementById('vueltoRow').style.display = 'none';
