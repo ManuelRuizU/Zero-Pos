@@ -1344,13 +1344,13 @@ window.guardarCarritoLocal = function(items, usuarioId) {
   try {
     localStorage.setItem('zero_carrito_v1', JSON.stringify({
       items: items.map(item => ({
-        id: item.id,
+        id: item.producto_id,
         nombre: item.nombre,
-        precio: item.precio,
+        precio: item.precio_unit,
         precio_unit: item.precio_unit,
         cantidad: item.cantidad,
         variante_id: item.variante_id || null,
-        variante_nombre: item.variante_nombre || null,
+        variante_nombre: item.nombre_variante || null,
         imagen_url: item.imagen_url || null
       })),
       usuario_id: usuarioId,
@@ -2056,17 +2056,21 @@ async function init() {
       const prod = indiceId.get(parseInt(item.id));
       if (prod) {
         const existente = carrito.find(c =>
-          c.id === item.id && c.variante_id === item.variante_id
+          c.producto_id === item.id && c.variante_id === item.variante_id
         );
         if (existente) {
           existente.cantidad = item.cantidad;
         } else {
           carrito.push({
-            ...prod,
-            cantidad: item.cantidad,
+            producto_id: prod.id,
+            nombre: prod.nombre,
             precio_unit: item.precio_unit ?? item.precio ?? prod.precio,
+            cantidad: item.cantidad,
+            stock: prod.stock_real ?? prod.stock,
+            modo_stock: prod.modo_stock || 'normal',
             variante_id: item.variante_id || null,
-            variante_nombre: item.variante_nombre || null
+            nombre_variante: item.variante_nombre || null,
+            imagen_url: item.imagen_url || null,
           });
         }
         recuperados++;
