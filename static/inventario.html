@@ -1590,14 +1590,13 @@ async function marcarLeida(id) {
 const mostrarToast = (msg, tipo) => showToast(msg, tipo || 'ok');
 
 function cargarZXing() {
-  if (typeof ZXingBrowser !== 'undefined') return Promise.resolve();
+  if (typeof ZXing !== 'undefined') return Promise.resolve();
   if (cargarZXing._promise) return cargarZXing._promise;
   cargarZXing._promise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/index.min.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
     s.onload = () => {
-      // @zxing/browser expone ZXingBrowser en window
-      console.log('[ZERO] ZXing browser cargado');
+      console.log('[ZERO] ZXing cargado OK');
       setTimeout(resolve, 100);
     };
     s.onerror = e => { console.error('[ZERO] ZXing falló al cargar:', e); reject(e); };
@@ -1609,45 +1608,37 @@ function cargarZXing() {
 async function detectarConZXing(file) {
   try {
     await cargarZXing();
-    if (typeof ZXingBrowser === 'undefined') return null;
+    if (typeof ZXing === 'undefined') return null;
 
     const url = URL.createObjectURL(file);
     const img = await new Promise((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error('img load'));
-      i.src = url;
+      const i = new Image(); i.onload = () => resolve(i); i.onerror = () => reject(new Error('img')); i.src = url;
     });
     URL.revokeObjectURL(url);
 
     const MAX = 1200;
     let w = img.width, h = img.height;
-    if (w > MAX || h > MAX) {
-      const ratio = Math.min(MAX / w, MAX / h);
-      w = Math.floor(w * ratio); h = Math.floor(h * ratio);
-    }
+    if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.floor(w*r); h = Math.floor(h*r); }
     const canvas = document.createElement('canvas');
     canvas.width = w; canvas.height = h;
     canvas.getContext('2d').drawImage(img, 0, 0, w, h);
     console.log('[ZERO] Canvas ZXing:', w, 'x', h);
 
-    const reader = new ZXingBrowser.BrowserMultiFormatReader();
+    function _decode(c, cw, ch) {
+      const d = c.getContext('2d').getImageData(0, 0, cw, ch);
+      const len = d.data.length / 4;
+      const luma = new Uint8ClampedArray(len * 3);
+      for (let i = 0; i < len; i++) { luma[i*3]=d.data[i*4]; luma[i*3+1]=d.data[i*4+1]; luma[i*3+2]=d.data[i*4+2]; }
+      const lum = new ZXing.RGBLuminanceSource(luma, cw, ch);
+      return new ZXing.MultiFormatReader().decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum)));
+    }
 
-    // Intento 1: frame completo
+    try { const r = _decode(canvas, w, h); console.log('[ZERO] ZXing encontró:', r.getText()); return r.getText(); } catch(e) {}
     try {
-      const result = await reader.decodeFromCanvas(canvas);
-      if (result) { console.log('[ZERO] ZXing encontró:', result.getText()); return result.getText(); }
-    } catch(e) {}
-
-    // Intento 2: recorte central 80%
-    try {
-      const cx = Math.floor(w * 0.1), cy = Math.floor(h * 0.1);
-      const cw = Math.floor(w * 0.8), ch = Math.floor(h * 0.8);
-      const c2 = document.createElement('canvas');
-      c2.width = cw; c2.height = ch;
-      c2.getContext('2d').drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
-      const result2 = await reader.decodeFromCanvas(c2);
-      if (result2) { console.log('[ZERO] ZXing centro:', result2.getText()); return result2.getText(); }
+      const cx = Math.floor(w*.1), cy = Math.floor(h*.1), cw2 = Math.floor(w*.8), ch2 = Math.floor(h*.8);
+      const c2 = document.createElement('canvas'); c2.width = cw2; c2.height = ch2;
+      c2.getContext('2d').drawImage(canvas, cx, cy, cw2, ch2, 0, 0, cw2, ch2);
+      const r2 = _decode(c2, cw2, ch2); console.log('[ZERO] ZXing centro:', r2.getText()); return r2.getText();
     } catch(e2) {}
 
     console.warn('[ZERO] ZXing no detectó código');
