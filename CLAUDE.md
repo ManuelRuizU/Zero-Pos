@@ -81,6 +81,9 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Input[type=file] existe como botón SEPARADO para "escanear desde foto"
 - **LECCIÓN APRENDIDA:** commit 48c7ed4 rompió esto al reemplazar getUserMedia
   por input file "para más confiabilidad" — fue un error. No repetir.
+- **El objeto `Escaner` tiene `_cargarZXing()` como método INTERNO.**
+  Nunca moverlo a función externa. La carga de ZXing es responsabilidad
+  exclusiva del objeto Escaner, no del scope global de pos.html.
 
 ### Impresión de tickets (routes/ventas.py)
 - `import threading` está al top del archivo ✅
