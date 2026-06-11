@@ -4054,7 +4054,7 @@ const Escaner = {
   video:      null,
   ultimoScan: 0,
   _callback:  null,
-  INTERVALO_MS: 80,
+  INTERVALO_MS: 800,
 
   async init() {
     this.video  = document.getElementById('videoEscaner');
@@ -4133,13 +4133,25 @@ const Escaner = {
         const res = await this.detector.detect(this.canvas);
         if (res.length) codigo = res[0].rawValue;
       } catch(e) {}
-    } else if (typeof ZXing !== 'undefined') {
+    }
+
+    if (!codigo) {
       try {
-        const imgData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-        const lum = new ZXing.RGBLuminanceSource(imgData.data, this.canvas.width, this.canvas.height);
-        const bin = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
-        const res = new ZXing.MultiFormatReader().decode(bin);
-        if (res) codigo = res.getText();
+        await new Promise(resolve => {
+          this.canvas.toBlob(async blob => {
+            if (!blob) { resolve(); return; }
+            const fd = new FormData();
+            fd.append('imagen', blob, 'frame.jpg');
+            const resp = await fetch('/api/productos/detectar-codigo', {
+              method: 'POST',
+              credentials: 'include',
+              body: fd
+            });
+            const data = await resp.json();
+            if (data.ok && data.codigo) codigo = data.codigo;
+            resolve();
+          }, 'image/jpeg', 0.8);
+        });
       } catch(e) {}
     }
 
