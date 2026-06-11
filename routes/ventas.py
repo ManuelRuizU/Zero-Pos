@@ -214,8 +214,11 @@ def crear_venta():
         logger.info(f"Venta #{venta_id} creada por usuario {uid} — total={total}")
 
     # La transacción ya está committed. Imprimir sin afectar la respuesta.
-    _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                           config_negocio, config_imp, pedido_data, empleado)
+    try:
+        _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
+                               config_negocio, config_imp, pedido_data, empleado)
+    except Exception as e:
+        logger.error(f"Error al imprimir ticket venta #{venta_id}: {e}")
 
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 

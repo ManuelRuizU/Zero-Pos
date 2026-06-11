@@ -1,0 +1,14 @@
+[Unit]
+Description=ZERO POS
+After=network.target
+
+[Service]
+Type=simple
+User=manuelruizuribe
+WorkingDirectory=/home/manuelruizuribe/Proyectos/zero_pos
+ExecStart=/home/manuelruizuribe/Proyectos/zero_pos/venv/bin/python app.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
