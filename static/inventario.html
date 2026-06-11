@@ -959,10 +959,11 @@ function abrirEscanerVideo(onCodigo) {
 
   navigator.mediaDevices.getUserMedia({
     video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-  }).then(s => {
+  }).then(async s => {
     stream = s;
     const video = document.getElementById('videoScan');
     video.srcObject = s;
+    try { await video.play(); } catch(e) {}
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
