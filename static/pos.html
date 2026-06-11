@@ -3978,47 +3978,68 @@ function _escanerOverlay(msg) {
   }
 }
 
+function cargarZXing() {
+  if (typeof ZXing !== 'undefined') return Promise.resolve();
+  if (cargarZXing._promise) return cargarZXing._promise;
+  cargarZXing._promise = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
+    s.onload = () => { console.log('[ZERO] ZXing cargado OK'); setTimeout(resolve, 100); };
+    s.onerror = e => { console.error('[ZERO] ZXing falló al cargar:', e); reject(e); };
+    document.head.appendChild(s);
+  });
+  return cargarZXing._promise;
+}
 
 async function detectarConZXing(file) {
   try {
-    await Escaner._cargarZXing();
+    await cargarZXing();
     if (typeof ZXing === 'undefined') return null;
-
-    const url = URL.createObjectURL(file);
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image(); i.onload = () => resolve(i); i.onerror = () => reject(new Error('img')); i.src = url;
+    return new Promise(resolve => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          const ratio = Math.min(MAX / w, MAX / h);
+          w = Math.floor(w * ratio); h = Math.floor(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        console.log('[ZERO] Canvas ZXing:', w, 'x', h);
+        try {
+          const d = ctx.getImageData(0, 0, w, h);
+          const lum = new ZXing.RGBLuminanceSource(d.data, w, h);
+          const bin = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+          const r = new ZXing.MultiFormatReader().decode(bin);
+          URL.revokeObjectURL(url);
+          console.log('[ZERO] ZXing encontró:', r.getText());
+          resolve(r.getText());
+        } catch (e) {
+          try {
+            const cx = Math.floor(w * 0.1), cy = Math.floor(h * 0.1);
+            const cw = Math.floor(w * 0.8), ch = Math.floor(h * 0.8);
+            const d2 = ctx.getImageData(cx, cy, cw, ch);
+            const lum2 = new ZXing.RGBLuminanceSource(d2.data, cw, ch);
+            const bin2 = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum2));
+            const r2 = new ZXing.MultiFormatReader().decode(bin2);
+            URL.revokeObjectURL(url);
+            console.log('[ZERO] ZXing centro:', r2.getText());
+            resolve(r2.getText());
+          } catch (e2) {
+            URL.revokeObjectURL(url);
+            console.warn('[ZERO] ZXing no detectó código');
+            resolve(null);
+          }
+        }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
     });
-    URL.revokeObjectURL(url);
-
-    const MAX = 1200;
-    let w = img.width, h = img.height;
-    if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.floor(w*r); h = Math.floor(h*r); }
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, w, h);
-    console.log('[ZERO] Canvas ZXing:', w, 'x', h);
-
-    function _decode(c, cw, ch) {
-      const d = c.getContext('2d').getImageData(0, 0, cw, ch);
-      const len = d.data.length / 4;
-      const luma = new Uint8ClampedArray(len * 3);
-      for (let i = 0; i < len; i++) { luma[i*3]=d.data[i*4]; luma[i*3+1]=d.data[i*4+1]; luma[i*3+2]=d.data[i*4+2]; }
-      const lum = new ZXing.RGBLuminanceSource(luma, cw, ch);
-      return new ZXing.MultiFormatReader().decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum)));
-    }
-
-    try { const r = _decode(canvas, w, h); console.log('[ZERO] ZXing encontró:', r.getText()); return r.getText(); } catch(e) {}
-    try {
-      const cx = Math.floor(w*.1), cy = Math.floor(h*.1), cw2 = Math.floor(w*.8), ch2 = Math.floor(h*.8);
-      const c2 = document.createElement('canvas'); c2.width = cw2; c2.height = ch2;
-      c2.getContext('2d').drawImage(canvas, cx, cy, cw2, ch2, 0, 0, cw2, ch2);
-      const r2 = _decode(c2, cw2, ch2); console.log('[ZERO] ZXing centro:', r2.getText()); return r2.getText();
-    } catch(e2) {}
-
-    console.warn('[ZERO] ZXing no detectó código');
-    return null;
-  } catch(e) {
+  } catch (e) {
     console.error('[ZERO] Error ZXing:', e);
     return null;
   }
@@ -4032,6 +4053,7 @@ const Escaner = {
   ctx:        null,
   video:      null,
   ultimoScan: 0,
+  _callback:  null,
   INTERVALO_MS: 80,
 
   async init() {
@@ -4048,23 +4070,12 @@ const Escaner = {
       } catch(e) { this.detector = null; }
     }
 
-    if (!this.detector) await this._cargarZXing();
-  },
-
-  _cargarZXing() {
-    if (window.ZXing) return Promise.resolve();
-    return new Promise(resolve => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
-      s.onload = () => { console.log('[ZERO] ZXing cargado como fallback'); resolve(); };
-      s.onerror = () => resolve();
-      document.head.appendChild(s);
-    });
+    if (!this.detector) await cargarZXing().catch(() => {});
   },
 
   async abrir(onCodigo) {
     this._callback = onCodigo || null;
-    if (!this.detector && !window.ZXing) await this.init();
+    if (!this.video) await this.init();
     document.getElementById('modalEscaner').style.display = 'flex';
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -4112,9 +4123,9 @@ const Escaner = {
 
     const sx = Math.floor(vw * 0.2), sy = Math.floor(vh * 0.3);
     const sw = Math.floor(vw * 0.6), sh = Math.floor(vh * 0.4);
+    if (!this.canvas.width) { this.canvas.width = sw; this.canvas.height = sh; }
     this.ctx.drawImage(this.video, sx, sy, sw, sh, 0, 0, this.canvas.width, this.canvas.height);
 
-    const inicio = performance.now();
     let codigo = null;
 
     if (this.detector) {
@@ -4122,7 +4133,7 @@ const Escaner = {
         const res = await this.detector.detect(this.canvas);
         if (res.length) codigo = res[0].rawValue;
       } catch(e) {}
-    } else if (window.ZXing) {
+    } else if (typeof ZXing !== 'undefined') {
       try {
         const imgData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         const lum = new ZXing.RGBLuminanceSource(imgData.data, this.canvas.width, this.canvas.height);
@@ -4133,8 +4144,6 @@ const Escaner = {
     }
 
     if (codigo) {
-      const ms = performance.now() - inicio;
-      console.log(`[ZERO] Código detectado en ${ms.toFixed(1)}ms: ${codigo}`);
       this._onDetectado(codigo);
     }
   },
@@ -4144,8 +4153,11 @@ const Escaner = {
     if (navigator.vibrate) navigator.vibrate(50);
     const cb = this._callback;
     this.cerrar();
-    if (cb) cb(codigo);
-    else procesarCodigo(codigo);
+    if (cb) {
+      cb(codigo);
+    } else {
+      procesarCodigo(codigo);
+    }
   },
 
   _feedbackExito() {
@@ -4946,7 +4958,7 @@ document.getElementById('btnCamara')?.addEventListener('click', () => {
 
 // Pre-cargar ZXing en segundo plano si BarcodeDetector no está disponible
 if (!('BarcodeDetector' in window)) {
-  setTimeout(() => Escaner._cargarZXing().catch(() => {}), 0);
+  setTimeout(() => cargarZXing().catch(() => {}), 0);
 }
 
 init();

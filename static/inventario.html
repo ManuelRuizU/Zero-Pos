@@ -1595,10 +1595,7 @@ function cargarZXing() {
   cargarZXing._promise = new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
-    s.onload = () => {
-      console.log('[ZERO] ZXing cargado OK');
-      setTimeout(resolve, 100);
-    };
+    s.onload = () => { console.log('[ZERO] ZXing cargado OK'); setTimeout(resolve, 100); };
     s.onerror = e => { console.error('[ZERO] ZXing falló al cargar:', e); reject(e); };
     document.head.appendChild(s);
   });
@@ -1609,41 +1606,51 @@ async function detectarConZXing(file) {
   try {
     await cargarZXing();
     if (typeof ZXing === 'undefined') return null;
-
-    const url = URL.createObjectURL(file);
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image(); i.onload = () => resolve(i); i.onerror = () => reject(new Error('img')); i.src = url;
+    return new Promise(resolve => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          const ratio = Math.min(MAX / w, MAX / h);
+          w = Math.floor(w * ratio); h = Math.floor(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        console.log('[ZERO] Canvas ZXing:', w, 'x', h);
+        try {
+          const d = ctx.getImageData(0, 0, w, h);
+          const lum = new ZXing.RGBLuminanceSource(d.data, w, h);
+          const bin = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum));
+          const r = new ZXing.MultiFormatReader().decode(bin);
+          URL.revokeObjectURL(url);
+          console.log('[ZERO] ZXing encontró:', r.getText());
+          resolve(r.getText());
+        } catch (e) {
+          try {
+            const cx = Math.floor(w * 0.1), cy = Math.floor(h * 0.1);
+            const cw = Math.floor(w * 0.8), ch = Math.floor(h * 0.8);
+            const d2 = ctx.getImageData(cx, cy, cw, ch);
+            const lum2 = new ZXing.RGBLuminanceSource(d2.data, cw, ch);
+            const bin2 = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum2));
+            const r2 = new ZXing.MultiFormatReader().decode(bin2);
+            URL.revokeObjectURL(url);
+            console.log('[ZERO] ZXing centro:', r2.getText());
+            resolve(r2.getText());
+          } catch (e2) {
+            URL.revokeObjectURL(url);
+            console.warn('[ZERO] ZXing no detectó código');
+            resolve(null);
+          }
+        }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
     });
-    URL.revokeObjectURL(url);
-
-    const MAX = 1200;
-    let w = img.width, h = img.height;
-    if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.floor(w*r); h = Math.floor(h*r); }
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-    console.log('[ZERO] Canvas ZXing:', w, 'x', h);
-
-    function _decode(c, cw, ch) {
-      const d = c.getContext('2d').getImageData(0, 0, cw, ch);
-      const len = d.data.length / 4;
-      const luma = new Uint8ClampedArray(len * 3);
-      for (let i = 0; i < len; i++) { luma[i*3]=d.data[i*4]; luma[i*3+1]=d.data[i*4+1]; luma[i*3+2]=d.data[i*4+2]; }
-      const lum = new ZXing.RGBLuminanceSource(luma, cw, ch);
-      return new ZXing.MultiFormatReader().decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum)));
-    }
-
-    try { const r = _decode(canvas, w, h); console.log('[ZERO] ZXing encontró:', r.getText()); return r.getText(); } catch(e) {}
-    try {
-      const cx = Math.floor(w*.1), cy = Math.floor(h*.1), cw2 = Math.floor(w*.8), ch2 = Math.floor(h*.8);
-      const c2 = document.createElement('canvas'); c2.width = cw2; c2.height = ch2;
-      c2.getContext('2d').drawImage(canvas, cx, cy, cw2, ch2, 0, 0, cw2, ch2);
-      const r2 = _decode(c2, cw2, ch2); console.log('[ZERO] ZXing centro:', r2.getText()); return r2.getText();
-    } catch(e2) {}
-
-    console.warn('[ZERO] ZXing no detectó código');
-    return null;
-  } catch(e) {
+  } catch (e) {
     console.error('[ZERO] Error ZXing:', e);
     return null;
   }
@@ -2008,42 +2015,28 @@ function _rpPaso3Form(c) {
       const catEmoji = (() => { try { return categorias.find(cat=>cat.id==catSugeridaId)?.icono || '📦'; } catch(e){ return '📦'; } })();
       const tieneFoto = !!estadoNuevoProd.imagenUrl;
       const tieneOff  = !!estadoNuevoProd._imagenUrlOff;
-
-      const imgPreview = sel === true && tieneFoto ? estadoNuevoProd.imagenUrl
-        : sel === 'off' && tieneOff ? estadoNuevoProd._imagenUrlOff
-        : null;
-
-      const previewHtml = imgPreview ? `
-        <div style="display:flex;justify-content:center;margin-bottom:10px">
-          <img src="${escH(imgPreview)}" style="width:140px;height:140px;object-fit:cover;border-radius:12px;border:2px solid var(--accent)">
-        </div>` : `
-        <div style="display:flex;justify-content:center;margin-bottom:10px">
-          <div style="width:140px;height:140px;border-radius:12px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:48px">${catEmoji}</div>
-        </div>`;
-
       const btnFoto = tieneFoto ? `
         <button onclick="estadoNuevoProd._usarFoto=true;renderPasoActual()"
-          style="flex:1;padding:8px 4px;background:${sel===true?'rgba(34,197,94,.15)':'var(--surface)'};border:2px solid ${sel===true?'#22c55e':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
-          <img src="${escH(estadoNuevoProd.imagenUrl)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px" onerror="this.style.display='none'">
-          <span style="font-size:10px;color:${sel===true?'#86efac':'var(--text-dim)'}">📷 Mi foto</span>
+          style="flex:1;padding:10px;background:${sel===true?'rgba(34,197,94,.15)':'var(--surface)'};border:2px solid ${sel===true?'#22c55e':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <img src="${escH(estadoNuevoProd.imagenUrl)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
+          <span style="font-size:11px;color:${sel===true?'#86efac':'var(--text-dim)'}">📷 Mi foto</span>
         </button>` : '';
       const btnOff = tieneOff ? `
         <button onclick="estadoNuevoProd._usarFoto='off';renderPasoActual()"
-          style="flex:1;padding:8px 4px;background:${sel==='off'?'rgba(59,130,246,.15)':'var(--surface)'};border:2px solid ${sel==='off'?'#3b82f6':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
-          <img src="${escH(estadoNuevoProd._imagenUrlOff)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px" onerror="this.style.display='none'">
-          <span style="font-size:10px;color:${sel==='off'?'#93c5fd':'var(--text-dim)'}">🌐 OFF</span>
+          style="flex:1;padding:10px;background:${sel==='off'?'rgba(59,130,246,.15)':'var(--surface)'};border:2px solid ${sel==='off'?'#3b82f6':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <img src="${escH(estadoNuevoProd._imagenUrlOff)}" style="width:56px;height:56px;object-fit:cover;border-radius:8px" onerror="this.style.display='none'">
+          <span style="font-size:11px;color:${sel==='off'?'#93c5fd':'var(--text-dim)'}">🌐 Imagen de OFF</span>
         </button>` : '';
       const btnIcon = `
         <button onclick="estadoNuevoProd._usarFoto=false;renderPasoActual()"
-          style="flex:1;padding:8px 4px;background:${sel===false?'rgba(99,102,241,.15)':'var(--surface)'};border:2px solid ${sel===false?'#6366f1':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px">
-          <span style="font-size:32px;line-height:1">${catEmoji}</span>
-          <span style="font-size:10px;color:${sel===false?'#a5b4fc':'var(--text-dim)'}">🎨 Ícono</span>
+          style="flex:1;padding:10px;background:${sel===false?'rgba(99,102,241,.15)':'var(--surface)'};border:2px solid ${sel===false?'#6366f1':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <span style="font-size:42px;line-height:1">${catEmoji}</span>
+          <span style="font-size:11px;color:${sel===false?'#a5b4fc':'var(--text-dim)'}">🎨 Ícono auto</span>
         </button>`;
       return `
       <div style="margin-bottom:16px">
         <label class="flujo-label">Imagen del producto</label>
-        ${previewHtml}
-        <div style="display:flex;gap:8px">${btnFoto}${btnOff}${btnIcon}</div>
+        <div style="display:flex;gap:8px;margin-top:6px">${btnFoto}${btnOff}${btnIcon}</div>
       </div>`;
     })() : ''}
 
