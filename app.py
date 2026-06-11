@@ -633,7 +633,7 @@ def procesar_cola_impresion(app: Flask):
                 cfg = {r["clave"]: r["valor"] for r in cfg_rows}
                 pendientes = conn.execute(
                     "SELECT id, contenido FROM cola_impresion "
-                    "WHERE estado IN ('pendiente','fallido') AND intentos < 3 "
+                    "WHERE estado IN ('pendiente','fallido') AND intentos < 10 "
                     "ORDER BY id ASC LIMIT 10"
                 ).fetchall()
 

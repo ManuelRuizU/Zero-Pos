@@ -959,7 +959,7 @@ def marcar_ticket_fallido(conn, cola_id: int, error: str):
         """UPDATE cola_impresion
            SET intentos = intentos + 1,
                error_msg = ?,
-               estado = CASE WHEN intentos + 1 >= 3 THEN 'fallido' ELSE 'pendiente' END,
+               estado = CASE WHEN intentos + 1 >= 10 THEN 'fallido' ELSE 'pendiente' END,
                actualizado_en = CURRENT_TIMESTAMP
            WHERE id=?""",
         (error[:500], cola_id)

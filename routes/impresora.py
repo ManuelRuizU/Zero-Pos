@@ -149,6 +149,22 @@ def estado_impresora():
     })
 
 
+@impresora_bp.route("/cola", methods=["GET"])
+def cola_impresion():
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+
+    with db_session() as conn:
+        rows = conn.execute(
+            """SELECT ci.id, ci.venta_id, ci.estado, ci.intentos, ci.error_msg, ci.creado_en, ci.actualizado_en
+               FROM cola_impresion ci
+               WHERE ci.estado IN ('pendiente','fallido')
+               ORDER BY ci.creado_en DESC LIMIT 50"""
+        ).fetchall()
+
+    return jsonify([dict(r) for r in rows])
+
+
 @impresora_bp.route("/reimprimir", methods=["POST"])
 def reimprimir():
     if not session.get("usuario_id"):
@@ -169,7 +185,7 @@ def reimprimir():
                         cfg = {r["clave"]: r["valor"] for r in cfg_rows}
                         pendientes = conn.execute(
                             "SELECT id, contenido FROM cola_impresion "
-                            "WHERE estado IN ('pendiente','fallido') AND intentos < 3 ORDER BY id ASC LIMIT 10"
+                            "WHERE estado IN ('pendiente','fallido') AND intentos < 10 ORDER BY id ASC LIMIT 10"
                         ).fetchall()
                     config_imp = {"tipo": cfg.get("impresora_tipo","red"), "ip": cfg.get("impresora_ip",""), "puerto": cfg.get("impresora_puerto","9100")}
                     for row in pendientes:

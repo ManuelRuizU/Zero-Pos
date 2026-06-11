@@ -756,6 +756,10 @@ body {
   <button class="btn-top" id="btnCreditBadge" onclick="location.href='credit.html'" title="ZERO CREDIT — fiados vencidos" style="display:none;position:relative">
     📒<span id="creditBadge" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
   </button>
+  <!-- Cola impresión (visible solo cuando hay tickets pendientes) -->
+  <button class="btn-top" id="btnImpresoraBadge" onclick="abrirModalImpresoraCola()" title="Tickets sin imprimir" style="display:none;position:relative">
+    🖨️<span id="impresoraBadge" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
+  </button>
   <!-- Usuario dropdown -->
   <div style="position:relative">
     <button class="btn-top" id="btnUserMenu" onclick="toggleUserMenu()">
@@ -1022,6 +1026,20 @@ body {
     <div id="dvTotales" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:6px"></div>
     <!-- Footer fecha/id -->
     <div id="dvFooter" style="padding:12px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim)"></div>
+  </div>
+</div>
+
+<!-- ── Modal cola impresión ──────────────────────────────────── -->
+<div class="modal-overlay" id="modalImpresoraCola" onclick="if(event.target===this)this.style.display='none'" style="display:none">
+  <div class="modal" style="max-width:420px;padding:0;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:14px;font-weight:700">🖨️ Cola de impresión</div>
+      <button onclick="document.getElementById('modalImpresoraCola').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px">
+      <button onclick="_colaReintentarTodos()" style="flex:1;padding:9px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">↺ Reintentar todos ahora</button>
+    </div>
+    <div id="colaImpresoraLista" style="max-height:340px;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -2098,23 +2116,28 @@ async function _verificarTicketsPendientes() {
     const r = await fetch('/api/impresora/estado', {credentials: 'include'});
     if (!r.ok) return;
     const d = await r.json();
+    const btn = document.getElementById('btnImpresoraBadge');
+    const badge = document.getElementById('impresoraBadge');
+    if (btn && badge) {
+      if (d.pendientes > 0) {
+        btn.style.display = 'block';
+        badge.textContent = d.pendientes > 9 ? '9+' : d.pendientes;
+      } else {
+        btn.style.display = 'none';
+      }
+    }
     if (d.pendientes > 0) {
-      mostrarToastPersistente(`🖨️ Hay ${d.pendientes} ticket(s) sin imprimir de la sesión anterior. Toca aquí para reintentar.`, 'warning');
+      mostrarToastPersistente(`🖨️ Hay ${d.pendientes} ticket(s) sin imprimir. Toca para gestionar.`, 'warning');
       if (_toastPersistente) {
-        _toastPersistente.onclick = async () => {
+        _toastPersistente.onclick = () => {
           _toastPersistente.remove();
-          try {
-            await fetch('/api/impresora/reimprimir', {
-              method: 'POST', credentials: 'include',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({accion: 'procesar_pendientes'}),
-            });
-          } catch(e) {}
+          abrirModalImpresoraCola();
         };
       }
     }
   } catch(e) {}
 }
+setInterval(_actualizarBadgeImpresora, 60000);
 
 function _aplicarPermisosPOS(me) {
   const p = me.permisos || {};
@@ -4487,14 +4510,15 @@ function _renderHistorial(ventas) {
       const estadoColor = v.estado === 'anulada' ? '#ef4444' : v.estado === 'completada' ? '#22c55e' : '#94a3b8';
       const hora = (v.creado_en || '').slice(11, 16);
       const metodoIcon = {'efectivo':'💵','tarjeta':'💳','transferencia':'📲'}[v.metodo_pago] || '💰';
-      html += `<div onclick="abrirDetalleVenta(${v.id})" style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s" onmouseenter="this.style.background='var(--surface-hover)'" onmouseleave="this.style.background='none'">
-        <div style="flex:1;min-width:0">
+      html += `<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .12s" onmouseenter="this.style.background='var(--surface-hover)'" onmouseleave="this.style.background='none'">
+        <div onclick="abrirDetalleVenta(${v.id})" style="flex:1;min-width:0;cursor:pointer">
           <div style="font-size:14px;font-weight:600;color:${v.estado==='anulada'?'#ef444480':'var(--text)'}">
             ${v.estado==='anulada'?'<s>':''}#${v.id}${v.estado==='anulada'?'</s>':''} ${metodoIcon}
           </div>
           <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${hora} · ${v.cajero||v.usuario||'—'}</div>
         </div>
-        <div style="font-size:15px;font-weight:700;color:${estadoColor};text-decoration:${v.estado==='anulada'?'line-through':'none'}">${fmt(v.total)}</div>
+        <div style="font-size:15px;font-weight:700;color:${estadoColor};text-decoration:${v.estado==='anulada'?'line-through':'none'};margin-right:8px">${fmt(v.total)}</div>
+        ${v.estado!=='anulada'?`<button onclick="_reimprimirDesdeHistorial(${v.id},event)" title="Reimprimir ticket" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;padding:4px;flex-shrink:0">🖨️</button>`:''}
       </div>`;
     });
   });
@@ -4597,6 +4621,97 @@ async function _reimprimirVentaDetalle() {
     body: JSON.stringify({venta_id: _detalleVentaActual.id}),
   });
   showToast('Reimprimiendo...', 'info');
+}
+
+async function _reimprimirDesdeHistorial(ventaId, event) {
+  event.stopPropagation();
+  try {
+    const r = await fetch('/api/impresora/reimprimir', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({venta_id: ventaId}),
+    });
+    const d = await r.json();
+    showToast(d.ok ? 'Reimprimiendo...' : (d.error || 'Error al reimprimir'), d.ok ? 'info' : 'error');
+  } catch(e) {
+    showToast('Error de conexión', 'error');
+  }
+}
+
+async function abrirModalImpresoraCola() {
+  document.getElementById('modalImpresoraCola').style.display = 'flex';
+  const lista = document.getElementById('colaImpresoraLista');
+  lista.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">Cargando...</div>';
+  try {
+    const r = await fetch('/api/impresora/cola', {credentials: 'include'});
+    const rows = await r.json();
+    if (!rows.length) {
+      lista.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">Sin tickets pendientes</div>';
+      return;
+    }
+    lista.innerHTML = rows.map(t => `
+      <div style="display:flex;align-items:center;padding:11px 16px;border-bottom:1px solid var(--border);gap:12px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">Venta #${t.venta_id || '—'}</div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:2px">${t.estado} · ${t.intentos} intento${t.intentos!==1?'s':''}</div>
+          ${t.error_msg ? `<div style="font-size:11px;color:#ef4444;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.error_msg}</div>` : ''}
+        </div>
+        <button onclick="_reimprimirColaItem(${t.venta_id},${t.id},this)" style="padding:6px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;color:var(--text)">🖨️</button>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;font-size:13px">Error al cargar</div>';
+  }
+}
+
+async function _reimprimirColaItem(ventaId, colaId, btn) {
+  btn.disabled = true; btn.textContent = '...';
+  try {
+    const payload = ventaId ? {venta_id: ventaId} : {cola_id: colaId};
+    const r = await fetch('/api/impresora/reimprimir', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json();
+    btn.textContent = d.ok ? '✓' : '✗';
+    if (d.ok) { btn.style.color = '#22c55e'; btn.disabled = true; }
+    else { btn.style.color = '#ef4444'; btn.disabled = false; btn.textContent = '↺'; }
+  } catch(e) {
+    btn.textContent = '↺'; btn.disabled = false;
+  }
+}
+
+async function _colaReintentarTodos() {
+  try {
+    await fetch('/api/impresora/reimprimir', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({accion: 'procesar_pendientes'}),
+    });
+    showToast('Reintentando todos los tickets...', 'info');
+    document.getElementById('modalImpresoraCola').style.display = 'none';
+    setTimeout(_actualizarBadgeImpresora, 3000);
+  } catch(e) {
+    showToast('Error de conexión', 'error');
+  }
+}
+
+async function _actualizarBadgeImpresora() {
+  try {
+    const r = await fetch('/api/impresora/estado', {credentials: 'include'});
+    if (!r.ok) return;
+    const d = await r.json();
+    const btn = document.getElementById('btnImpresoraBadge');
+    const badge = document.getElementById('impresoraBadge');
+    if (btn && badge) {
+      if (d.pendientes > 0) {
+        btn.style.display = 'block';
+        badge.textContent = d.pendientes > 9 ? '9+' : d.pendientes;
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+  } catch(e) {}
 }
 
 // ── Vista grid/lista ─────────────────────────────────────────────
