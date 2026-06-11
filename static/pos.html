@@ -4098,12 +4098,8 @@ const Escaner = {
     } catch(err) {
       console.error('[ZERO] Error cámara:', err);
       this.cerrar();
-      if (this._callback) {
-        abrirEscanerArchivo(this._callback);
-      } else {
-        showToast('No se pudo acceder a la cámara', 'error');
-        document.getElementById('searchInput').focus();
-      }
+      showToast('No se pudo acceder a la cámara', 'error');
+      document.getElementById('searchInput').focus();
     }
   },
 
@@ -4220,10 +4216,8 @@ function abrirEscanerArchivo(onCodigo) {
   input.click();
 }
 
-function abrirEscaner() {
-  abrirEscanerArchivo(c => { showToast('✅ ' + c, 'success'); procesarCodigo(c); });
-}
-function abrirScanner() { abrirEscaner(); }
+function abrirEscaner() { Escaner.abrir(); }
+function abrirScanner() { Escaner.abrir(); }
 async function cerrarSesion() {
   limpiarCarritoLocal();
   await fetch('/api/auth/logout', {method:'POST', credentials:'include'});
