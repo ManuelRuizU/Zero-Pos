@@ -402,9 +402,11 @@ def _guardar_imagen(imagen_bytes: bytes) -> str | None:
     """Wrapper sin código de barras — genera ID temporal por timestamp."""
     import time as _t
     try:
-        return _guardar_imagen_producto(f"tmp_{int(_t.time() * 1000)}", imagen_bytes)
+        url = _guardar_imagen_producto(f"tmp_{int(_t.time() * 1000)}", imagen_bytes)
+        logger.info(f"Imagen guardada: {url}")
+        return url
     except Exception as e:
-        logger.debug(f"_guardar_imagen: {e}")
+        logger.warning(f"_guardar_imagen falló: {e}")
         return None
 
 
@@ -420,6 +422,7 @@ def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
             data = _json.loads(resp.read())
 
         if data.get("status") != 1:
+            logger.info(f"OFF: código {codigo_barras} no encontrado en la base de datos")
             return None
         p = data.get("product", {})
 
@@ -431,6 +434,7 @@ def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
             or ""
         ).strip()
         if not nombre:
+            logger.info(f"OFF: código {codigo_barras} existe pero sin nombre")
             return None
 
         marca = (p.get("brands") or "").split(",")[0].strip() or None
@@ -459,9 +463,9 @@ def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
                 imagen_url_off = _guardar_imagen(img_bytes)
                 logger.info(f"Imagen OFF descargada: {imagen_url_off}")
             except Exception as e:
-                logger.debug(f"No se pudo descargar imagen OFF: {e}")
+                logger.info(f"OFF: imagen no descargada ({e})")
 
-        logger.info(f"OFF: '{nombre}' marca={marca} cat={categoria}")
+        logger.info(f"OFF: nombre encontrado → '{nombre}' marca={marca} cat={categoria}")
         return {
             "nombre": nombre,
             "marca": marca,
@@ -472,7 +476,7 @@ def _buscar_open_food_facts(codigo_barras: str) -> dict | None:
             "fuente": "open_food_facts",
         }
     except Exception as e:
-        logger.debug(f"OFF no disponible: {e}")
+        logger.info(f"OFF: sin resultado — {type(e).__name__}: {e}")
         return None
 
 
@@ -630,6 +634,8 @@ def leer_producto():
     # PASO 1: Guardar imagen optimizada
     if imagen_bytes:
         imagen_url = _guardar_imagen(imagen_bytes)
+        if imagen_url:
+            logger.info(f"leer_producto: foto guardada → {imagen_url}")
 
     # PASO 2: Detectar código en la foto con pyzbar
     codigo = codigo_manual
@@ -647,8 +653,9 @@ def leer_producto():
         except Exception as e:
             logger.debug(f"pyzbar en foto: {e}")
 
-    # PASO 3: Buscar en Open Food Facts
+    # PASO 3: Buscar en Open Food Facts (antes de OCR)
     if codigo:
+        logger.info(f"leer_producto: consultando OFF para código {codigo}")
         datos_off = _buscar_open_food_facts(codigo)
         if datos_off:
             logger.info(f"OFF encontró: {datos_off['nombre']}")
