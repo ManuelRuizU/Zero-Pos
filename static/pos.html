@@ -4165,11 +4165,13 @@ const Escaner = {
     this._feedbackExito();
     if (navigator.vibrate) navigator.vibrate(50);
     const cb = this._callback;
-    this.cerrar();
     if (cb) {
       cb(codigo);
+      this.cerrar();
     } else {
       procesarCodigo(codigo);
+      this.activo = false;
+      setTimeout(() => { this.activo = true; }, 1500);
     }
   },
 
