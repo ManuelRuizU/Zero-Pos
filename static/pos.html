@@ -4106,7 +4106,7 @@ const Escaner = {
 
   _bucle() {
     const tick = async () => {
-      if (!this.activo) return;
+      if (!this.activo || this._pausado) return;
       const ahora = performance.now();
       if (ahora - this.ultimoScan >= this.INTERVALO_MS) {
         this.ultimoScan = ahora;
@@ -4170,12 +4170,25 @@ const Escaner = {
       this.cerrar();
     } else {
       procesarCodigo(codigo);
-      this.activo = false;
-      setTimeout(() => { this.activo = true; }, 1500);
+      this._pausado = true;
+      setTimeout(() => { this._pausado = false; }, 1500);
     }
   },
 
   _feedbackExito() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 1800;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.15);
+    } catch(e) {}
     const fb = document.getElementById('feedbackEscaner');
     const marco = document.getElementById('marcoEscaneo');
     if (fb) { fb.textContent = '✓ Detectado'; fb.classList.add('show'); }
@@ -4194,7 +4207,8 @@ const Escaner = {
       this.stream = null;
     }
     document.getElementById('modalEscaner').style.display = 'none';
-    document.getElementById('searchInput').focus();
+    const si = document.getElementById('searchInput');
+    if (si && !('ontouchstart' in window)) si.focus();
   },
 };
 
