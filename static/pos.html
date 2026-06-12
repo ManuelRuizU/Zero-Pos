@@ -4106,13 +4106,13 @@ const Escaner = {
 
   _bucle() {
     const tick = async () => {
+      requestAnimationFrame(tick);
       if (!this.activo || this._pausado) return;
       const ahora = performance.now();
       if (ahora - this.ultimoScan >= this.INTERVALO_MS) {
         this.ultimoScan = ahora;
         await this._procesarFrame();
       }
-      requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   },
