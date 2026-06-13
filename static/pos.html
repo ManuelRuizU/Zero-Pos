@@ -4215,7 +4215,7 @@ const Escaner = {
     }
     document.getElementById('modalEscaner').style.display = 'none';
     const si = document.getElementById('searchInput');
-    if (si && !('ontouchstart' in window)) si.focus();
+    // no focus — evita teclado en móvil
   },
 };
 
