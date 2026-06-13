@@ -4055,6 +4055,7 @@ const Escaner = {
   video:      null,
   ultimoScan: 0,
   _callback:  null,
+  _procesando: false,
   INTERVALO_MS: 800,
 
   async init() {
@@ -4118,9 +4119,11 @@ const Escaner = {
   },
 
   async _procesarFrame() {
-    if (!this.video || this.video.readyState < 2) return;
+    if (this._procesando) return;
+    this._procesando = true;
+    if (!this.video || this.video.readyState < 2) { this._procesando = false; return; }
     const vw = this.video.videoWidth, vh = this.video.videoHeight;
-    if (!vw || !vh) return;
+    if (!vw || !vh) { this._procesando = false; return; }
 
     const sx = Math.floor(vw * 0.2), sy = Math.floor(vh * 0.3);
     const sw = Math.floor(vw * 0.6), sh = Math.floor(vh * 0.4);
@@ -4157,7 +4160,10 @@ const Escaner = {
     }
 
     if (codigo) {
+      this._procesando = false;
       this._onDetectado(codigo);
+    } else {
+      this._procesando = false;
     }
   },
 
@@ -4201,6 +4207,7 @@ const Escaner = {
 
   cerrar() {
     this.activo = false;
+    this._procesando = false;
     this._callback = null;
     if (this.stream) {
       this.stream.getTracks().forEach(t => t.stop());
