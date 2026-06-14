@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zeropos-v2';
+const CACHE_NAME = 'zeropos-v3';
 const URLS_TO_CACHE = [
   '/static/pos.html',
   '/static/admin.html',
@@ -31,18 +31,20 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-
-  // API: siempre network — sin cachear
+  // API: NO interceptar — dejar pasar al browser
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(fetch(event.request));
     return;
   }
-
-  // Archivos estáticos: cache-first, fallback a network
+  // Externos (openfoodfacts, etc): NO interceptar
+  if (!url.origin.includes('192.168.50.183') &&
+      !url.origin.includes('127.0.0.1') &&
+      !url.origin.includes('localhost')) {
+    return;
+  }
+  // Archivos estáticos: cache-first
   event.respondWith(
     caches.match(event.request).then(cached => {
       return cached || fetch(event.request).then(response => {
-        // Cachear respuestas estáticas exitosas
         if (response.ok && url.pathname.startsWith('/static/')) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));

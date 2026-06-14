@@ -1806,19 +1806,6 @@ async function buscarEnOFF(codigo) {
   estadoNuevoProd.paso = 'buscando';
   renderPasoActual();
 
-  let hayInternet = false;
-  try {
-    await fetch('https://world.openfoodfacts.org', { method:'HEAD', signal: AbortSignal.timeout(2000) });
-    hayInternet = true;
-  } catch(e) {}
-
-  if (!hayInternet) {
-    showToast('📵 Sin conexión. Ingresa el nombre manualmente.', 'error');
-    estadoNuevoProd.paso = 2;
-    renderPasoActual();
-    return;
-  }
-
   showToast('🌐 Buscando producto en línea...');
   try {
     const fd = new FormData();
@@ -1840,6 +1827,7 @@ async function buscarEnOFF(codigo) {
       estadoNuevoProd.paso = 2;
     }
   } catch(e) {
+    showToast('📵 Sin conexión. Ingresa el nombre manualmente.', 'error');
     estadoNuevoProd.paso = 2;
   }
   renderPasoActual();
