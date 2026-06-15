@@ -4694,6 +4694,12 @@ function _renderFiltrosHistorial() {
         <option value="tarjeta">💳 Tarjeta</option>
         <option value="transferencia">📲 Transferencia</option>
       </select>
+      <select id="hFiltroEstado" onchange="_aplicarFiltrosHistorial()"
+        style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+        <option value="">Todos los estados</option>
+        <option value="completada">Completadas</option>
+        <option value="anulada">Anuladas</option>
+      </select>
       <select id="hFiltroOrden" onchange="_aplicarFiltrosHistorial()"
         style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
         <option value="reciente">Más reciente</option>
@@ -4707,10 +4713,12 @@ function _renderFiltrosHistorial() {
 function _aplicarFiltrosHistorial() {
   const texto  = (document.getElementById('hFiltroTexto')?.value  || '').toLowerCase();
   const metodo = (document.getElementById('hFiltroMetodo')?.value || '');
+  const estado = (document.getElementById('hFiltroEstado')?.value || '');
   const orden  = (document.getElementById('hFiltroOrden')?.value  || 'reciente');
 
   let ventas = _todasVentasHistorial.filter(v => {
     if (metodo && v.metodo_pago !== metodo) return false;
+    if (estado && v.estado !== estado) return false;
     if (texto) {
       const cajero = (v.cajero || v.usuario || '').toLowerCase();
       const id = String(v.id);
@@ -4757,15 +4765,18 @@ function _renderHistorial(ventas) {
       const estadoColor = v.estado === 'anulada' ? '#ef4444' : v.estado === 'completada' ? '#22c55e' : '#94a3b8';
       const hora = (v.creado_en || '').slice(11, 16);
       const metodoIcon = {'efectivo':'💵','tarjeta':'💳','transferencia':'📲'}[v.metodo_pago] || '💰';
-      html += `<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .12s" onmouseenter="this.style.background='var(--surface-hover)'" onmouseleave="this.style.background='none'">
+      const esAnulada = v.estado === 'anulada';
+      html += `<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);transition:background .12s;${esAnulada?'background:rgba(239,68,68,0.05)':''}" onmouseenter="this.style.background='${esAnulada?'rgba(239,68,68,0.1)':'var(--surface-hover)'}'" onmouseleave="this.style.background='${esAnulada?'rgba(239,68,68,0.05)':'none'}'">
         <div onclick="abrirDetalleVenta(${v.id})" style="flex:1;min-width:0;cursor:pointer">
-          <div style="font-size:14px;font-weight:600;color:${v.estado==='anulada'?'#ef444480':'var(--text)'}">
-            ${v.estado==='anulada'?'<s>':''}#${v.id}${v.estado==='anulada'?'</s>':''} ${metodoIcon}
+          <div style="font-size:14px;font-weight:600;color:${esAnulada?'#ef4444':'var(--text)'};display:flex;align-items:center;gap:6px">
+            <span style="${esAnulada?'text-decoration:line-through;opacity:.7':''}">#${v.id}</span>
+            ${esAnulada?'<span style="font-size:10px;font-weight:700;background:#ef4444;color:white;border-radius:4px;padding:1px 5px;letter-spacing:.3px">ANULADA</span>':''}
+            ${!esAnulada?metodoIcon:''}
           </div>
           <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${hora} · ${v.cajero||v.usuario||'—'}</div>
         </div>
-        <div style="font-size:15px;font-weight:700;color:${estadoColor};text-decoration:${v.estado==='anulada'?'line-through':'none'};margin-right:8px">${fmt(v.total)}</div>
-        ${v.estado!=='anulada'?`<button onclick="_reimprimirDesdeHistorial(${v.id},event)" title="Reimprimir ticket" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer;padding:8px 10px;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">🖨️</button>`:''}
+        <div style="font-size:15px;font-weight:700;color:${estadoColor};text-decoration:${esAnulada?'line-through':'none'};margin-right:8px;opacity:${esAnulada?'.6':'1'}">${fmt(v.total)}</div>
+        ${!esAnulada?`<button onclick="_reimprimirDesdeHistorial(${v.id},event)" title="Reimprimir ticket" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer;padding:8px 10px;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">🖨️</button>`:''}
       </div>`;
     });
   });
