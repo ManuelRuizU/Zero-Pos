@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from collections import defaultdict
@@ -181,9 +182,20 @@ def abrir_turno():
         return jsonify({"error": "No autenticado"}), 401
 
     data = request.get_json(silent=True) or {}
-    fondo = float(data.get("fondo_inicial", 0))
+    denoms = data.get("denominaciones", {})
+    if denoms:
+        fondo = sum(int(k) * int(v) for k, v in denoms.items() if str(v).isdigit())
+    else:
+        fondo = float(data.get("fondo_inicial", 0))
+    denoms_json = json.dumps(denoms) if denoms else None
 
     with db_session() as conn:
+        for col in ("denominaciones_apertura", "denominaciones_cierre"):
+            try:
+                conn.execute(f"ALTER TABLE turnos ADD COLUMN {col} TEXT")
+            except Exception:
+                pass
+
         abierto = conn.execute(
             "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
         ).fetchone()
@@ -191,9 +203,9 @@ def abrir_turno():
             return jsonify({"error": "Ya tienes un turno abierto", "turno_id": abierto["id"]}), 409
 
         cur = conn.execute(
-            """INSERT INTO turnos (usuario_id, fondo_inicial, estado)
-               VALUES (?, ?, 'abierto')""",
-            (uid, fondo)
+            """INSERT INTO turnos (usuario_id, fondo_inicial, estado, denominaciones_apertura)
+               VALUES (?, ?, 'abierto', ?)""",
+            (uid, fondo, denoms_json)
         )
         session["turno_id"] = cur.lastrowid
         return jsonify({"ok": True, "turno_id": cur.lastrowid})
@@ -206,7 +218,12 @@ def cerrar_turno():
         return jsonify({"error": "No autenticado"}), 401
 
     data = request.get_json(silent=True) or {}
-    fondo_final = float(data.get("fondo_final", 0))
+    denoms = data.get("denominaciones", {})
+    if denoms:
+        fondo_final = sum(int(k) * int(v) for k, v in denoms.items() if str(v).isdigit())
+    else:
+        fondo_final = float(data.get("fondo_final", 0))
+    denoms_json = json.dumps(denoms) if denoms else None
 
     with db_session() as conn:
         turno = conn.execute(
@@ -216,9 +233,10 @@ def cerrar_turno():
             return jsonify({"error": "No hay turno abierto"}), 404
 
         conn.execute(
-            """UPDATE turnos SET estado='cerrado', cierre=CURRENT_TIMESTAMP, fondo_final=?
+            """UPDATE turnos SET estado='cerrado', cierre=CURRENT_TIMESTAMP,
+               fondo_final=?, denominaciones_cierre=?
                WHERE id=?""",
-            (fondo_final, turno["id"])
+            (fondo_final, denoms_json, turno["id"])
         )
         session.pop("turno_id", None)
         return jsonify({"ok": True})

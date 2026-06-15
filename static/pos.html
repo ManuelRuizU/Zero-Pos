@@ -1110,6 +1110,54 @@ body {
   </div>
 </div>
 
+<!-- ── Modal apertura/cierre turno ──────────────────────────── -->
+<div class="modal-overlay" id="modalTurno" style="display:none;z-index:1400">
+  <div class="modal" style="max-width:400px;width:100%;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <div id="modalTurnoTitulo" style="font-size:15px;font-weight:700"></div>
+      <button onclick="document.getElementById('modalTurno').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:16px">
+      <p id="modalTurnoDesc" style="font-size:13px;color:var(--text-dim);margin:0 0 16px"></p>
+      <!-- Contador denominaciones -->
+      <div id="modalTurnoDenoms" style="display:none">
+        <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Contar efectivo (opcional)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+          <!-- Billetes -->
+          <div style="grid-column:1/-1;font-size:11px;color:var(--text-dim);font-weight:600;padding:4px 0 2px;border-bottom:1px solid var(--border)">BILLETES</div>
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$20.000</label>
+          <input type="number" min="0" value="0" data-denom="20000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$10.000</label>
+          <input type="number" min="0" value="0" data-denom="10000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$5.000</label>
+          <input type="number" min="0" value="0" data-denom="5000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$2.000</label>
+          <input type="number" min="0" value="0" data-denom="2000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$1.000</label>
+          <input type="number" min="0" value="0" data-denom="1000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <!-- Monedas -->
+          <div style="grid-column:1/-1;font-size:11px;color:var(--text-dim);font-weight:600;padding:8px 0 2px;border-bottom:1px solid var(--border)">MONEDAS</div>
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$500</label>
+          <input type="number" min="0" value="0" data-denom="500" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$100</label>
+          <input type="number" min="0" value="0" data-denom="100" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$50</label>
+          <input type="number" min="0" value="0" data-denom="50" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$10</label>
+          <input type="number" min="0" value="0" data-denom="10" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:2px solid var(--border)">
+          <span style="font-size:14px;font-weight:700">Total contado</span>
+          <span id="modalTurnoTotal" style="font-size:20px;font-weight:900;color:#22c55e">$0</span>
+        </div>
+      </div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border)">
+      <button id="modalTurnoBtn" onclick="_confirmarTurno()" style="width:100%;padding:12px;border-radius:10px;border:none;background:#6366f1;color:white;font-size:15px;font-weight:700;cursor:pointer"></button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal cola impresión ──────────────────────────────────── -->
 <div class="modal-overlay" id="modalImpresoraCola" onclick="if(event.target===this)this.style.display='none'" style="display:none">
   <div class="modal" style="max-width:420px;padding:0;overflow:hidden">
@@ -2259,16 +2307,96 @@ function _aplicarPermisosPOS(me) {
   }
 }
 
+let _turnoModo = 'abrir'; // 'abrir' | 'cerrar'
+let _turnoRequerirConteo = false;
+
 async function verificarTurno(me) {
   const t = await fetch('/api/auth/turno/actual', {credentials:'include'}).then(r => r.json());
   if (!t.turno) {
-    const fondo = prompt('Abre tu turno — ingresa el fondo inicial de caja (ej: 50000):', '0');
-    if (fondo !== null) {
-      await fetch('/api/auth/turno/abrir', {
-        method: 'POST', credentials: 'include',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({fondo_inicial: parseFloat(fondo) || 0}),
-      });
+    await _abrirModalTurno('abrir');
+  }
+}
+
+async function _abrirModalTurno(modo) {
+  _turnoModo = modo;
+  const cfg = await fetch('/api/config', {credentials:'include'}).then(r=>r.json()).catch(()=>({}));
+  _turnoRequerirConteo = cfg.turno_contar_denominaciones === '1';
+
+  const titulo = modo === 'abrir' ? '💵 Abrir turno' : '🔒 Cerrar turno';
+  const desc   = modo === 'abrir'
+    ? 'Registra el fondo inicial de caja para comenzar el turno.'
+    : 'Registra el efectivo en caja al cerrar el turno.';
+  const btnLabel = modo === 'abrir' ? 'Abrir turno' : 'Cerrar turno';
+
+  document.getElementById('modalTurnoTitulo').textContent = titulo;
+  document.getElementById('modalTurnoDesc').textContent   = desc;
+  document.getElementById('modalTurnoBtn').textContent    = btnLabel;
+
+  const denoms = document.getElementById('modalTurnoDenoms');
+  denoms.style.display = '';
+  document.querySelectorAll('#modalTurnoDenoms input[data-denom]').forEach(i => i.value = 0);
+  _calcTurnoTotal();
+
+  document.getElementById('modalTurno').style.display = 'flex';
+}
+
+function _calcTurnoTotal() {
+  let total = 0;
+  document.querySelectorAll('#modalTurnoDenoms input[data-denom]').forEach(inp => {
+    const denom = parseInt(inp.dataset.denom);
+    const cant  = parseInt(inp.value) || 0;
+    total += denom * cant;
+  });
+  document.getElementById('modalTurnoTotal').textContent = '$' + total.toLocaleString('es-CL');
+  return total;
+}
+
+function _getDenominaciones() {
+  const denoms = {};
+  let hayAlgo = false;
+  document.querySelectorAll('#modalTurnoDenoms input[data-denom]').forEach(inp => {
+    const cant = parseInt(inp.value) || 0;
+    denoms[inp.dataset.denom] = cant;
+    if (cant > 0) hayAlgo = true;
+  });
+  return hayAlgo ? denoms : {};
+}
+
+async function _confirmarTurno() {
+  const denoms = _getDenominaciones();
+  const total  = _calcTurnoTotal();
+
+  if (_turnoModo === 'abrir') {
+    const body = denoms && Object.keys(denoms).length
+      ? { denominaciones: denoms }
+      : { fondo_inicial: total };
+    const r = await fetch('/api/auth/turno/abrir', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (r.ok) {
+      document.getElementById('modalTurno').style.display = 'none';
+      showToast('Turno abierto', 'success');
+    } else {
+      const d = await r.json();
+      showToast(d.error || 'Error al abrir turno', 'error');
+    }
+  } else {
+    const body = denoms && Object.keys(denoms).length
+      ? { denominaciones: denoms }
+      : { fondo_final: total };
+    const r = await fetch('/api/auth/turno/cerrar', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body),
+    });
+    if (r.ok) {
+      document.getElementById('modalTurno').style.display = 'none';
+      showToast('Turno cerrado', 'success');
+    } else {
+      const d = await r.json();
+      showToast(d.error || 'Error al cerrar turno', 'error');
     }
   }
 }
