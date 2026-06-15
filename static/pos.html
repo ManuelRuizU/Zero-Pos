@@ -1070,11 +1070,11 @@ body {
 </div>
 
 <!-- ── Modal detalle venta ──────────────────────────────────── -->
-<div class="modal-overlay" id="modalDetalleVenta" onclick="if(event.target===this)this.style.display='none'" style="display:none">
+<div class="modal-overlay" id="modalDetalleVenta" onclick="if(event.target===this)this.style.display='none'" style="display:none;z-index:1300">
   <div class="modal" style="max-width:480px;width:100%;padding:0;overflow:hidden;max-height:90vh;display:flex;flex-direction:column">
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
-      <button onclick="document.getElementById('modalDetalleVenta').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">←</button>
+      <button onclick="document.getElementById('modalDetalleVenta').style.display='none';document.getElementById('drawerHistorial').style.display=''" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">←</button>
       <div id="dvNumero" style="font-size:14px;font-weight:600;color:var(--text-dim)"></div>
       <div style="display:flex;gap:8px">
         <button id="dvBtnAnular" onclick="_anularVentaDetalle()" style="background:#ef444420;border:1px solid #ef4444;color:#ef4444;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer">ANULAR</button>
@@ -1096,6 +1096,16 @@ body {
       <div id="dvTotales" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:6px"></div>
       <!-- Footer fecha/id -->
       <div id="dvFooter" style="padding:12px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim)"></div>
+      <!-- Confirmar anulación inline -->
+      <div id="dvAnularConfirm" style="display:none;padding:14px 16px;border-top:1px solid #ef4444;background:#ef444410">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:#ef4444">Motivo de anulación</div>
+        <input id="dvAnularMotivo" placeholder="Ej: Error en pedido…"
+          style="width:100%;padding:8px;border-radius:8px;border:1px solid #ef4444;background:var(--bg);color:var(--text);font-size:13px;box-sizing:border-box;margin-bottom:8px">
+        <div style="display:flex;gap:8px">
+          <button onclick="_cancelarAnularDetalle()" style="flex:1;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:13px">Cancelar</button>
+          <button onclick="_confirmarAnularDetalle()" style="flex:1;padding:8px;border-radius:8px;border:none;background:#ef4444;color:white;cursor:pointer;font-size:13px;font-weight:600">Confirmar anulación</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -4652,18 +4662,11 @@ async function abrirHistorial() {
     '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:13px">Cargando...</div>';
 
   try {
-    const rows = await fetch('/api/reportes/ventas/dia?fecha=' + new Date().toISOString().slice(0,10),
-      {credentials:'include'}).then(r => r.json());
-
-    // Fetch raw ventas for today + yesterday
-    const hoy   = new Date().toISOString().slice(0,10);
-    const ayerD = new Date(Date.now() - 86400000).toISOString().slice(0,10);
-    const [vHoy, vAyer] = await Promise.all([
-      fetch(`/api/ventas?fecha=${hoy}&limit=50`, {credentials:'include'}).then(r=>r.json()).catch(()=>[]),
-      fetch(`/api/ventas?fecha=${ayerD}&limit=30`, {credentials:'include'}).then(r=>r.json()).catch(()=>[]),
-    ]);
-    const todasVentas = [...(Array.isArray(vHoy)?vHoy:[]), ...(Array.isArray(vAyer)?vAyer:[])];
-    _todasVentasHistorial = todasVentas;
+    const raw = await fetch('/api/ventas?limit=100', {credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+    const arr = Array.isArray(raw) ? raw : [];
+    const map = new Map();
+    arr.forEach(v => map.set(v.id, v));
+    _todasVentasHistorial = [...map.values()];
     _renderFiltrosHistorial();
     _aplicarFiltrosHistorial();
   } catch(e) {
@@ -4778,6 +4781,7 @@ async function abrirDetalleVenta(id) {
 
   try {
     const v = await fetch(`/api/ventas/${id}`, {credentials:'include'}).then(r=>r.json());
+    console.log('[ZERO] detalle venta:', v);
     _detalleVentaActual = v;
     _renderDetalleVenta(v);
   } catch(e) {
@@ -4838,10 +4842,21 @@ function _renderDetalleVenta(v) {
   document.getElementById('dvFooter').innerHTML = `<span>${fecha}</span><span>#${v.id}</span>`;
 }
 
-async function _anularVentaDetalle() {
+function _anularVentaDetalle() {
   if (!_detalleVentaActual) return;
-  const motivo = prompt('Motivo de anulación:');
-  if (motivo === null) return;
+  const conf = document.getElementById('dvAnularConfirm');
+  const inp  = document.getElementById('dvAnularMotivo');
+  if (conf) { inp.value = ''; conf.style.display = ''; inp.focus(); }
+}
+
+function _cancelarAnularDetalle() {
+  const conf = document.getElementById('dvAnularConfirm');
+  if (conf) conf.style.display = 'none';
+}
+
+async function _confirmarAnularDetalle() {
+  if (!_detalleVentaActual) return;
+  const motivo = document.getElementById('dvAnularMotivo')?.value.trim() || '';
   const r = await fetch(`/api/ventas/${_detalleVentaActual.id}/anular`, {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type':'application/json'},
@@ -4849,7 +4864,9 @@ async function _anularVentaDetalle() {
   });
   if (r.ok) {
     showToast('Venta anulada', 'success');
+    document.getElementById('dvAnularConfirm').style.display = 'none';
     document.getElementById('modalDetalleVenta').style.display = 'none';
+    document.getElementById('drawerHistorial').style.display = '';
     cargarProductos();
   } else {
     const d = await r.json();
