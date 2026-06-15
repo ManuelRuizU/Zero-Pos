@@ -1064,20 +1064,21 @@ body {
       <div style="font-size:16px;font-weight:700">Ventas recientes</div>
       <button onclick="cerrarHistorial()" style="background:none;border:none;color:var(--text-dim);font-size:22px;cursor:pointer;padding:4px">✕</button>
     </div>
+    <div id="historialFiltros"></div>
     <div id="historialLista" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
   </div>
 </div>
 
 <!-- ── Modal detalle venta ──────────────────────────────────── -->
 <div class="modal-overlay" id="modalDetalleVenta" onclick="if(event.target===this)this.style.display='none'" style="display:none">
-  <div class="modal" style="max-width:400px;padding:0;overflow:hidden">
+  <div class="modal" style="max-width:480px;width:100%;padding:0;overflow:hidden;max-height:90vh;display:flex;flex-direction:column">
     <!-- Header -->
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
       <button onclick="document.getElementById('modalDetalleVenta').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">←</button>
       <div id="dvNumero" style="font-size:14px;font-weight:600;color:var(--text-dim)"></div>
       <div style="display:flex;gap:8px">
         <button id="dvBtnAnular" onclick="_anularVentaDetalle()" style="background:#ef444420;border:1px solid #ef4444;color:#ef4444;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer">ANULAR</button>
-        <button onclick="_reimprimirVentaDetalle()" style="background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:4px">🖨️</button>
+        <button onclick="_reimprimirVentaDetalle()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:600">🖨️ Reimprimir</button>
       </div>
     </div>
     <!-- Total grande -->
@@ -1085,14 +1086,17 @@ body {
       <div id="dvTotal" style="font-size:36px;font-weight:900;color:#22c55e;letter-spacing:-1px"></div>
       <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Total</div>
     </div>
-    <!-- Metadata -->
-    <div id="dvMeta" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:8px"></div>
-    <!-- Items -->
-    <div id="dvItems" style="padding:14px 16px;border-bottom:1px solid var(--border)"></div>
-    <!-- Totales -->
-    <div id="dvTotales" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:6px"></div>
-    <!-- Footer fecha/id -->
-    <div id="dvFooter" style="padding:12px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim)"></div>
+    <!-- Contenido scrollable -->
+    <div style="overflow-y:auto;flex:1">
+      <!-- Metadata -->
+      <div id="dvMeta" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:8px"></div>
+      <!-- Items -->
+      <div id="dvItems" style="padding:14px 16px;border-bottom:1px solid var(--border)"></div>
+      <!-- Totales -->
+      <div id="dvTotales" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:6px"></div>
+      <!-- Footer fecha/id -->
+      <div id="dvFooter" style="padding:12px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim)"></div>
+    </div>
   </div>
 </div>
 
@@ -4639,6 +4643,7 @@ async function _cargarVersion() {
 
 // ── Historial de ventas agrupado por fecha ────────────────────────
 let _detalleVentaActual = null;
+let _todasVentasHistorial = [];
 
 async function abrirHistorial() {
   cerrarDrawerMenu();
@@ -4658,7 +4663,9 @@ async function abrirHistorial() {
       fetch(`/api/ventas?fecha=${ayerD}&limit=30`, {credentials:'include'}).then(r=>r.json()).catch(()=>[]),
     ]);
     const todasVentas = [...(Array.isArray(vHoy)?vHoy:[]), ...(Array.isArray(vAyer)?vAyer:[])];
-    _renderHistorial(todasVentas);
+    _todasVentasHistorial = todasVentas;
+    _renderFiltrosHistorial();
+    _aplicarFiltrosHistorial();
   } catch(e) {
     document.getElementById('historialLista').innerHTML =
       '<div style="padding:20px;text-align:center;color:var(--text-dim)">Error cargando historial</div>';
@@ -4668,6 +4675,56 @@ async function abrirHistorial() {
 function cerrarHistorial() {
   document.getElementById('drawerHistorial').style.display = 'none';
   cerrarPanelSinTeclado();
+}
+
+function _renderFiltrosHistorial() {
+  const wrapper = document.getElementById('historialFiltros');
+  if (!wrapper) return;
+  wrapper.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--surface)">
+      <input id="hFiltroTexto" oninput="_aplicarFiltrosHistorial()" placeholder="Cajero o #ticket…"
+        style="flex:1;min-width:120px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+      <select id="hFiltroMetodo" onchange="_aplicarFiltrosHistorial()"
+        style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+        <option value="">Todos los pagos</option>
+        <option value="efectivo">💵 Efectivo</option>
+        <option value="tarjeta">💳 Tarjeta</option>
+        <option value="transferencia">📲 Transferencia</option>
+      </select>
+      <select id="hFiltroOrden" onchange="_aplicarFiltrosHistorial()"
+        style="padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+        <option value="reciente">Más reciente</option>
+        <option value="antiguo">Más antiguo</option>
+        <option value="mayor">Mayor monto</option>
+        <option value="menor">Menor monto</option>
+      </select>
+    </div>`;
+}
+
+function _aplicarFiltrosHistorial() {
+  const texto  = (document.getElementById('hFiltroTexto')?.value  || '').toLowerCase();
+  const metodo = (document.getElementById('hFiltroMetodo')?.value || '');
+  const orden  = (document.getElementById('hFiltroOrden')?.value  || 'reciente');
+
+  let ventas = _todasVentasHistorial.filter(v => {
+    if (metodo && v.metodo_pago !== metodo) return false;
+    if (texto) {
+      const cajero = (v.cajero || v.usuario || '').toLowerCase();
+      const id = String(v.id);
+      if (!cajero.includes(texto) && !id.includes(texto)) return false;
+    }
+    return true;
+  });
+
+  const cmp = {
+    reciente: (a, b) => (b.creado_en||'').localeCompare(a.creado_en||''),
+    antiguo:  (a, b) => (a.creado_en||'').localeCompare(b.creado_en||''),
+    mayor:    (a, b) => (b.total||0) - (a.total||0),
+    menor:    (a, b) => (a.total||0) - (b.total||0),
+  };
+  ventas = ventas.sort(cmp[orden] || cmp.reciente);
+
+  _renderHistorial(ventas);
 }
 
 function _renderHistorial(ventas) {
@@ -4705,7 +4762,7 @@ function _renderHistorial(ventas) {
           <div style="font-size:12px;color:var(--text-dim);margin-top:2px">${hora} · ${v.cajero||v.usuario||'—'}</div>
         </div>
         <div style="font-size:15px;font-weight:700;color:${estadoColor};text-decoration:${v.estado==='anulada'?'line-through':'none'};margin-right:8px">${fmt(v.total)}</div>
-        ${v.estado!=='anulada'?`<button onclick="_reimprimirDesdeHistorial(${v.id},event)" title="Reimprimir ticket" style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;padding:4px;flex-shrink:0">🖨️</button>`:''}
+        ${v.estado!=='anulada'?`<button onclick="_reimprimirDesdeHistorial(${v.id},event)" title="Reimprimir ticket" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;cursor:pointer;padding:8px 10px;flex-shrink:0;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center">🖨️</button>`:''}
       </div>`;
     });
   });
