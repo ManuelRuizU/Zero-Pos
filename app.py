@@ -171,7 +171,7 @@ def _run_mux(host: str, mux_port: int, https_int_port: int, http_port: int) -> N
 
     def _redirect(conn: socket.socket, client_ip: str) -> None:
         try:
-            conn.settimeout(5)
+            conn.settimeout(30)
             raw = b""
             while b"\r\n\r\n" not in raw and len(raw) < 8192:
                 chunk = conn.recv(4096)
@@ -207,7 +207,7 @@ def _run_mux(host: str, mux_port: int, https_int_port: int, http_port: int) -> N
                 return
             if probe[0] == 0x16:   # TLS ClientHello
                 try:
-                    backend = socket.create_connection(("127.0.0.1", https_int_port), timeout=3)
+                    backend = socket.create_connection(("127.0.0.1", https_int_port), timeout=30)
                     threading.Thread(target=_pipe, args=(conn, backend), daemon=True).start()
                     _pipe(backend, conn)
                 except Exception:
