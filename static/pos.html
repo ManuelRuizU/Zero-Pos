@@ -4790,9 +4790,12 @@ async function abrirDetalleVenta(id) {
 }
 
 function _renderDetalleVenta(v) {
-  document.getElementById('dvNumero').textContent = `#${v.id||'—'}`;
-  document.getElementById('dvTotal').textContent = fmt(v.total || 0);
-  if (v.estado === 'anulada') {
+  const venta = v.venta || v;
+  const items = v.items || [];
+
+  document.getElementById('dvNumero').textContent = `#${venta.id||'—'}`;
+  document.getElementById('dvTotal').textContent = fmt(venta.total || 0);
+  if (venta.estado === 'anulada') {
     document.getElementById('dvTotal').style.color = '#ef4444';
     document.getElementById('dvTotal').style.textDecoration = 'line-through';
   } else {
@@ -4801,20 +4804,19 @@ function _renderDetalleVenta(v) {
   }
 
   // Ocultar botón anular si ya está anulada
-  document.getElementById('dvBtnAnular').style.display = v.estado === 'anulada' ? 'none' : '';
+  document.getElementById('dvBtnAnular').style.display = venta.estado === 'anulada' ? 'none' : '';
 
   // Meta
-  const tipoIcon = {'delivery':'🛵','retiro':'🏠','local':'🏪'}[v.tipo||'local'] || '🏪';
+  const tipoIcon = {'delivery':'🛵','retiro':'🏠','local':'🏪'}[venta.tipo||'local'] || '🏪';
   const meta = [];
-  if (v.cajero || v.usuario) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Cajero</span><span>${v.cajero||v.usuario}</span></div>`);
-  if (v.metodo_pago) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Pago</span><span>${v.metodo_pago}</span></div>`);
-  if (v.cliente_nombre) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Cliente</span><span>${v.cliente_nombre}</span></div>`);
-  if (v.tipo && v.tipo !== 'local') meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Tipo</span><span>${tipoIcon} ${v.tipo}</span></div>`);
-  if (v.direccion) meta.push(`<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-dim);flex-shrink:0">Dirección</span><span style="text-align:right">${v.direccion}</span></div>`);
+  if (venta.cajero || venta.usuario) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Cajero</span><span>${venta.cajero||venta.usuario}</span></div>`);
+  if (venta.metodo_pago) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Pago</span><span>${venta.metodo_pago}</span></div>`);
+  if (venta.cliente_nombre) meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Cliente</span><span>${venta.cliente_nombre}</span></div>`);
+  if (venta.tipo && venta.tipo !== 'local') meta.push(`<div style="display:flex;justify-content:space-between"><span style="color:var(--text-dim)">Tipo</span><span>${tipoIcon} ${venta.tipo}</span></div>`);
+  if (venta.direccion) meta.push(`<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:var(--text-dim);flex-shrink:0">Dirección</span><span style="text-align:right">${venta.direccion}</span></div>`);
   document.getElementById('dvMeta').innerHTML = meta.join('');
 
   // Items
-  const items = v.items || [];
   let itemsHtml = `<div style="font-size:11px;font-weight:700;color:var(--text-dim);display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px"><span>Producto</span><span style="text-align:center">Cant</span><span style="text-align:right">Precio</span></div>`;
   items.forEach(i => {
     itemsHtml += `<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)20">
@@ -4831,15 +4833,15 @@ function _renderDetalleVenta(v) {
 
   // Totales
   const totales = [];
-  if (v.descuento > 0) totales.push(`<div style="display:flex;justify-content:space-between;color:#f59e0b"><span>Descuento</span><span>-${fmt(v.descuento)}</span></div>`);
-  if (v.costo_delivery > 0) totales.push(`<div style="display:flex;justify-content:space-between"><span>Despacho</span><span>${fmt(v.costo_delivery)}</span></div>`);
-  totales.push(`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px"><span>Total</span><span>${fmt(v.total)}</span></div>`);
-  totales.push(`<div style="display:flex;justify-content:space-between;color:var(--text-dim)"><span style="text-transform:capitalize">${v.metodo_pago||'—'}</span><span>${fmt(v.total)}</span></div>`);
+  if (venta.descuento > 0) totales.push(`<div style="display:flex;justify-content:space-between;color:#f59e0b"><span>Descuento</span><span>-${fmt(venta.descuento)}</span></div>`);
+  if (venta.costo_delivery > 0) totales.push(`<div style="display:flex;justify-content:space-between"><span>Despacho</span><span>${fmt(venta.costo_delivery)}</span></div>`);
+  totales.push(`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px"><span>Total</span><span>${fmt(venta.total)}</span></div>`);
+  totales.push(`<div style="display:flex;justify-content:space-between;color:var(--text-dim)"><span style="text-transform:capitalize">${venta.metodo_pago||'—'}</span><span>${fmt(venta.total)}</span></div>`);
   document.getElementById('dvTotales').innerHTML = totales.join('');
 
   // Footer
-  const fecha = v.creado_en ? new Date(v.creado_en).toLocaleString('es-CL', {dateStyle:'short', timeStyle:'short'}) : '—';
-  document.getElementById('dvFooter').innerHTML = `<span>${fecha}</span><span>#${v.id}</span>`;
+  const fecha = venta.creado_en ? new Date(venta.creado_en).toLocaleString('es-CL', {dateStyle:'short', timeStyle:'short'}) : '—';
+  document.getElementById('dvFooter').innerHTML = `<span>${fecha}</span><span>#${venta.id}</span>`;
 }
 
 function _anularVentaDetalle() {
@@ -4857,7 +4859,7 @@ function _cancelarAnularDetalle() {
 async function _confirmarAnularDetalle() {
   if (!_detalleVentaActual) return;
   const motivo = document.getElementById('dvAnularMotivo')?.value.trim() || '';
-  const r = await fetch(`/api/ventas/${_detalleVentaActual.id}/anular`, {
+  const r = await fetch(`/api/ventas/${_detalleVentaActual.venta?.id || _detalleVentaActual.id}/anular`, {
     method: 'POST', credentials: 'include',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({motivo}),
@@ -4879,7 +4881,7 @@ async function _reimprimirVentaDetalle() {
   await fetch('/api/impresora/reimprimir', {
     method:'POST', credentials:'include',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({venta_id: _detalleVentaActual.id}),
+    body: JSON.stringify({venta_id: _detalleVentaActual.venta?.id || _detalleVentaActual.id}),
   });
   showToast('Reimprimiendo...', 'info');
 }
