@@ -697,8 +697,13 @@ def _formatear_texto(venta: dict, items: list, config: dict,
     for it in items:
         nombre = limpiar_texto(it.get("producto_nombre", it.get("nombre", "?")))
         cant = it.get("cantidad", 1)
-        label = nombre if cant == 1 else f"{cant}x {nombre}"
-        lineas.append(_linea_precio(label, it.get("subtotal", 0), N))
+        precio_unit = it.get("precio_unit", 0)
+        subtotal = it.get("subtotal", 0)
+        if cant == 1:
+            lineas.append(_linea_precio(nombre, subtotal, N))
+        else:
+            lineas.append(_linea_precio(f"{cant}x {nombre}", subtotal, N))
+            lineas.append(f"  {cant} x {_clp(precio_unit)}".ljust(N))
         if it.get("notas"):
             lineas.append("  *** " + limpiar_texto(it["notas"]))
 
@@ -723,12 +728,22 @@ def _formatear_texto(venta: dict, items: list, config: dict,
             "",
         ]
 
+    from database import db_session
+    try:
+        with db_session() as conn:
+            row = conn.execute(
+                "SELECT valor FROM config WHERE clave='mensaje_ticket'"
+            ).fetchone()
+            mensaje = row["valor"] if row and row["valor"] else "Gracias por preferirnos!"
+    except Exception:
+        mensaje = "Gracias por preferirnos!"
+
     num_display = ""
     if pedido:
         num_display = f"#{pedido.get('numero', '')}-{str(venta['id']).zfill(4)}"
     lineas += [
         SEP,
-        "Gracias por preferirnos!".center(N),
+        limpiar_texto(mensaje).center(N),
         f"{fecha_str}  {hora_str}  {num_display}".center(N),
         SEP,
         "", "", "", "", "",

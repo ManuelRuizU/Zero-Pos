@@ -372,6 +372,11 @@ input:checked + .slider:before{transform:translateX(20px);}
             <input type="text" id="cfg_comuna_negocio" placeholder="Ej: Angol">
           </div>
         </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Mensaje de despedida en ticket</label>
+            <input type="text" id="cfg_mensaje_ticket" placeholder="¡Gracias por preferirnos!">
+          </div>
+        </div>
         <div class="cfg-save">
           <span class="save-feedback" id="fb_negocio">✓ Guardado</span>
           <button class="btn primary sm" onclick="guardarSeccion('negocio')">Guardar negocio</button>
@@ -1373,6 +1378,7 @@ async function cargarConfig() {
   set('cfg_nombre_negocio',      cfgActual.nombre_negocio);
   set('cfg_rut_negocio',         cfgActual.rut_negocio);
   set('cfg_comuna_negocio',      cfgActual.comuna_negocio);
+  set('cfg_mensaje_ticket',      cfgActual.mensaje_ticket);
   set('cfg_moneda',              cfgActual.moneda || 'CLP');
   set('cfg_iva_porcentaje',      cfgActual.iva_porcentaje ?? '19');
   set('cfg_impresora_tipo',         cfgActual.impresora_tipo || 'red');
@@ -1437,7 +1443,7 @@ function toggleImpresora() {
 }
 
 const SECCIONES = {
-  negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje','comuna_negocio'],
+  negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje','comuna_negocio','mensaje_ticket'],
   impresora: ['impresora_tipo','impresora_ip','impresora_puerto','impresora_autocorte','impresora_corte_tipo'],
   khipu:     ['khipu_receiver_id','khipu_secret'],
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
