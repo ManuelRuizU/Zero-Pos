@@ -35,10 +35,8 @@ self.addEventListener('fetch', event => {
   if (url.pathname.startsWith('/api/')) {
     return;
   }
-  // Externos (openfoodfacts, etc): NO interceptar
-  if (!url.origin.includes('192.168.50.183') &&
-      !url.origin.includes('127.0.0.1') &&
-      !url.origin.includes('localhost')) {
+  // Externos: NO interceptar
+  if (url.origin !== self.location.origin) {
     return;
   }
   // Archivos estáticos: cache-first
