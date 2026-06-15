@@ -1,6 +1,6 @@
 # CLAUDE.md — Contrato de Desarrollo ZERO POS
 # Lee este archivo COMPLETO antes de tocar cualquier código.
-# Última actualización: 2026-06-11
+# Última actualización: 2026-06-15
 
 ---
 
@@ -115,6 +115,31 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Portal cliente en HTTP :5000/credit/[token] (sin certificado, para Android)
 - QR de cliente apunta a IP de red real, NO a 127.0.0.1
 - Tarjeta impresa incluye QR funcional
+
+### Mux (app.py)
+- Timeout del mux: conn.settimeout(30) y create_connection(timeout=30)
+- NO reducir estos timeouts — endpoints como OCR + OFF tardan ~6-8 segundos
+- El mux está en _run_mux() líneas ~144-230
+
+### Service Worker (static/sw.js)
+- CACHE_NAME actual: 'zeropos-v3'
+- Las rutas /api/ NO se interceptan — el handler hace return sin respondWith
+- Las rutas externas (url.origin !== self.location.origin) tampoco se interceptan
+- Solo se cachean archivos /static/
+- Para forzar reinstalación del SW: bump CACHE_NAME a v4, v5, etc.
+
+### Open Food Facts (routes/inventario.py)
+- _buscar_open_food_facts() funciona correctamente
+- El endpoint POST /api/inventario/leer-producto consulta OFF antes de OCR
+- OFF solo se consulta desde el BACKEND, nunca desde el frontend
+- Timeout configurado en la función para no bloquear si no hay internet
+
+### mkcert SSL
+- Certificado en: ~/Proyectos/zero_pos/ssl/cert.pem
+- Clave en: ~/Proyectos/zero_pos/ssl/key.pem
+- CA root en: ~/.local/share/mkcert/rootCA.pem
+- Válido hasta: 12 Septiembre 2028
+- Para instalar en nuevos dispositivos: servir rootCA.pem por HTTP :5000
 
 ---
 
