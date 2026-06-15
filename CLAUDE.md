@@ -1,6 +1,6 @@
 # CLAUDE.md — Contrato de Desarrollo ZERO POS
 # Lee este archivo COMPLETO antes de tocar cualquier código.
-# Última actualización: 2026-06-15
+# Última actualización: 2026-06-16
 
 ---
 
@@ -115,6 +115,16 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Portal cliente en HTTP :5000/credit/[token] (sin certificado, para Android)
 - QR de cliente apunta a IP de red real, NO a 127.0.0.1
 - Tarjeta impresa incluye QR funcional
+
+### Historial de ventas (pos.html)
+- Función abrirHistorial() carga /api/ventas?limit=100
+- Deduplica por id antes de renderizar (Map por v.id)
+- _renderFiltrosHistorial() + _aplicarFiltrosHistorial() manejan filtros client-side
+- Modal #modalDetalleVenta tiene z-index:1300 para quedar sobre el drawer (z-index:1200)
+- Al cerrar modal → vuelve al historial (NO a la caja)
+- _detalleVentaActual tiene estructura {venta: {...}, items: [...]}
+- _reimprimirVentaDetalle() y _anularVentaDetalle() usan _detalleVentaActual.venta?.id
+- **NO cambiar la estructura del objeto retornado por /api/ventas/{id}**
 
 ### Mux (app.py)
 - Timeout del mux: conn.settimeout(30) y create_connection(timeout=30)
