@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
 <title>ZERO POS — Mesón</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <link rel="stylesheet" href="/static/css/zero-tokens.css">
 <link rel="stylesheet" href="/static/css/zero-base.css">
 <link rel="stylesheet" href="/static/css/zero-components.css">
@@ -344,9 +345,9 @@ body{ height:100dvh; overflow:hidden; }
     </div>
     <div class="topbar-spacer"></div>
     <span class="topbar-user" id="topUser"></span>
-    <button class="btn-back" id="btnBack" onclick="volverInicio()" style="display:none">← Volver</button>
-    <button id="btnMesonCredit" class="btn-back" onclick="location.href='credit.html'" style="display:none">💳</button>
-    <button class="btn-logout" onclick="logout()">Salir</button>
+    <button class="btn-back" id="btnBack" onclick="volverInicio()" style="display:none;align-items:center;gap:5px"><i class="ti ti-arrow-left" style="font-size:15px"></i> Volver</button>
+    <button id="btnMesonCredit" class="btn-back" onclick="location.href='credit.html'" style="display:none;align-items:center;gap:5px"><i class="ti ti-credit-card" style="font-size:15px"></i></button>
+    <button class="btn-logout" onclick="logout()" style="display:flex;align-items:center;gap:5px"><i class="ti ti-logout" style="font-size:14px"></i> Salir</button>
   </div>
 
   <!-- ── INICIO ──────────────────────────────────────────────────── -->
