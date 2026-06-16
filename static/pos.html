@@ -642,6 +642,7 @@ body {
 .toast.show { opacity: 1; }
 .toast.success { border-color: var(--success); color: var(--success); }
 .toast.error { border-color: var(--danger); color: var(--danger); }
+.toast.warning { border-color: var(--warning); color: var(--warning); }
 
 /* Mobile-only carrito controls */
 @media (max-width: 767px) {
@@ -2896,12 +2897,14 @@ function _agregarProdAlCarrito(prod, modifDesc, precioExtra) {
   if (!modifDesc) {
     const idx = carrito.findIndex(i => i.producto_id === prod.id && !i.variante_id && !i.modificadores_desc);
     if (idx >= 0) {
-      if (modoStock !== 'sin_stock' && carrito[idx].cantidad >= (prod.stock_real ?? prod.stock)) {
-        showToast('Stock máximo alcanzado', 'error'); return;
-      }
       carrito[idx].cantidad++;
       renderCarrito();
-      showToast('+ ' + prod.nombre, 'success');
+      const stockDisp = prod.stock_real ?? prod.stock;
+      if (modoStock !== 'sin_stock' && stockDisp > 0 && carrito[idx].cantidad > stockDisp) {
+        showToast(`⚠️ Stock insuficiente — quedan ${stockDisp} unidades`, 'warning');
+      } else {
+        showToast('+ ' + prod.nombre, 'success');
+      }
       return;
     }
   }
@@ -2922,6 +2925,18 @@ function _agregarProdAlCarrito(prod, modifDesc, precioExtra) {
 function cambiarCantidad(idx, delta) {
   carrito[idx].cantidad += delta;
   if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+  renderCarrito();
+  if (carrito.length === 0) _pushPantallaIdle();
+}
+
+function _setItemCantidad(idx, val) {
+  val = parseInt(val) || 1;
+  if (val <= 0) { eliminarItem(idx); return; }
+  carrito[idx].cantidad = val;
+  const item = carrito[idx];
+  if (item && item.modo_stock !== 'sin_stock' && item.stock > 0 && val > item.stock) {
+    showToast(`⚠️ Stock insuficiente — quedan ${item.stock} unidades`, 'warning');
+  }
   renderCarrito();
   if (carrito.length === 0) _pushPantallaIdle();
 }
@@ -2968,7 +2983,10 @@ function renderCarrito() {
       <div class="item-nombre">${item.nombre}${loteTag}${modifTag}</div>
       <div class="item-controles">
         <button class="qty-btn" onclick="cambiarCantidad(${idx},-1)">−</button>
-        <span class="qty-num">${item.cantidad}</span>
+        <input type="number" inputmode="numeric" value="${item.cantidad}" min="1"
+          style="width:40px;text-align:center;background:none;border:none;color:var(--text);font-size:16px;font-weight:700;cursor:pointer"
+          onchange="_setItemCantidad(${idx}, parseInt(this.value)||1)"
+          onclick="this.select()">
         <button class="qty-btn" onclick="cambiarCantidad(${idx},+1)">+</button>
       </div>
       <div class="item-subtotal">${fmt(sub)}</div>
@@ -4079,9 +4097,13 @@ function cerrarVariantes() {
 function agregarAlCarritoConVariante(prod, variante) {
   const key = `${prod.id}_v${variante.id}`;
   const idx = carrito.findIndex(i => i._key === key);
+  let _stockWarn = false;
   if (idx >= 0) {
-    if (carrito[idx].cantidad >= variante.stock) { showToast('Stock máximo alcanzado', 'error'); return; }
     carrito[idx].cantidad++;
+    if (variante.stock > 0 && carrito[idx].cantidad > variante.stock) {
+      _stockWarn = true;
+      showToast(`⚠️ Stock insuficiente — quedan ${variante.stock} unidades`, 'warning');
+    }
   } else {
     carrito.push({
       _key: key, producto_id: prod.id, variante_id: variante.id,
@@ -4090,7 +4112,7 @@ function agregarAlCarritoConVariante(prod, variante) {
     });
   }
   renderCarrito();
-  showToast(`+ ${prod.nombre} (${variante.nombre})`, 'success');
+  if (!_stockWarn) showToast(`+ ${prod.nombre} (${variante.nombre})`, 'success');
 }
 
 // ── Venta rápida ─────────────────────────────────────────────
