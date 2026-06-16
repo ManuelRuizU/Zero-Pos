@@ -31,9 +31,8 @@ body{ min-height:100vh; }
   border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s;
   display:inline-flex;align-items:center;gap:6px;
 }
-.nav-btn i { font-size:15px;color:var(--text-dim); }
 .nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text);}
-.nav-btn:hover i,.nav-btn.active i{color:#6366f1;}
+.nav-icon-pill{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;margin-right:2px;flex-shrink:0;}
 .content{max-width:1200px;margin:0 auto;padding:24px 20px;}
 h2{font-size:22px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px;}
 
@@ -263,18 +262,18 @@ input:checked + .slider:before{transform:translateX(20px);}
 <div class="topbar">
   <div class="logo">ZERO<span>POS</span> Admin</div>
   <div class="nav">
-    <button class="nav-btn active" onclick="showTab('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
-    <button class="nav-btn" onclick="showTab('ventas',this)"><i class="ti ti-receipt"></i> Ventas</button>
-    <button class="nav-btn" onclick="showTab('ia',this)"><i class="ti ti-brain"></i> IA</button>
-    <button class="nav-btn" onclick="showTab('config',this)"><i class="ti ti-settings"></i> Config</button>
-    <button class="nav-btn" onclick="showTab('voz',this)"><i class="ti ti-microphone"></i> Voz</button>
-    <button class="nav-btn" onclick="showTab('apariencia',this)"><i class="ti ti-palette"></i> Apariencia</button>
-    <button class="nav-btn" onclick="showTab('categorias',this)"><i class="ti ti-tag"></i> Categorías</button>
-    <button class="nav-btn" onclick="showTab('equipo',this)"><i class="ti ti-users"></i> Equipo</button>
-    <button class="nav-btn" onclick="showTab('publicidad',this)"><i class="ti ti-speakerphone"></i> Publicidad</button>
-    <button class="nav-btn" onclick="location.href='inventario.html'"><i class="ti ti-package"></i> Inventario</button>
-    <button class="nav-btn" id="btnNavPedidosAdmin" onclick="location.href='pedidos.html'"><i class="ti ti-motorbike"></i> Pedidos</button>
-    <button class="nav-btn" onclick="location.href='credit.html'"><i class="ti ti-credit-card"></i> CREDIT</button>
+    <button class="nav-btn active" onclick="showTab('dashboard',this)"><div class="nav-icon-pill" style="background:#1a2744"><i class="ti ti-layout-dashboard" style="color:#60a5fa;font-size:15px"></i></div> Dashboard</button>
+    <button class="nav-btn" onclick="showTab('ventas',this)"><div class="nav-icon-pill" style="background:#1a2a1a"><i class="ti ti-receipt" style="color:#4ade80;font-size:15px"></i></div> Ventas</button>
+    <button class="nav-btn" onclick="showTab('ia',this)"><div class="nav-icon-pill" style="background:#1e1e3a"><i class="ti ti-brain" style="color:#818cf8;font-size:15px"></i></div> IA</button>
+    <button class="nav-btn" onclick="showTab('config',this)"><div class="nav-icon-pill" style="background:#1e1e2e"><i class="ti ti-settings" style="color:#94a3b8;font-size:15px"></i></div> Config</button>
+    <button class="nav-btn" onclick="showTab('voz',this)"><div class="nav-icon-pill" style="background:#2a1a2a"><i class="ti ti-microphone" style="color:#c084fc;font-size:15px"></i></div> Voz</button>
+    <button class="nav-btn" onclick="showTab('apariencia',this)"><div class="nav-icon-pill" style="background:#2a1a10"><i class="ti ti-palette" style="color:#fb923c;font-size:15px"></i></div> Apariencia</button>
+    <button class="nav-btn" onclick="showTab('categorias',this)"><div class="nav-icon-pill" style="background:#1a2a1a"><i class="ti ti-tag" style="color:#4ade80;font-size:15px"></i></div> Categorías</button>
+    <button class="nav-btn" onclick="showTab('equipo',this)"><div class="nav-icon-pill" style="background:#1a2744"><i class="ti ti-users" style="color:#60a5fa;font-size:15px"></i></div> Equipo</button>
+    <button class="nav-btn" onclick="showTab('publicidad',this)"><div class="nav-icon-pill" style="background:#2a2a10"><i class="ti ti-speakerphone" style="color:#facc15;font-size:15px"></i></div> Publicidad</button>
+    <button class="nav-btn" onclick="location.href='inventario.html'"><div class="nav-icon-pill" style="background:#1a2a1a"><i class="ti ti-package" style="color:#4ade80;font-size:15px"></i></div> Inventario</button>
+    <button class="nav-btn" id="btnNavPedidosAdmin" onclick="location.href='pedidos.html'"><div class="nav-icon-pill" style="background:#2a1a10"><i class="ti ti-motorbike" style="color:#fb923c;font-size:15px"></i></div> Pedidos</button>
+    <button class="nav-btn" onclick="location.href='credit.html'"><div class="nav-icon-pill" style="background:#2a1a10"><i class="ti ti-credit-card" style="color:#fb923c;font-size:15px"></i></div> CREDIT</button>
   </div>
 </div>
 
@@ -283,7 +282,7 @@ input:checked + .slider:before{transform:translateX(20px);}
   <!-- Dashboard -->
   <div class="tab-content active" id="tab-dashboard">
     <div style="margin-bottom:20px">
-      <button onclick="location.href='pos.html'" style="width:100%;padding:18px;border-radius:16px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.15);backdrop-filter:blur(12px);color:#22c55e;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 0 30px rgba(34,197,94,0.15)">
+      <button onclick="location.href='pos.html'" style="width:100%;padding:20px;border-radius:16px;border:1px solid rgba(34,197,94,0.35);background:rgba(34,197,94,0.12);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);color:#22c55e;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 0 40px rgba(34,197,94,0.08),inset 0 1px 0 rgba(255,255,255,0.05)">
         <i class="ti ti-shopping-cart" style="font-size:22px"></i> IR A CAJA
       </button>
     </div>
