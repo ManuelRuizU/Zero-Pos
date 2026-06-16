@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>ZERO POS — Admin</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <link rel="stylesheet" href="/static/css/zero-tokens.css">
 <link rel="stylesheet" href="/static/css/zero-base.css">
 <link rel="stylesheet" href="/static/css/zero-components.css">
@@ -28,8 +29,11 @@ body{ min-height:100vh; }
 .nav-btn{
   background:none;border:1px solid var(--border);color:var(--text-dim);
   border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s;
+  display:inline-flex;align-items:center;gap:6px;
 }
+.nav-btn i { font-size:15px;color:var(--text-dim); }
 .nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text);}
+.nav-btn:hover i,.nav-btn.active i{color:#6366f1;}
 .content{max-width:1200px;margin:0 auto;padding:24px 20px;}
 h2{font-size:22px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px;}
 
@@ -259,19 +263,18 @@ input:checked + .slider:before{transform:translateX(20px);}
 <div class="topbar">
   <div class="logo">ZERO<span>POS</span> Admin</div>
   <div class="nav">
-    <button class="nav-btn active" onclick="showTab('dashboard',this)">📊 Dashboard</button>
-    <button class="nav-btn" onclick="showTab('ventas',this)">🧾 Ventas</button>
-    <button class="nav-btn" onclick="showTab('ia',this)">🤖 IA</button>
-    <button class="nav-btn" onclick="showTab('config',this)">⚙️ Config</button>
-    <button class="nav-btn" onclick="showTab('voz',this)">🎤 Voz</button>
-    <button class="nav-btn" onclick="showTab('apariencia',this)">🎨 Apariencia</button>
-    <button class="nav-btn" onclick="showTab('categorias',this)">🗂️ Categorías</button>
-    <button class="nav-btn" onclick="showTab('equipo',this)">👥 Equipo</button>
-    <button class="nav-btn" onclick="showTab('publicidad',this)">📺 Publicidad</button>
-    <button class="nav-btn" onclick="location.href='inventario.html'">📦 Inventario</button>
-    <button class="nav-btn" onclick="location.href='pedidos.html'">🛵 Pedidos</button>
-    <button class="nav-btn" onclick="location.href='credit.html'">💳 CREDIT</button>
-    <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
+    <button class="nav-btn active" onclick="showTab('dashboard',this)"><i class="ti ti-layout-dashboard"></i> Dashboard</button>
+    <button class="nav-btn" onclick="showTab('ventas',this)"><i class="ti ti-receipt"></i> Ventas</button>
+    <button class="nav-btn" onclick="showTab('ia',this)"><i class="ti ti-brain"></i> IA</button>
+    <button class="nav-btn" onclick="showTab('config',this)"><i class="ti ti-settings"></i> Config</button>
+    <button class="nav-btn" onclick="showTab('voz',this)"><i class="ti ti-microphone"></i> Voz</button>
+    <button class="nav-btn" onclick="showTab('apariencia',this)"><i class="ti ti-palette"></i> Apariencia</button>
+    <button class="nav-btn" onclick="showTab('categorias',this)"><i class="ti ti-tag"></i> Categorías</button>
+    <button class="nav-btn" onclick="showTab('equipo',this)"><i class="ti ti-users"></i> Equipo</button>
+    <button class="nav-btn" onclick="showTab('publicidad',this)"><i class="ti ti-speakerphone"></i> Publicidad</button>
+    <button class="nav-btn" onclick="location.href='inventario.html'"><i class="ti ti-package"></i> Inventario</button>
+    <button class="nav-btn" id="btnNavPedidosAdmin" onclick="location.href='pedidos.html'"><i class="ti ti-motorbike"></i> Pedidos</button>
+    <button class="nav-btn" onclick="location.href='credit.html'"><i class="ti ti-credit-card"></i> CREDIT</button>
   </div>
 </div>
 
@@ -280,8 +283,8 @@ input:checked + .slider:before{transform:translateX(20px);}
   <!-- Dashboard -->
   <div class="tab-content active" id="tab-dashboard">
     <div style="margin-bottom:20px">
-      <button onclick="location.href='pos.html'" style="width:100%;padding:18px;border-radius:14px;border:none;background:#22c55e;color:#fff;font-size:20px;font-weight:900;cursor:pointer;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 4px 16px rgba(34,197,94,.35)">
-        🛒 <span>IR A CAJA</span>
+      <button onclick="location.href='pos.html'" style="width:100%;padding:18px;border-radius:16px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.15);backdrop-filter:blur(12px);color:#22c55e;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 0 30px rgba(34,197,94,0.15)">
+        <i class="ti ti-shopping-cart" style="font-size:22px"></i> IR A CAJA
       </button>
     </div>
     <h2>Resumen del día</h2>
@@ -1159,6 +1162,10 @@ async function init() {
   cargarDashboard();
   const urlEl = document.getElementById('urlCliente');
   if (urlEl) urlEl.textContent = `${location.protocol}//${location.host}/static/cliente.html`;
+  const cfg = await fetch('/api/config',{credentials:'include'}).then(r=>r.json()).catch(()=>({}));
+  const deliveryActivo = cfg.modulo_delivery === '1' || cfg.modulo_delivery === true || cfg.modulo_delivery === 1;
+  const btnPedidos = document.getElementById('btnNavPedidosAdmin');
+  if (btnPedidos) btnPedidos.style.display = deliveryActivo ? '' : 'none';
 }
 
 function copiarUrlCliente() {
