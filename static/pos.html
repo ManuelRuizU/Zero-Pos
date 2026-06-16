@@ -2924,7 +2924,11 @@ function _agregarProdAlCarrito(prod, modifDesc, precioExtra) {
 
 function cambiarCantidad(idx, delta) {
   carrito[idx].cantidad += delta;
-  if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+  if (carrito[idx].cantidad <= 0) { carrito.splice(idx, 1); renderCarrito(); _pushPantallaIdle(); return; }
+  const item = carrito[idx];
+  if (delta > 0 && item.modo_stock !== 'sin_stock' && item.stock > 0 && item.cantidad > item.stock) {
+    showToast(`⚠️ Stock insuficiente — quedan ${item.stock} unidades`, 'warning');
+  }
   renderCarrito();
   if (carrito.length === 0) _pushPantallaIdle();
 }
@@ -2984,7 +2988,7 @@ function renderCarrito() {
       <div class="item-controles">
         <button class="qty-btn" onclick="cambiarCantidad(${idx},-1)">−</button>
         <input type="number" inputmode="numeric" value="${item.cantidad}" min="1"
-          style="width:40px;text-align:center;background:none;border:none;color:var(--text);font-size:16px;font-weight:700;cursor:pointer"
+          style="width:60px;text-align:center;background:none;border:none;color:var(--text);font-size:16px;font-weight:700;cursor:pointer"
           onchange="_setItemCantidad(${idx}, parseInt(this.value)||1)"
           onclick="this.select()">
         <button class="qty-btn" onclick="cambiarCantidad(${idx},+1)">+</button>
