@@ -1184,7 +1184,7 @@ body {
   <div style="flex:1;padding:12px 0;overflow-y:auto">
     <a href="admin.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">📊 <span>Reportes y Admin</span></a>
     <a href="inventario.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">📦 <span>Inventario</span></a>
-    <a href="pedidos.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">🛵 <span>Pedidos</span></a>
+    <a id="linkPedidosDrawer" href="pedidos.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">🛵 <span>Pedidos</span></a>
     <a id="navCredito" href="credit.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
       <span style="font-size:18px">💳</span>
       <div style="flex:1"><div>ZERO CREDIT</div><div style="font-size:11px;color:var(--text-dim)">Clientes y fiados</div></div>
@@ -2206,8 +2206,12 @@ async function init() {
     btnPedidos.style.display = (!window.ZERO?.isStore() || deliveryActivo) ? '' : 'none';
   }
 
-  // Mostrar botón cola si es minimarket (sin módulo mesas ni delivery)
-  document.getElementById('btnColaEspera').style.display = '';
+  const linkPedidos = document.getElementById('linkPedidosDrawer');
+  if (linkPedidos) linkPedidos.style.display = deliveryActivo ? '' : 'none';
+
+  // Mostrar botón cola solo si delivery activo
+  const btnCola = document.getElementById('btnColaEspera');
+  if (btnCola) btnCola.style.display = deliveryActivo ? '' : 'none';
 
   _initVista();
   await cargarCategorias();
@@ -5334,6 +5338,7 @@ async function llamarCliente(pid) {
 }
 
 function iniciarPollCola() {
+  if (!cfgApp || (cfgApp.modulo_delivery !== '1' && cfgApp.modulo_delivery !== true)) return;
   setInterval(async () => {
     try {
       const lista = await fetch('/api/pedidos/en-espera', {credentials:'include'}).then(r=>r.json());
