@@ -813,9 +813,13 @@ body {
 
 <!-- Topbar — una sola fila limpia -->
 <div class="topbar">
-  <button class="btn-top" onclick="abrirNavbar()" title="Menú" style="font-size:18px">☰</button>
+  <button class="btn-top" onclick="abrirNavbar()" title="Menú" style="width:34px;height:34px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" onmouseenter="this.style.background='#13132a'" onmouseleave="this.style.background='none'">
+    <i class="ti ti-menu-2" style="color:#818cf8;font-size:22px"></i>
+  </button>
   <div class="topbar-logo">ZERO<span>POS</span></div>
-  <button id="btnDashboard" onclick="location.href='admin.html'" title="Dashboard" class="btn-top" style="display:none;font-size:14px">📊</button>
+  <button id="btnDashboard" onclick="location.href='admin.html'" title="Dashboard" class="btn-top" style="display:none;width:34px;height:34px;background:#1a2744;border:none;border-radius:8px;cursor:pointer;align-items:center;justify-content:center">
+    <i class="ti ti-layout-dashboard" style="color:#60a5fa;font-size:18px"></i>
+  </button>
   <div class="topbar-spacer"></div>
   <!-- Cola de espera (visible solo cuando hay pedidos) -->
   <button class="btn-top" id="btnColaEspera" onclick="toggleColaEspera()" title="Cola de espera" style="display:none;position:relative">
