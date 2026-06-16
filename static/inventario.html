@@ -1718,12 +1718,26 @@ function avanzarPaso(n) {
   if (estadoNuevoProd.paso === 3 && n !== 3) {
     const nombre = document.getElementById('iaNombre')?.value.trim() || '';
     const precio = parseInt(document.getElementById('iaPrecio')?.value) || 0;
-    if (!nombre) { showToast('El nombre es requerido', 'error'); document.getElementById('iaNombre')?.focus(); return; }
-    if (!precio) { showToast('El precio de venta es requerido', 'error'); document.getElementById('iaPrecio')?.focus(); return; }
+    function _markField(id, msg) {
+      showToast(msg, 'error');
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.border = '2px solid #ef4444';
+        el.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.2)';
+        el.focus();
+        setTimeout(() => { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
+      }
+    }
+    const costo3  = parseInt(document.getElementById('iaCosto')?.value) || 0;
+    const stock3  = document.getElementById('iaStock')?.value;
+    if (!nombre) { _markField('iaNombre', '⚠️ Ingresa el nombre del producto'); return; }
+    if (!precio) { _markField('iaPrecio', '⚠️ Ingresa el precio de venta'); return; }
+    if (!costo3) { _markField('iaCosto',  '⚠️ Ingresa el precio de costo'); return; }
+    if (stock3 === '' || stock3 === null || stock3 === undefined) { _markField('iaStock', '⚠️ Ingresa la cantidad en bodega'); return; }
     estadoNuevoProd._form = {
       nombre, precio,
-      costo:      parseInt(document.getElementById('iaCosto')?.value) || 0,
-      stock:      parseInt(document.getElementById('iaStock')?.value) || 0,
+      costo:      costo3,
+      stock:      parseInt(stock3) || 0,
       catId:      document.getElementById('iaCatId')?.value || '',
       marcaId:    document.getElementById('iaMarcaId')?.value || '',
       marcaNombre: document.getElementById('iaMarcaInput')?.value.trim() || '',
@@ -2052,8 +2066,18 @@ function _rpPaso3Form(c) {
     </div>
 
     <div class="flujo-field">
-      <label class="flujo-label">Precio de venta * <span style="font-size:11px;color:var(--text-dim)">(único campo manual)</span></label>
+      <label class="flujo-label">Precio de venta *</label>
       <input id="iaPrecio" type="number" class="flujo-input" value="${f.precio||''}" placeholder="Ej: 1890" inputmode="numeric" style="font-size:18px;font-weight:700">
+    </div>
+
+    <div class="flujo-field">
+      <label class="flujo-label">Precio de costo *</label>
+      <input id="iaCosto" type="number" class="flujo-input" value="${f.costo||''}" placeholder="Precio pagado al proveedor" inputmode="numeric">
+    </div>
+
+    <div class="flujo-field">
+      <label class="flujo-label">Cantidad en bodega *</label>
+      <input id="iaStock" type="number" class="flujo-input" value="${f.stock!==undefined?f.stock:''}" placeholder="Ej: 10" inputmode="numeric">
     </div>
 
     <div class="flujo-field" style="position:relative">
@@ -2092,19 +2116,6 @@ function _rpPaso3Form(c) {
       </select>
     </div>
 
-    <details style="margin-bottom:16px">
-      <summary style="color:var(--accent2);cursor:pointer;font-size:13px;padding:8px 0">▼ Más datos (opcional)</summary>
-      <div style="display:flex;flex-direction:column;gap:12px;padding-top:12px">
-        <div class="flujo-field" style="margin:0">
-          <label class="flujo-label">Precio de costo (opcional)</label>
-          <input id="iaCosto" type="number" class="flujo-input" value="${f.costo||''}" placeholder="Precio pagado al proveedor" inputmode="numeric">
-        </div>
-        <div class="flujo-field" style="margin:0">
-          <label class="flujo-label">Stock inicial</label>
-          <input id="iaStock" type="number" class="flujo-input" value="${f.stock!==undefined?f.stock:0}" inputmode="numeric">
-        </div>
-      </div>
-    </details>
 
     <div style="display:flex;flex-direction:column;gap:10px">
       <button class="btn" style="padding:11px" onclick="estadoNuevoProd.paso=2;renderPasoActual()">← Volver a la foto</button>
@@ -2176,8 +2187,25 @@ async function _guardarProductoFlujoIA() {
   const fd = estadoNuevoProd._form;
   const nombre = fd.nombre || estadoNuevoProd.datosIA.nombre || '';
   const precio = fd.precio || 0;
-  if (!nombre) { showToast('El nombre es requerido', 'error'); estadoNuevoProd.paso=3; renderPasoActual(); return; }
-  if (!precio) { showToast('El precio es requerido', 'error'); estadoNuevoProd.paso=3; renderPasoActual(); return; }
+  function _highlightError(inputId, msg) {
+    estadoNuevoProd.paso = 3;
+    renderPasoActual();
+    showToast(msg, 'error');
+    const el = document.getElementById(inputId);
+    if (el) {
+      el.style.border = '2px solid #ef4444';
+      el.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.2)';
+      el.focus();
+      setTimeout(() => { el.style.border = ''; el.style.boxShadow = ''; }, 3000);
+    }
+  }
+
+  if (!nombre) { _highlightError('iaNombre', '⚠️ Ingresa el nombre del producto'); return; }
+  if (!precio) { _highlightError('iaPrecio', '⚠️ Ingresa el precio de venta'); return; }
+  const costo = fd.costo;
+  if (!costo) { _highlightError('iaCosto', '⚠️ Ingresa el precio de costo'); return; }
+  const cantidad = fd.stock;
+  if (cantidad === '' || cantidad === null || cantidad === undefined) { _highlightError('iaStock', '⚠️ Ingresa la cantidad en bodega'); return; }
 
   const imagenUrlFinal = (() => {
     const sel = estadoNuevoProd._usarFoto;
@@ -2502,10 +2530,10 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
-<!-- ── FAB Comando Stock ─────────────────────────────────────────── -->
+<!-- ZERO: stock por voz desactivado temporalmente — pendiente mejorar reconocimiento -->
 <button id="fabComandoStock" onclick="abrirComandoStock()"
   style="position:fixed;bottom:24px;right:24px;z-index:900;
-         display:flex;align-items:center;gap:8px;
+         display:none;align-items:center;gap:8px;
          background:#16a34a;color:#fff;border:none;
          border-radius:999px;padding:14px 20px;
          font-size:15px;font-weight:700;cursor:pointer;
