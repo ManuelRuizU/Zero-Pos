@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>ZERO POS — Inventario</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <link rel="stylesheet" href="/static/css/zero-tokens.css">
 <link rel="stylesheet" href="/static/css/zero-base.css">
 <link rel="stylesheet" href="/static/css/zero-components.css">
@@ -22,8 +23,10 @@ body{ min-height:100vh; }
 .logo{font-weight:700;font-size:16px;} .logo span{color:var(--accent);}
 .nav{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
 .nav-btn{background:none;border:1px solid var(--border);color:var(--text-dim);
-  border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s;}
+  border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s;
+  display:inline-flex;align-items:center;gap:6px;}
 .nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text);}
+.nav-icon-pill{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;margin-right:2px;flex-shrink:0;}
 .content{max-width:1200px;margin:0 auto;padding:24px 20px;}
 h2{font-size:22px;font-weight:700;margin-bottom:20px;}
 .toolbar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
@@ -151,11 +154,29 @@ select option{background:#13131a;}
 
 
 
-<!-- Sidebar categorías (mobile: slide-in, desktop: siempre visible) -->
+<div class="topbar">
+  <button class="btn-top" id="btnSidebarCat" onclick="abrirSidebarCat()" title="Categorías" style="font-size:18px;padding:6px 10px">☰</button>
+  <div class="logo">ZERO<span>POS</span></div>
+  <span style="font-size:13px;color:var(--text-dim);font-weight:600">Inventario</span>
+  <div class="topbar-spacer"></div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showTab('productos',this)"><div class="nav-icon-pill" style="background:#1a2a1a"><i class="ti ti-package" style="color:#4ade80;font-size:15px"></i></div> Productos</button>
+    <button class="nav-btn" onclick="showTab('proveedores',this)"><div class="nav-icon-pill" style="background:#1a2744"><i class="ti ti-truck" style="color:#60a5fa;font-size:15px"></i></div> Proveedores</button>
+    <button class="nav-btn" onclick="showTab('alertas',this)"><div class="nav-icon-pill" style="background:#2a1a10"><i class="ti ti-alert-triangle" style="color:#fb923c;font-size:15px"></i></div> Alertas</button>
+    <button class="nav-btn" onclick="showTab('categorias',this)"><div class="nav-icon-pill" style="background:#1a2a1a"><i class="ti ti-tag" style="color:#4ade80;font-size:15px"></i></div> Categorías</button>
+    <button class="nav-btn" onclick="leerFactura()"><div class="nav-icon-pill" style="background:#1e1e2e"><i class="ti ti-file-invoice" style="color:#94a3b8;font-size:15px"></i></div> Leer factura</button>
+    <button class="nav-btn" onclick="location.href='credit.html'"><div class="nav-icon-pill" style="background:#2a1a10"><i class="ti ti-credit-card" style="color:#fb923c;font-size:15px"></i></div> CREDIT</button>
+  </div>
+</div>
+
+<!-- Layout: sidebar + content — sidebar es fixed en mobile, static en desktop vía @media -->
+<div style="display:flex;height:calc(100vh - 57px)">
+
+<!-- Sidebar (mobile: slide-in fixed; desktop: panel izquierdo ~180px vía zero-layout.css) -->
 <div class="inv-sidebar-overlay" id="sidebarOverlay" onclick="cerrarSidebarCat()"></div>
 <div class="inv-sidebar" id="sidebarCat">
   <div class="inv-sidebar-header">
-    <span>🗂️ Categorías</span>
+    <span>Categorías</span>
     <button class="btn-cerrar-sidebar btn-top" onclick="cerrarSidebarCat()" style="padding:4px 8px;font-size:16px">✕</button>
   </div>
   <div class="inv-sidebar-body" id="sidebarCatBody">
@@ -165,31 +186,7 @@ select option{background:#13131a;}
   </div>
 </div>
 
-<div class="topbar">
-  <button class="btn-top" id="btnSidebarCat" onclick="abrirSidebarCat()" title="Categorías" style="font-size:18px;padding:6px 10px">☰</button>
-  <div class="logo">ZERO<span>POS</span></div>
-  <span style="font-size:13px;color:var(--text-dim);font-weight:600">Inventario</span>
-  <div class="topbar-spacer"></div>
-  <div class="nav">
-    <button class="nav-btn active" onclick="showTab('productos',this)">📦 Productos</button>
-    <button class="nav-btn" onclick="showTab('proveedores',this)">🏭 Proveedores</button>
-    <button class="nav-btn" onclick="showTab('alertas',this)">⚠️ Alertas</button>
-    <button class="nav-btn" onclick="showTab('categorias',this)">🏷️ Categorías</button>
-    <button class="nav-btn" onclick="leerFactura()">📄 Leer factura</button>
-    <button class="nav-btn" onclick="location.href='credit.html'">💳 CREDIT</button>
-    <button class="nav-btn" onclick="location.href='pos.html'">← Caja</button>
-  </div>
-</div>
-
-<!-- Layout: sidebar (desktop) + content -->
-<div style="display:flex;min-height:calc(100vh - 57px)">
-
-<!-- Sidebar: on desktop it sits here in flow -->
-<div class="inv-sidebar" id="sidebarCatDesktop" style="position:static;transform:none;display:none">
-  <!-- Populated dynamically from sidebarCat content -->
-</div>
-
-<div style="flex:1;min-width:0">
+<div style="flex:1;min-width:0;overflow-y:auto">
 <div class="content" style="padding-top:16px">
 
   <!-- Productos -->

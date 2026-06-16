@@ -151,13 +151,14 @@
   /* Inventario: sidebar always visible, not sliding */
   .inv-sidebar {
     position: static; transform: none !important;
-    width: 240px; border-right: 1px solid var(--border);
+    width: 180px; flex-shrink: 0; border-right: 1px solid var(--border);
     background: rgba(10,10,15,.6);
     height: calc(100vh - 57px);
     overflow-y: auto;
   }
   .inv-sidebar-overlay { display: none !important; }
   .inv-sidebar .inv-sidebar-header .btn-cerrar-sidebar { display: none; }
+  #btnSidebarCat { display: none; }
 }
 
 @media (max-width: 767px) {
