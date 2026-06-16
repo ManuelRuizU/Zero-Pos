@@ -116,6 +116,12 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - QR de cliente apunta a IP de red real, NO a 127.0.0.1
 - Tarjeta impresa incluye QR funcional
 
+### Permisos de sesión y turno (pos.html)
+- Cierre de sesión solo para admin — cajeros solo pueden cerrar turno
+- Botones #btnCerrarSesionMenu y #btnCerrarSesionDropdown: display:none por defecto, se muestran en _aplicarPermisosPOS() si rol === 'admin'
+- cerrarSesion() verifica turno activo antes de hacer logout — si hay turno abierto muestra toast de error
+- _meRol: variable global seteada en init() con me.rol
+
 ### Historial de ventas (pos.html)
 - Función abrirHistorial() carga /api/ventas?limit=100
 - Deduplica por id antes de renderizar (Map por v.id)
