@@ -739,8 +739,13 @@ def crear_marca():
 def listar_categorias():
     if not _require_auth():
         return jsonify({"error": "No autenticado"}), 401
+    todas = request.args.get("todas") == "1"
     with db_session() as conn:
-        rows = conn.execute("SELECT * FROM categorias ORDER BY nombre").fetchall()
+        sql = "SELECT * FROM categorias"
+        if not todas:
+            sql += " WHERE COALESCE(activo,1)=1"
+        sql += " ORDER BY nombre"
+        rows = conn.execute(sql).fetchall()
         return jsonify([dict(r) for r in rows])
 
 
@@ -768,6 +773,7 @@ def categorias_arbol():
     with db_session() as conn:
         rows = conn.execute(
             """SELECT c.id, c.nombre, c.icono, c.departamento,
+                      COALESCE(c.activo,1) as activo,
                       COUNT(p.id) as total_productos
                FROM categorias c
                LEFT JOIN productos p ON p.categoria_id=c.id AND p.activo=1
@@ -775,15 +781,35 @@ def categorias_arbol():
                ORDER BY c.departamento, c.nombre"""
         ).fetchall()
     arbol = {}
+    depto_activo = {}
     for r in rows:
         d = r["departamento"] or "Otros"
         arbol.setdefault(d, []).append({
             "id": r["id"],
             "nombre": r["nombre"],
             "icono": r["icono"] or "📦",
+            "activo": bool(r["activo"]),
             "total_productos": r["total_productos"],
         })
-    return jsonify(arbol)
+        depto_activo[d] = depto_activo.get(d, True) and bool(r["activo"])
+    return jsonify({"departamentos": arbol, "depto_activo": depto_activo})
+
+
+@productos_bp.route("/categorias/departamento/toggle", methods=["PUT"])
+def toggle_departamento():
+    if not _require_auth():
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    departamento = str(data.get("departamento", "")).strip()
+    if not departamento:
+        return jsonify({"error": "Departamento requerido"}), 400
+    activo = 1 if data.get("activo") else 0
+    with db_session() as conn:
+        conn.execute(
+            "UPDATE categorias SET activo=? WHERE departamento=?",
+            (activo, departamento)
+        )
+        return jsonify({"ok": True})
 
 
 @productos_bp.route("/categorias/<int:cid>", methods=["PUT"])

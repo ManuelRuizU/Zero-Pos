@@ -727,6 +727,24 @@ def _migrate_columns(conn: sqlite3.Connection):
     except Exception as e:
         logger.debug(f"migrate categorias.departamento: {e}")
 
+    # Columna activo en categorias + unificar bebidas
+    try:
+        cols_cats2 = {r[1] for r in conn.execute("PRAGMA table_info(categorias)").fetchall()}
+        if "activo" not in cols_cats2:
+            conn.execute("ALTER TABLE categorias ADD COLUMN activo INTEGER DEFAULT 1")
+        conn.execute("UPDATE categorias SET activo=1 WHERE activo IS NULL")
+        # Unificar bebidas alcohólicas y no alcohólicas en departamento "Bebidas"
+        conn.execute(
+            "UPDATE categorias SET departamento='Bebidas'"
+            " WHERE nombre='Bebidas' AND departamento='Alimentación'"
+        )
+        conn.execute(
+            "UPDATE categorias SET departamento='Bebidas'"
+            " WHERE departamento='Bebidas con Alcohol'"
+        )
+    except Exception as e:
+        logger.debug(f"migrate categorias.activo+bebidas: {e}")
+
     # Índices de código de barras para escaneo O(1)
     try:
         conn.execute(

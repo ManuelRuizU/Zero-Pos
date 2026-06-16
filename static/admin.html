@@ -1872,30 +1872,50 @@ async function cargarHistorialVoz() {
 
 // ── Categorías ────────────────────────────────────────────────────────────────
 let _catModalFn = null;
-let _catArbol   = {};
+let _catArbol       = {};
+let _catDeptoActivo = {};
 
 async function cargarCatArbol() {
   const el = document.getElementById('catArbol');
   el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Cargando...</p>';
-  _catArbol = await fetch('/api/productos/categorias/arbol',{credentials:'include'})
+  const resp = await fetch('/api/productos/categorias/arbol',{credentials:'include'})
     .then(r=>r.json()).catch(()=>({}));
-  renderCatArbol(_catArbol);
+  _catArbol = resp.departamentos || resp;
+  _catDeptoActivo = resp.depto_activo || {};
+  renderCatArbol(_catArbol, _catDeptoActivo);
 }
 
-function renderCatArbol(arbol) {
+async function catToggleDepto(departamento, activar) {
+  await fetch('/api/productos/categorias/departamento/toggle', {
+    method:'PUT', credentials:'include',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({departamento, activo: activar ? 1 : 0})
+  });
+  cargarCatArbol();
+}
+
+function renderCatArbol(arbol, deptoActivo) {
   const el = document.getElementById('catArbol');
-  const deptos = Object.keys(arbol);
+  const deptos = Object.keys(arbol || {});
   if (!deptos.length) {
     el.innerHTML = '<p style="color:var(--text-dim);font-size:13px;">Sin categorías</p>';
     return;
   }
   el.innerHTML = deptos.map(depto => {
-    const cats = arbol[depto];
-    const dq   = depto.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    return `<div class="cat-depto-section">
+    const cats   = arbol[depto];
+    const activo = deptoActivo[depto] !== false;
+    const dq     = depto.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const toggleStyle = activo
+      ? 'background:rgba(34,197,94,0.15);border:1px solid #22c55e;color:#22c55e'
+      : 'background:rgba(239,68,68,0.15);border:1px solid #ef4444;color:#ef4444';
+    return `<div class="cat-depto-section" style="${activo?'':'opacity:.55'}">
       <div class="cat-depto-header">
         <span class="cat-depto-title">${depto}</span>
-        <button class="btn sm" onclick="catNuevaCat('${dq}')">+ Categoría</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn sm" style="${toggleStyle};font-size:11px;padding:3px 10px;border-radius:20px"
+            onclick="catToggleDepto('${dq}',${!activo})">${activo?'ON':'OFF'}</button>
+          <button class="btn sm" onclick="catNuevaCat('${dq}')">+ Categoría</button>
+        </div>
       </div>
       <div class="cat-list">
         ${cats.map(c => {
@@ -1992,7 +2012,7 @@ function catEditarCat(id, nombre, depto, icono) {
 
 async function catEliminarCat(id, nombre, total) {
   if (total > 0) {
-    const cats = await fetch('/api/productos/categorias',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+    const cats = await fetch('/api/productos/categorias?todas=1',{credentials:'include'}).then(r=>r.json()).catch(()=>[]);
     const opts = cats.filter(c=>c.id!==id)
       .map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
     document.getElementById('catModalTitle').textContent = '🗑️ Eliminar categoría';
