@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ZERO POS — Caja</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <link rel="stylesheet" href="/static/css/zero-tokens.css">
 <link rel="stylesheet" href="/static/css/zero-base.css">
 <link rel="stylesheet" href="/static/css/zero-components.css">
@@ -1174,6 +1175,22 @@ body {
 </div>
 
 <!-- ── Navbar overlay + drawer ───────────────────────────────── -->
+<style>
+.nav-item {
+  display:flex;align-items:center;gap:14px;padding:11px 10px;
+  border-radius:8px;margin:0 8px;cursor:pointer;text-decoration:none;
+  color:#6b7280;font-size:14px;transition:background .12s;
+  border-left:2px solid transparent;
+}
+.nav-item:hover { background:#13131f; }
+.nav-item.activo {
+  background:#13132a;border-left:2px solid #6366f1;
+}
+.nav-item.activo .nav-icono { color:#818cf8; }
+.nav-item.activo .nav-texto { color:#a5b4fc;font-weight:500; }
+.nav-icono { font-size:19px;width:20px;text-align:center;color:#4b5563;flex-shrink:0; }
+.nav-texto { flex:1; }
+</style>
 <div id="navbarOverlay" class="navbar-overlay" onclick="cerrarNavbar()"></div>
 <div id="navbarDrawer" class="navbar-drawer">
   <div class="navbar-header">
@@ -1181,31 +1198,70 @@ body {
     <button class="btn-cerrar-navbar" onclick="cerrarNavbar()">✕</button>
   </div>
   <div id="menuCajeroNombre" style="font-size:13px;color:var(--text-dim);padding:8px 18px 4px"></div>
-  <div style="flex:1;padding:12px 0;overflow-y:auto">
-    <a href="admin.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">📊 <span>Reportes y Admin</span></a>
-    <a href="inventario.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">📦 <span>Inventario</span></a>
-    <a id="linkPedidosDrawer" href="pedidos.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">🛵 <span>Pedidos</span></a>
-    <a id="navCredito" href="credit.html" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);text-decoration:none;font-size:14px;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
-      <span style="font-size:18px">💳</span>
-      <div style="flex:1"><div>ZERO CREDIT</div><div style="font-size:11px;color:var(--text-dim)">Clientes y fiados</div></div>
+  <div style="flex:1;padding:8px 0;overflow-y:auto">
+    <a href="admin.html" class="nav-item" id="navAdmin">
+      <i class="ti ti-chart-bar nav-icono"></i>
+      <span class="nav-texto">Reportes y Admin</span>
+    </a>
+    <a href="inventario.html" class="nav-item" id="navInventario">
+      <i class="ti ti-package nav-icono"></i>
+      <span class="nav-texto">Inventario</span>
+    </a>
+    <a id="linkPedidosDrawer" href="pedidos.html" class="nav-item" data-navid="navPedidos">
+      <i class="ti ti-motorbike nav-icono"></i>
+      <span class="nav-texto">Pedidos</span>
+    </a>
+    <a id="navCredito" href="credit.html" class="nav-item">
+      <i class="ti ti-credit-card nav-icono"></i>
+      <div class="nav-texto">
+        <div>ZERO CREDIT</div>
+        <div style="font-size:11px;color:#6b7280">Clientes y fiados</div>
+      </div>
       <span id="badgeCreditoNav" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:2px 8px;font-size:12px;font-weight:700"></span>
     </a>
-    <div onclick="abrirHistorial();cerrarNavbar()" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);font-size:14px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">🕐 <span>Historial de ventas</span></div>
-    <div style="height:1px;background:var(--border);margin:4px 0"></div>
-    <div onclick="window.open('/static/cliente.html','pantalla-cliente');cerrarNavbar()" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);font-size:14px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">📺 <span>Pantalla cliente</span></div>
-    <div id="btnImpresora" onclick="mostrarAlertaImpresora()" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);font-size:14px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
-      🖨️ <span>Impresora</span>
+    <div onclick="abrirHistorial();cerrarNavbar()" class="nav-item">
+      <i class="ti ti-history nav-icono"></i>
+      <span class="nav-texto">Historial de ventas</span>
+    </div>
+    <div style="height:1px;background:var(--border);margin:6px 8px"></div>
+    <div onclick="window.open('/static/cliente.html','pantalla-cliente');cerrarNavbar()" class="nav-item">
+      <i class="ti ti-device-desktop nav-icono"></i>
+      <span class="nav-texto">Pantalla cliente</span>
+    </div>
+    <div id="btnImpresora" onclick="mostrarAlertaImpresora()" class="nav-item">
+      <i class="ti ti-printer nav-icono"></i>
+      <span class="nav-texto">Impresora</span>
       <span id="impDot" style="width:8px;height:8px;border-radius:50%;background:#6b7280;margin-left:auto;flex-shrink:0"></span>
     </div>
-    <div onclick="abrirVentaRapida();cerrarNavbar()" style="display:flex;align-items:center;gap:12px;padding:14px 18px;color:var(--text);font-size:14px;cursor:pointer;transition:background .15s" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''"  >⚡ <span>Venta rápida</span></div>
+    <div onclick="abrirVentaRapida();cerrarNavbar()" class="nav-item">
+      <i class="ti ti-bolt nav-icono"></i>
+      <span class="nav-texto">Venta rápida</span>
+    </div>
   </div>
-  <div style="padding:16px 18px;border-top:1px solid var(--border)">
-    <div style="font-size:11px;color:var(--text-dim);text-align:center;margin-bottom:10px">Toca afuera para cerrar</div>
+  <div style="padding:12px 16px;border-top:1px solid var(--border)">
     <div id="menuVersion" style="font-size:11px;color:#2d3748;margin-bottom:10px">ZERO POS</div>
-    <button onclick="cerrarNavbar();_abrirModalTurno('cerrar')" style="width:100%;padding:10px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;margin-bottom:8px">🔒 Cerrar turno</button>
-    <button id="btnCerrarSesionMenu" onclick="cerrarSesion()" style="width:100%;padding:10px;background:#ef444420;border:1px solid #ef4444;color:#ef4444;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:none">🚪 Cerrar sesión</button>
+    <button onclick="cerrarNavbar();_abrirModalTurno('cerrar')" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#4b5563;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+      <i class="ti ti-lock" style="font-size:16px"></i> Cerrar turno
+    </button>
+    <button id="btnCerrarSesionMenu" onclick="cerrarSesion()" style="width:100%;padding:10px;background:#2d151520;border:1px solid #2d1515;color:#ef4444;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:none;align-items:center;justify-content:center;gap:8px">
+      <i class="ti ti-logout" style="font-size:16px"></i> Cerrar sesión
+    </button>
   </div>
 </div>
+<script>
+(function() {
+  const p = window.location.pathname;
+  const map = {
+    '/static/admin.html':      'navAdmin',
+    '/static/inventario.html': 'navInventario',
+  };
+  const id = map[p];
+  if (id) document.getElementById(id)?.classList.add('activo');
+  if (p === '/static/pedidos.html') {
+    document.querySelector('[data-navid="navPedidos"]')?.classList.add('activo');
+  }
+})();
+</script>
 
 <!-- Modal modificadores -->
 <div class="modal-overlay" id="modalModificadores" style="display:none;align-items:flex-end;padding:0">
