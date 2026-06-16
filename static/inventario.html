@@ -22,10 +22,10 @@ body{ min-height:100vh; }
   border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
 .logo{font-weight:700;font-size:16px;} .logo span{color:var(--accent);}
 .nav{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;}
-.nav-btn{background:none;border:1px solid var(--border);color:var(--text-dim);
+.nav-btn{background:none;border:1px solid var(--border);color:#e2e8f0;
   border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s;
   display:inline-flex;align-items:center;gap:6px;}
-.nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text);}
+.nav-btn:hover,.nav-btn.active{background:var(--surface2);color:#fff;}
 .nav-icon-pill{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;margin-right:2px;flex-shrink:0;}
 .inv-cat-item{padding:6px 12px 6px 24px;}
 .sidebar-depto-btn{display:flex;align-items:center;gap:6px;padding:8px 12px 4px;font-size:11px;text-transform:uppercase;color:#6366f1;font-weight:700;cursor:pointer;letter-spacing:.5px;user-select:none;}
@@ -160,7 +160,7 @@ select option{background:#13131a;}
 
 <div class="topbar">
   <button class="btn-top" id="btnSidebarCat" onclick="abrirSidebarCat()" title="Categorías" style="font-size:18px;padding:6px 10px">☰</button>
-  <button onclick="window.location.href='/static/pos.html'" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:#6366f1;font-size:14px;cursor:pointer;padding:8px 12px;border-radius:8px;font-weight:500" onmouseenter="this.style.background='#13132a'" onmouseleave="this.style.background='none'"><i class="ti ti-arrow-left" style="font-size:18px"></i> Volver a Caja</button>
+  <button onclick="window.location.href='/static/pos.html'" style="display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size:14px;cursor:pointer;padding:8px 14px;border-radius:8px;font-weight:600;transition:all .15s" onmouseenter="this.style.background='rgba(99,102,241,0.22)'" onmouseleave="this.style.background='rgba(99,102,241,0.12)'"><i class="ti ti-arrow-left" style="font-size:17px"></i> Volver a la Caja</button>
   <div class="logo">ZERO<span>POS</span></div>
   <span style="font-size:13px;color:var(--text-dim);font-weight:600">Inventario</span>
   <div class="topbar-spacer"></div>
