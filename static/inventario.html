@@ -27,6 +27,10 @@ body{ min-height:100vh; }
   display:inline-flex;align-items:center;gap:6px;}
 .nav-btn:hover,.nav-btn.active{background:var(--surface2);color:var(--text);}
 .nav-icon-pill{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;margin-right:2px;flex-shrink:0;}
+.inv-cat-item{padding:6px 12px 6px 24px;}
+.sidebar-depto-btn{display:flex;align-items:center;gap:6px;padding:8px 12px 4px;font-size:11px;text-transform:uppercase;color:#6366f1;font-weight:700;cursor:pointer;letter-spacing:.5px;user-select:none;}
+.sidebar-depto-btn:hover{background:rgba(99,102,241,.08);}
+.sidebar-depto-btn i{font-size:12px;}
 .content{max-width:1200px;margin:0 auto;padding:24px 20px;}
 h2{font-size:22px;font-weight:700;margin-bottom:20px;}
 .toolbar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
@@ -156,6 +160,7 @@ select option{background:#13131a;}
 
 <div class="topbar">
   <button class="btn-top" id="btnSidebarCat" onclick="abrirSidebarCat()" title="Categorías" style="font-size:18px;padding:6px 10px">☰</button>
+  <button onclick="window.location.href='/static/pos.html'" style="display:flex;align-items:center;gap:6px;background:none;border:none;color:#6366f1;font-size:14px;cursor:pointer;padding:8px 12px;border-radius:8px;font-weight:500" onmouseenter="this.style.background='#13132a'" onmouseleave="this.style.background='none'"><i class="ti ti-arrow-left" style="font-size:18px"></i> Volver a Caja</button>
   <div class="logo">ZERO<span>POS</span></div>
   <span style="font-size:13px;color:var(--text-dim);font-weight:600">Inventario</span>
   <div class="topbar-spacer"></div>
@@ -638,6 +643,7 @@ let categorias = [];
 let soloStockBajo = false;
 let catFiltroId = null;
 let _cachedProds = [];
+let _deptoAbiertos = new Set(['Alimentación']);
 
 async function init() {
   const me = await fetch('/api/auth/me',{credentials:'include'}).then(r=>r.json()).catch(()=>null);
@@ -762,30 +768,42 @@ function seleccionarCategoriaSidebar(id, btn) {
 function filtrarPorCat(id, btn) {
   seleccionarCategoriaSidebar(id, null);
 }
+function _toggleDeptoSidebar(depto) {
+  if (_deptoAbiertos.has(depto)) _deptoAbiertos.delete(depto);
+  else _deptoAbiertos.add(depto);
+  _poblarSidebarCats();
+}
+
 function _poblarSidebarCats() {
   const body = document.getElementById('sidebarCatBody');
   const contadores = {};
   (_cachedProds||[]).forEach(p => { if (p.categoria_id) contadores[p.categoria_id] = (contadores[p.categoria_id]||0)+1; });
   const total = (_cachedProds||[]).length;
-  document.getElementById('catCountTodos').textContent = total;
 
-  // Group by departamento
   const deptos = {};
   categorias.forEach(c => {
     const d = c.departamento || 'Otros';
     if (!deptos[d]) deptos[d] = [];
     deptos[d].push(c);
   });
+
   let html = `<div class="inv-cat-item ${!catFiltroId?'active':''}" data-cat-id="" onclick="seleccionarCategoriaSidebar(null,this)">
     <span>Todos</span><span class="inv-cat-count">${total}</span></div>`;
+
   Object.entries(deptos).forEach(([depto, cats]) => {
-    html += `<div class="inv-depto-header">${depto}</div>`;
-    cats.forEach(c => {
-      const cnt = contadores[c.id]||0;
-      const activo = catFiltroId == c.id ? 'active' : '';
-      html += `<div class="inv-cat-item ${activo}" data-cat-id="${c.id}" onclick="seleccionarCategoriaSidebar(${c.id},this)">
-        <span>${c.icono||'📦'} ${c.nombre}</span><span class="inv-cat-count">${cnt}</span></div>`;
-    });
+    const abierto = _deptoAbiertos.has(depto);
+    const chevron = abierto ? 'ti-chevron-down' : 'ti-chevron-right';
+    const deptoEsc = depto.replace(/'/g, "\\'");
+    html += `<div class="sidebar-depto-btn" onclick="_toggleDeptoSidebar('${deptoEsc}')">
+      <i class="ti ${chevron}"></i>${depto}</div>`;
+    if (abierto) {
+      cats.forEach(c => {
+        const cnt = contadores[c.id]||0;
+        const activo = catFiltroId == c.id ? 'active' : '';
+        html += `<div class="inv-cat-item ${activo}" data-cat-id="${c.id}" onclick="seleccionarCategoriaSidebar(${c.id},this)">
+          <span>${c.nombre}</span><span class="inv-cat-count">${cnt}</span></div>`;
+      });
+    }
   });
   body.innerHTML = html;
 }
