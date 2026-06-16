@@ -1534,6 +1534,26 @@ body {
   </div>
 </div>
 
+<!-- Modal confirmación stock insuficiente -->
+<div class="modal-overlay" id="modalStockInsuficiente">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title" style="font-size:17px;margin-bottom:8px;">⚠️ Stock insuficiente</div>
+    <p style="font-size:14px;color:var(--text-dim);margin-bottom:12px;">Los siguientes productos no tienen suficiente stock:</p>
+    <ul id="listaStockInsuficiente" style="margin:0 0 12px 0;padding-left:20px;font-size:14px;color:var(--text);line-height:1.8;"></ul>
+    <p style="color:#94a3b8;font-size:13px;margin-bottom:0;">¿Confirmar la venta de todas formas?</p>
+    <div style="display:flex;gap:12px;margin-top:16px;">
+      <button onclick="cerrarModalStockInsuficiente()"
+        style="flex:1;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;cursor:pointer;">
+        Cancelar
+      </button>
+      <button onclick="confirmarVentaConStockBajo()"
+        style="flex:1;padding:14px;background:#f59e0b;border:none;border-radius:10px;color:#000;font-size:15px;font-weight:700;cursor:pointer;">
+        Confirmar igual
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Overlay de procesamiento de imagen del escáner -->
 <div id="escanerOverlay" style="display:none">
   <div id="escanerOverlayBox">
@@ -2983,12 +3003,14 @@ function renderCarrito() {
     const modifTag = item.modificadores_desc
       ? `<div style="font-size:10px;color:#8b5cf6;margin-top:2px">└ ${item.modificadores_desc}</div>`
       : '';
+    const _stk = (item.modo_stock !== 'sin_stock' && item.stock != null) ? item.stock : Infinity;
+    const _cantColor = item.cantidad > _stk ? '#ef4444' : item.cantidad === _stk ? '#facc15' : 'var(--text)';
     div.innerHTML = `
       <div class="item-nombre">${item.nombre}${loteTag}${modifTag}</div>
       <div class="item-controles">
         <button class="qty-btn" onclick="cambiarCantidad(${idx},-1)">−</button>
         <input type="number" inputmode="numeric" value="${item.cantidad}" min="1"
-          style="width:60px;text-align:center;background:none;border:none;color:var(--text);font-size:16px;font-weight:700;cursor:pointer"
+          style="width:60px;text-align:center;background:none;border:none;color:${_cantColor};font-size:16px;font-weight:700;cursor:pointer"
           onchange="_setItemCantidad(${idx}, parseInt(this.value)||1)"
           onclick="this.select()">
         <button class="qty-btn" onclick="cambiarCantidad(${idx},+1)">+</button>
@@ -2999,6 +3021,17 @@ function renderCarrito() {
   });
 
   document.getElementById('btnCobrar').disabled = false;
+  const _insufBtn = verificarStockCarrito();
+  const _btnCobrar = document.getElementById('btnCobrar');
+  if (_insufBtn.length) {
+    _btnCobrar.style.background = 'linear-gradient(135deg,#f59e0b,#d97706)';
+    _btnCobrar.style.boxShadow = '0 4px 20px rgba(245,158,11,.4)';
+    _btnCobrar.textContent = '⚠️ Cobrar →';
+  } else {
+    _btnCobrar.style.background = '';
+    _btnCobrar.style.boxShadow = '';
+    _btnCobrar.textContent = '✓ Cobrar →';
+  }
   recalcular();
   pushPantallaCliente();
 }
@@ -3123,8 +3156,37 @@ function toggleCarritoMobile() {
 // ── Entrega ──────────────────────────────────────────────────
 let entregaActual = {tipo:'local',nombre:'',tel:'',tel2:'',email:'',direccion:'',depto:'',referencia:'',comuna:'',notas:'',hora_retiro:'',receptor_nombre:null,receptor_tel:null};
 
+function verificarStockCarrito() {
+  return carrito.filter(i =>
+    i.modo_stock !== 'sin_stock' && i.stock != null && i.cantidad > i.stock
+  );
+}
+
+function _mostrarModalStockInsuficiente(items) {
+  const ul = document.getElementById('listaStockInsuficiente');
+  ul.innerHTML = items.map(i =>
+    `<li>${i.nombre}: tienes <b>${i.stock}</b>, vendes <b>${i.cantidad}</b></li>`
+  ).join('');
+  document.getElementById('modalStockInsuficiente').classList.add('active');
+}
+
+function cerrarModalStockInsuficiente() {
+  document.getElementById('modalStockInsuficiente').classList.remove('active');
+}
+
+function confirmarVentaConStockBajo() {
+  cerrarModalStockInsuficiente();
+  _procesarCobro();
+}
+
 function abrirCobro() {
   if (!carrito.length) return;
+  const insuf = verificarStockCarrito();
+  if (insuf.length) { _mostrarModalStockInsuficiente(insuf); return; }
+  _procesarCobro();
+}
+
+function _procesarCobro() {
   carrito = carrito.filter(i => !i.es_reparto);
   recalcular();
   const deliveryActivo = cfgApp.modulo_delivery === '1' || cfgApp.modulo_delivery === true;
