@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delivery — ZERO POS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <link rel="stylesheet" href="/static/css/zero-tokens.css">
 <link rel="stylesheet" href="/static/css/zero-base.css">
 <link rel="stylesheet" href="/static/css/zero-components.css">
@@ -84,6 +85,10 @@ body {
   border: none;
   color: var(--text-dim);
   font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 10px 0;
   cursor: pointer;
   border-bottom: 2px solid transparent;
@@ -506,16 +511,20 @@ select { cursor: pointer; }
 
 <!-- Header -->
 <div id="header">
-  <span style="font-size:20px">🛵</span>
+  <div style="width:36px;height:36px;background:#2a1a10;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <i class="ti ti-motorbike" style="color:#fb923c;font-size:20px"></i>
+  </div>
   <h1>Delivery</h1>
   <span class="badge" id="badgeActivos">0</span>
-  <a href="/static/pos.html">← POS</a>
+  <button onclick="location.href='/static/pos.html'" style="margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size:13px;cursor:pointer;padding:6px 12px;border-radius:8px;font-weight:600;transition:all .15s" onmouseenter="this.style.background='rgba(99,102,241,0.22)'" onmouseleave="this.style.background='rgba(99,102,241,0.12)'">
+    <i class="ti ti-arrow-left" style="font-size:16px"></i> Volver a la Caja
+  </button>
 </div>
 
 <!-- Mobile tabs -->
 <div id="tabs">
-  <button class="active" onclick="showTab('form')">➕ Nuevo Pedido</button>
-  <button id="tabCola" onclick="showTab('cola')">📋 Cola <span id="tabColaBadge"></span></button>
+  <button class="active" onclick="showTab('form')"><i class="ti ti-plus"></i> Nuevo Pedido</button>
+  <button id="tabCola" onclick="showTab('cola')"><i class="ti ti-list"></i> Cola <span id="tabColaBadge"></span></button>
 </div>
 
 <!-- Main -->
