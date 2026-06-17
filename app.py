@@ -621,6 +621,45 @@ def _reset_stock_produccion():
         logger.warning(f"reset_stock_produccion error: {e}")
 
 
+def _mantenimiento_db():
+    from database import db_session
+    try:
+        with db_session() as conn:
+            conn.execute("PRAGMA optimize")
+            conn.execute("ANALYZE")
+            conn.execute(
+                "INSERT INTO config (clave, valor) VALUES ('ultimo_mantenimiento_db', datetime('now'))"
+                " ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor"
+            )
+        # VACUUM requiere conexión fuera de transacción activa
+        import sqlite3, os
+        db_path = os.path.join(os.path.dirname(__file__), 'zero_pos.db')
+        conn2 = sqlite3.connect(db_path)
+        conn2.execute("VACUUM")
+        conn2.close()
+        logger.info("DB: mantenimiento mensual completado")
+    except Exception as e:
+        logger.warning(f"DB: error mantenimiento: {e}")
+
+
+def _check_mantenimiento_db():
+    """Ejecuta mantenimiento si han pasado 30+ días desde el último."""
+    from database import db_session
+    from datetime import datetime, timedelta
+    try:
+        with db_session() as conn:
+            row = conn.execute(
+                "SELECT valor FROM config WHERE clave='ultimo_mantenimiento_db'"
+            ).fetchone()
+        if row and row["valor"]:
+            ultimo = datetime.fromisoformat(row["valor"])
+            if datetime.now() - ultimo < timedelta(days=30):
+                return
+        _mantenimiento_db()
+    except Exception as e:
+        logger.debug(f"check_mantenimiento_db: {e}")
+
+
 def procesar_cola_impresion(app: Flask):
     """Reintenta tickets pendientes/fallidos con menos de 3 intentos."""
     from database import db_session, marcar_ticket_impreso, marcar_ticket_fallido
@@ -689,7 +728,8 @@ def start_backup_scheduler(app: Flask):
         schedule.every().day.at("08:00").do(revisar_fiados_vencidos, app)
         schedule.every().day.at("23:59").do(calcular_metricas_dia, app)
         schedule.every(60).seconds.do(procesar_cola_impresion, app)
-        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00) + fiados (08:00) + métricas (23:59) + cola impresión (60s)")
+        schedule.every().day.at("04:00").do(_check_mantenimiento_db)
+        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00) + fiados (08:00) + métricas (23:59) + cola impresión (60s) + mantenimiento DB (04:00 si 30d)")
 
         def loop():
             while True:
@@ -698,6 +738,10 @@ def start_backup_scheduler(app: Flask):
 
         t = threading.Thread(target=loop, daemon=True, name="BackupScheduler")
         t.start()
+
+        # Verificar en startup si el mantenimiento está vencido
+        threading.Thread(target=_check_mantenimiento_db, daemon=True,
+                         name="DBMaintenanceCheck").start()
     except ImportError:
         logger.warning("schedule no disponible — backup automático desactivado")
 
