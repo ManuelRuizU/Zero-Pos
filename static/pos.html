@@ -1117,6 +1117,34 @@ body {
   </div>
 </div>
 
+<!-- ── Overlay turno cerrado ─────────────────────────────────── -->
+<div id="overlayTurnoCerrado" style="
+  display:none;
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:var(--bg);
+  z-index:9000;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:24px;
+">
+  <div style="font-size:28px;font-weight:700;letter-spacing:2px;color:var(--text)">
+    ZERO<span style="color:#6366f1">POS</span>
+  </div>
+  <div style="width:100px;height:100px;border-radius:50%;border:3px solid var(--border);display:flex;align-items:center;justify-content:center;">
+    <i class="ti ti-clock" style="font-size:52px;color:var(--text-dim)"></i>
+  </div>
+  <div style="text-align:center">
+    <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:8px">El turno está cerrado</div>
+    <div style="font-size:14px;color:var(--text-dim)">Abre el turno para realizar ventas</div>
+  </div>
+  <button onclick="_abrirModalTurno('abrir')" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer;letter-spacing:0.5px">
+    ABRIR EL TURNO
+  </button>
+  <div id="overlayTurnoUsuario" style="font-size:13px;color:var(--text-dim)"></div>
+</div>
+
 <!-- ── Modal apertura/cierre turno ──────────────────────────── -->
 <div class="modal-overlay" id="modalTurno" style="display:none;z-index:1400">
   <div class="modal" style="max-width:400px;width:100%;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column">
@@ -2430,7 +2458,12 @@ let _turnoRequerirConteo = false;
 async function verificarTurno(me) {
   const t = await fetch('/api/auth/turno/actual', {credentials:'include'}).then(r => r.json());
   if (!t.turno) {
-    await _abrirModalTurno('abrir');
+    const overlay = document.getElementById('overlayTurnoCerrado');
+    overlay.style.display = 'flex';
+    const usr = document.getElementById('overlayTurnoUsuario');
+    if (usr && me) usr.textContent = me.nombre || me.username || '';
+  } else {
+    document.getElementById('overlayTurnoCerrado').style.display = 'none';
   }
 }
 
@@ -2510,6 +2543,7 @@ async function _confirmarTurno() {
     });
     if (r.ok) {
       document.getElementById('modalTurno').style.display = 'none';
+      document.getElementById('overlayTurnoCerrado').style.display = 'none';
       if (_meRol === 'admin' || _meRol === 'propietario') {
         showToast('Turno abierto', 'success');
         setTimeout(() => location.href = 'admin.html', 800);
@@ -2531,6 +2565,7 @@ async function _confirmarTurno() {
     });
     if (r.ok) {
       document.getElementById('modalTurno').style.display = 'none';
+      document.getElementById('overlayTurnoCerrado').style.display = 'flex';
       showToast('Turno cerrado', 'success');
     } else {
       const d = await r.json();
