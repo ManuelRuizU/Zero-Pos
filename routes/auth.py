@@ -208,8 +208,37 @@ def abrir_turno():
                VALUES (?, ?, 'abierto', ?)""",
             (uid, fondo, denoms_json)
         )
-        session["turno_id"] = cur.lastrowid
-        return jsonify({"ok": True, "turno_id": cur.lastrowid})
+        turno_id = cur.lastrowid
+        session["turno_id"] = turno_id
+
+        row = conn.execute(
+            """SELECT t.*, u.nombre as cajero
+               FROM turnos t JOIN usuarios u ON t.usuario_id=u.id
+               WHERE t.id=?""",
+            (turno_id,)
+        ).fetchone()
+        turno_data = dict(row) if row else {"id": turno_id, "fondo_inicial": fondo,
+                                            "denominaciones_apertura": denoms_json}
+
+        cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+        config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
+        config_imp = {
+            "tipo":   config_negocio.get("impresora_tipo", "red"),
+            "ip":     config_negocio.get("impresora_ip", "192.168.1.100"),
+            "puerto": config_negocio.get("impresora_puerto", "9100"),
+        }
+
+    def _print():
+        try:
+            from utils.impresora import imprimir_apertura_turno
+            imprimir_apertura_turno(turno_data, config_negocio, config_imp)
+        except Exception as e:
+            logger.warning(f"Error imprimiendo apertura turno: {e}")
+
+    threading.Thread(target=_print, daemon=True,
+                     name=f"apertura-turno-{turno_id}").start()
+
+    return jsonify({"ok": True, "turno_id": turno_id})
 
 
 @auth_bp.route("/turno/cerrar", methods=["POST"])

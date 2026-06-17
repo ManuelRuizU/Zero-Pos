@@ -617,6 +617,67 @@ def test_conexion() -> dict:
         return {"ok": False, "error": str(e)}
 
 
+# ── APERTURA DE TURNO ────────────────────────────────────────────────────────
+
+def _formatear_apertura_turno(turno: dict, config: dict) -> str:
+    import json as _json
+    N    = ANCHO
+    SEP  = _sep('=', N)
+    SEP2 = _sep2(N)
+
+    nombre_neg = limpiar_texto(config.get("nombre_negocio", "ZERO POS"))
+    terminal   = limpiar_texto(config.get("nombre_terminal", "Caja 1"))
+    cajero     = limpiar_texto(turno.get("cajero", ""))
+
+    apertura_ts = turno.get("apertura") or turno.get("creado_en", "")
+    try:
+        fecha_str = f"{_fecha_ticket(apertura_ts)} {_hora_ticket(apertura_ts)}"
+    except Exception:
+        fecha_str = str(apertura_ts or "")[:16]
+
+    fondo_inicial = int(turno.get("fondo_inicial") or 0)
+
+    def lp(label, val):
+        return _linea_precio(label, val, N)
+
+    lineas = ["\n\n", SEP, nombre_neg.center(N), SEP,
+              "APERTURA DE TURNO".center(N), SEP]
+    lineas.append(f"Turno: #{turno.get('id', '')}")
+    lineas.append(f"Terminal: {terminal}")
+    if cajero:
+        lineas.append(f"Cajero: {cajero}")
+    if fecha_str:
+        lineas.append(f"Fecha:    {fecha_str}")
+
+    lineas += [SEP2, lp("Fondo inicial:", fondo_inicial)]
+
+    denoms_raw = turno.get("denominaciones_apertura")
+    if denoms_raw:
+        try:
+            denoms = _json.loads(denoms_raw) if isinstance(denoms_raw, str) else denoms_raw
+            d_items = sorted(
+                [(int(k), int(v)) for k, v in denoms.items() if int(v) > 0],
+                key=lambda x: -x[0]
+            )
+            if d_items:
+                lineas += [SEP2, "BILLETES Y MONEDAS".center(N), SEP2]
+                for denom, cant in d_items:
+                    label = f"{_clp(denom)} x {cant} ="
+                    lineas.append(lp(label, denom * cant))
+        except Exception:
+            pass
+
+    lineas += [SEP, "¡Listo para vender!".center(N), SEP, "\n\n\n\n\n"]
+    return "\n".join(lineas)
+
+
+def imprimir_apertura_turno(turno: dict, config: dict, config_imp: dict) -> dict:
+    """Imprime el ticket de apertura de turno via enviar_crudo."""
+    texto = _formatear_apertura_turno(turno, config)
+    logger.info(f"Imprimiendo apertura turno #{turno.get('id')}")
+    return enviar_crudo(config_imp, texto, config)
+
+
 # ── CIERRE DE TURNO ───────────────────────────────────────────────────────────
 
 def _formatear_cierre_turno(turno: dict, ventas_resumen: dict, config: dict) -> str:

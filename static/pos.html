@@ -1147,7 +1147,7 @@ body {
 </div>
 
 <!-- ── Modal apertura/cierre turno ──────────────────────────── -->
-<div class="modal-overlay" id="modalTurno" style="display:none;z-index:1400">
+<div class="modal-overlay" id="modalTurno" style="display:none;z-index:10000">
   <div class="modal" style="max-width:400px;width:100%;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
       <div id="modalTurnoTitulo" style="font-size:15px;font-weight:700"></div>
@@ -2547,8 +2547,7 @@ async function _confirmarTurno() {
       document.getElementById('modalTurno').style.display = 'none';
       document.getElementById('overlayTurnoCerrado').style.display = 'none';
       if (_meRol === 'admin' || _meRol === 'propietario') {
-        showToast('Turno abierto', 'success');
-        setTimeout(() => location.href = 'admin.html', 800);
+        location.href = 'admin.html';
       } else {
         showToast('Turno abierto — ¡Listo para vender!', 'success');
       }
