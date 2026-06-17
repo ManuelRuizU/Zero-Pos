@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from flask import Blueprint, request, jsonify, session
-from database import db_session, registrar_movimiento_stock, actualizar_proveedor_producto
+from database import db_session, registrar_movimiento_stock, actualizar_proveedor_producto, log_event
 
 inventario_bp = Blueprint("inventario", __name__, url_prefix="/api/inventario")
 logger = logging.getLogger("zero_pos.inventario")
@@ -296,12 +296,20 @@ def importar_factura():
                 ).fetchone()
                 if row:
                     producto_id = row["id"]
+                    _pc_ant = conn.execute(
+                        "SELECT precio_costo FROM productos WHERE id=?", (producto_id,)
+                    ).fetchone()
                     registrar_movimiento_stock(
                         conn, producto_id, None, "entrada", cantidad,
                         "compra", uid, compra_id=compra_id)
                     conn.execute(
                         "UPDATE productos SET precio_costo=? WHERE id=?",
                         (precio_unit, producto_id))
+                    log_event(conn, 'producto', 'precio_cambio',
+                              entidad_id=producto_id,
+                              payload={'precio_antes': _pc_ant['precio_costo'] if _pc_ant else None,
+                                       'precio_despues': precio_unit},
+                              usuario_id=uid)
                     actualizados += 1
                     if not row["precio"]:
                         sin_precio.append(nombre)
@@ -828,6 +836,10 @@ def crear_lote():
         )
         registrar_movimiento_stock(conn, producto_id, None, "entrada", cantidad, "lote_nuevo",
                                    _auth(), notas=f"Lote {num}")
+        log_event(conn, 'producto', 'stock_entrada',
+                  entidad_id=producto_id,
+                  payload={'cantidad': cantidad, 'lote_id': lote_id, 'lote_numero': num},
+                  usuario_id=_auth())
 
     return jsonify({"ok": True, "lote_id": lote_id, "numero_lote": num}), 201
 

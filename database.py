@@ -36,6 +36,28 @@ def ensure_index(conn, nombre: str, tabla: str, columnas: str) -> bool:
         return False
 
 
+def log_event(conn, entidad: str, accion: str,
+              entidad_id: int = None,
+              payload: dict = None,
+              usuario_id: int = None,
+              usuario_nombre: str = None,
+              device_id: str = None):
+    """Registra un evento en event_log (auditoría no bloqueante)."""
+    import json
+    try:
+        conn.execute(
+            """INSERT INTO event_log
+               (entidad, entidad_id, accion, payload,
+                usuario_id, usuario_nombre, device_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (entidad, entidad_id, accion,
+             json.dumps(payload, ensure_ascii=False) if payload else None,
+             usuario_id, usuario_nombre, device_id)
+        )
+    except Exception as e:
+        logger.warning(f"event_log: error registrando {entidad}.{accion}: {e}")
+
+
 def pesos(valor) -> int:
     """Convierte cualquier valor monetario a entero CLP (sin decimales)."""
     return int(round(float(valor or 0)))
@@ -416,6 +438,26 @@ def _m013_publicidad_plantillas(conn):
     ensure_column(conn, 'publicidad', 'datos_plantilla', 'TEXT', "'{}'")
 
 
+def _m014_event_log(conn):
+    """Tabla de auditoría de eventos: ventas, precios, stock."""
+    conn.execute("""CREATE TABLE IF NOT EXISTS event_log (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid           TEXT NOT NULL DEFAULT (lower(hex(randomblob(16)))),
+        entidad        TEXT NOT NULL,
+        entidad_id     INTEGER,
+        entidad_uuid   TEXT,
+        accion         TEXT NOT NULL,
+        payload        TEXT,
+        usuario_id     INTEGER,
+        usuario_nombre TEXT,
+        device_id      TEXT,
+        created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+        pending_sync   INTEGER DEFAULT 1
+    )""")
+    ensure_index(conn, 'idx_event_log_entidad', 'event_log', 'entidad, entidad_id')
+    ensure_index(conn, 'idx_event_log_pending', 'event_log', 'pending_sync, created_at')
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -430,6 +472,7 @@ _MIGRACIONES = [
     (11, "dia_pago: día de cobro fijo mensual en clientes_fiado",               _m011_dia_pago),
     (12, "publicidad: slides configurables para pantalla cliente",               _m012_publicidad),
     (13, "publicidad: plantilla_id y datos_plantilla para plantillas HTML",       _m013_publicidad_plantillas),
+    (14, "event_log: auditoría de eventos (ventas, precios, stock)",              _m014_event_log),
 ]
 
 

@@ -3,7 +3,8 @@ import threading
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
 from database import (db_session, pesos, registrar_movimiento_stock, tiene_permiso,
-                       encolar_ticket, marcar_ticket_impreso, marcar_ticket_fallido)
+                       encolar_ticket, marcar_ticket_impreso, marcar_ticket_fallido,
+                       log_event)
 from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
@@ -212,6 +213,11 @@ def crear_venta():
                 pedido_data = dict(row)
 
         logger.info(f"Venta #{venta_id} creada por usuario {uid} — total={total}")
+        log_event(conn, 'venta', 'crear',
+                  entidad_id=venta_id,
+                  payload={'total': total, 'metodo': metodo_pago, 'items': len(items_validados)},
+                  usuario_id=uid,
+                  usuario_nombre=session.get('usuario_nombre'))
 
     # La transacción ya está committed. Imprimir sin afectar la respuesta.
     try:
@@ -378,6 +384,7 @@ def anular_venta(vid):
     if not tiene_permiso(dict(session), "puede_anular_ventas"):
         return jsonify({"error": "Sin permisos para anular ventas"}), 403
     uid = session.get("usuario_id")
+    motivo = (request.get_json(silent=True) or {}).get('motivo', '')
 
     with db_session() as conn:
         venta = conn.execute(
@@ -397,6 +404,11 @@ def anular_venta(vid):
         conn.execute(
             "UPDATE ventas SET estado='anulada' WHERE id=?", (vid,)
         )
+        log_event(conn, 'venta', 'anular',
+                  entidad_id=vid,
+                  payload={'motivo': motivo} if motivo else None,
+                  usuario_id=uid,
+                  usuario_nombre=session.get('usuario_nombre'))
         return jsonify({"ok": True})
 
 
