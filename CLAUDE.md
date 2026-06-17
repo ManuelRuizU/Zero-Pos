@@ -218,6 +218,26 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 | uuid + updated_at + deleted_at | **Pendiente** | Agregar antes del primer cliente real |
 | Services/domain layer | **Pendiente** | Cuando haya 5+ clientes activos |
 
+### Fase 1 Sync — COMPLETADA (migración _m015)
+- uuid agregado en: productos, ventas, clientes, usuarios, categorias, turnos, pedidos
+- updated_at, deleted_at, origin_device agregados
+- 539 registros existentes poblados con uuid
+- Triggers: trg_productos_updated_at, trg_ventas_updated_at
+- Índices: idx_productos_uuid, idx_ventas_uuid, idx_clientes_uuid, idx_usuarios_uuid
+- NO modificar estos campos — son base de ZERO CLOUD
+
+### Fase 2 Sync — PENDIENTE
+- device_id en config (identificar cada instalación)
+- Tabla devices para registry de equipos
+- Ampliar event_log para cola de sincronización
+
+### Reglas de migración
+- SIEMPRE usar ensure_column() para nuevas columnas
+- SIEMPRE usar ensure_index() para nuevos índices
+- NUNCA usar ALTER TABLE con try/except directamente
+- Cada migración va en función _mXXX() en database.py
+- Poblar uuid en registros existentes al agregar columna
+
 ---
 
 ## Reglas de trabajo obligatorias
