@@ -458,6 +458,79 @@ def _m014_event_log(conn):
     ensure_index(conn, 'idx_event_log_pending', 'event_log', 'pending_sync, created_at')
 
 
+def _m015_sync_columns(conn):
+    """Fase 1 sync: uuid, updated_at, deleted_at, origin_device en tablas principales."""
+    # Tablas con las 4 columnas
+    for tabla in ('productos', 'ventas', 'clientes', 'usuarios'):
+        ensure_column(conn, tabla, 'uuid',          'TEXT')
+        ensure_column(conn, tabla, 'updated_at',    'DATETIME')
+        ensure_column(conn, tabla, 'deleted_at',    'DATETIME')
+        ensure_column(conn, tabla, 'origin_device', 'TEXT')
+
+    # categorias — sin origin_device
+    ensure_column(conn, 'categorias', 'uuid',       'TEXT')
+    ensure_column(conn, 'categorias', 'updated_at', 'DATETIME')
+    ensure_column(conn, 'categorias', 'deleted_at', 'DATETIME')
+
+    # turnos — sin deleted_at
+    ensure_column(conn, 'turnos', 'uuid',          'TEXT')
+    ensure_column(conn, 'turnos', 'updated_at',    'DATETIME')
+    ensure_column(conn, 'turnos', 'origin_device', 'TEXT')
+
+    # pedidos — puede no existir todavía
+    for col, tipo in [('uuid', 'TEXT'), ('updated_at', 'DATETIME'),
+                      ('deleted_at', 'DATETIME'), ('origin_device', 'TEXT')]:
+        try:
+            ensure_column(conn, 'pedidos', col, tipo)
+        except Exception as e:
+            logger.debug(f"_m015 pedidos.{col}: {e}")
+
+    # Poblar uuid en registros sin él
+    for tabla in ('productos', 'ventas', 'clientes', 'usuarios', 'turnos', 'categorias'):
+        try:
+            conn.execute(
+                f"UPDATE {tabla} SET uuid = lower(hex(randomblob(16))) WHERE uuid IS NULL"
+            )
+        except Exception as e:
+            logger.debug(f"_m015 uuid {tabla}: {e}")
+    try:
+        conn.execute(
+            "UPDATE pedidos SET uuid = lower(hex(randomblob(16))) WHERE uuid IS NULL"
+        )
+    except Exception as e:
+        logger.debug(f"_m015 uuid pedidos: {e}")
+
+    # Índices en uuid
+    ensure_index(conn, 'idx_productos_uuid', 'productos', 'uuid')
+    ensure_index(conn, 'idx_ventas_uuid',    'ventas',    'uuid')
+    ensure_index(conn, 'idx_clientes_uuid',  'clientes',  'uuid')
+    ensure_index(conn, 'idx_usuarios_uuid',  'usuarios',  'uuid')
+
+    # Triggers updated_at (recursive_triggers OFF por defecto — sin riesgo de loop)
+    try:
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS trg_productos_updated_at
+            AFTER UPDATE ON productos
+            BEGIN
+                UPDATE productos SET updated_at = CURRENT_TIMESTAMP
+                WHERE id = NEW.id;
+            END
+        """)
+    except Exception as e:
+        logger.debug(f"_m015 trigger productos: {e}")
+    try:
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS trg_ventas_updated_at
+            AFTER UPDATE ON ventas
+            BEGIN
+                UPDATE ventas SET updated_at = CURRENT_TIMESTAMP
+                WHERE id = NEW.id;
+            END
+        """)
+    except Exception as e:
+        logger.debug(f"_m015 trigger ventas: {e}")
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -473,6 +546,7 @@ _MIGRACIONES = [
     (12, "publicidad: slides configurables para pantalla cliente",               _m012_publicidad),
     (13, "publicidad: plantilla_id y datos_plantilla para plantillas HTML",       _m013_publicidad_plantillas),
     (14, "event_log: auditoría de eventos (ventas, precios, stock)",              _m014_event_log),
+    (15, "Fase 1 sync: uuid, updated_at, deleted_at, origin_device tablas base", _m015_sync_columns),
 ]
 
 
