@@ -649,8 +649,8 @@ def _formatear_cierre_turno(turno: dict, ventas_resumen: dict, config: dict) -> 
 
     fondo_inicial = int(turno.get("fondo_inicial") or 0)
     fondo_final   = int(turno.get("fondo_final") or 0)
-    ef_esperado   = fondo_inicial + efectivo
-    descuadre     = fondo_final - ef_esperado
+    ef_teorico    = fondo_inicial + efectivo   # fondo + cobros (reembolsos = 0)
+    descuadre     = fondo_final - ef_teorico
 
     def lp(label, val):
         return _linea_precio(label, val, N)
@@ -659,23 +659,36 @@ def _formatear_cierre_turno(turno: dict, ventas_resumen: dict, config: dict) -> 
         s = str(val)
         return label[:N - len(s)].ljust(N - len(s)) + s
 
-    lineas = ["\n\n", SEP, nombre_neg.center(N)]
+    lineas = ["\n\n"]
+
+    # 1. HEADER NEGOCIO
+    lineas += [SEP, nombre_neg.center(N)]
     if direccion_neg:
         lineas.append(direccion_neg.center(N))
     if telefono_neg:
         lineas.append(telefono_neg.center(N))
+
+    # 2. CIERRE DE TURNO — número, terminal, cajero
     lineas += [SEP, "CIERRE DE TURNO".center(N), SEP]
     lineas.append(f"Turno: #{turno.get('id', '')}")
     lineas.append(f"Terminal: {terminal}")
     if cajero:
         lineas.append(f"Cajero: {cajero}")
+
+    # 3. APERTURA Y CIERRE
     if apertura_str:
         lineas.append(f"Apertura: {apertura_str}")
     if cierre_str:
         lineas.append(f"Cierre:   {cierre_str}")
 
+    # 4. VENTAS DEL TURNO
     lineas += [SEP2, "VENTAS DEL TURNO".center(N), SEP2]
     lineas.append(lc("Transacciones:", ventas_count))
+    lineas.append(lp("Ventas brutas:", total_ventas))
+    lineas.append(lp("Reembolsos:", 0))
+    lineas.append(lp("Descuentos:", 0))
+    lineas.append(lp("Ventas netas:", total_ventas))
+    lineas.append(SEP2)
     if efectivo:
         lineas.append(lp("Efectivo:", efectivo))
     if tarjeta:
@@ -684,12 +697,15 @@ def _formatear_cierre_turno(turno: dict, ventas_resumen: dict, config: dict) -> 
         lineas.append(lp("Transferencia:", transferencia))
     if credito:
         lineas.append(lp("Credito (fiado):", credito))
-    lineas.append(lp("TOTAL:", total_ventas))
 
-    lineas += [SEP2, "ARQUEO DE CAJA".center(N), SEP2]
+    # 5. CAJÓN DE EFECTIVO
+    lineas += [SEP2, "CAJON DE EFECTIVO".center(N), SEP2]
     lineas.append(lp("Fondo inicial:", fondo_inicial))
-    lineas.append(lp("Ventas efectivo:", efectivo))
-    lineas.append(lp("Efectivo esperado:", ef_esperado))
+    lineas.append(lp("Cobros efectivo:", efectivo))
+    lineas.append(lp("Reembolsos efectivo:", 0))
+    lineas.append(lp("Depositado:", 0))
+    lineas.append(lp("Pagos/Salidas:", 0))
+    lineas.append(lp("Efectivo teorico:", ef_teorico))
     lineas.append(lp("Efectivo real:", fondo_final))
     if descuadre == 0:
         lineas.append("CUADRE EXACTO OK".center(N))
@@ -698,7 +714,7 @@ def _formatear_cierre_turno(turno: dict, ventas_resumen: dict, config: dict) -> 
     else:
         lineas.append(lp("FALTANTE:", abs(descuadre)))
 
-    # Denominaciones cierre
+    # 6. BILLETES Y MONEDAS
     denoms_raw = turno.get("denominaciones_cierre")
     if denoms_raw:
         try:
@@ -715,6 +731,7 @@ def _formatear_cierre_turno(turno: dict, ventas_resumen: dict, config: dict) -> 
         except Exception:
             pass
 
+    # 7. FOOTER
     now = datetime.now()
     lineas += [
         SEP,
