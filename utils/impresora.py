@@ -617,6 +617,123 @@ def test_conexion() -> dict:
         return {"ok": False, "error": str(e)}
 
 
+# ── CIERRE DE TURNO ───────────────────────────────────────────────────────────
+
+def _formatear_cierre_turno(turno: dict, ventas_resumen: dict, config: dict) -> str:
+    import json as _json
+    N    = ANCHO
+    SEP  = _sep('=', N)
+    SEP2 = _sep2(N)
+
+    nombre_neg    = limpiar_texto(config.get("nombre_negocio", "ZERO POS"))
+    direccion_neg = limpiar_texto(config.get("direccion_negocio", ""))
+    telefono_neg  = limpiar_texto(config.get("telefono_negocio", ""))
+    terminal      = limpiar_texto(config.get("nombre_terminal", "Caja 1"))
+    cajero        = limpiar_texto(turno.get("cajero", ""))
+
+    def _ap(ts):
+        try:
+            return f"{_fecha_ticket(ts)} {_hora_ticket(ts)}"
+        except Exception:
+            return str(ts or "")[:16]
+
+    apertura_str = _ap(turno.get("apertura") or turno.get("creado_en", ""))
+    cierre_str   = _ap(turno.get("cierre", ""))
+
+    efectivo      = int(ventas_resumen.get("efectivo", 0))
+    tarjeta       = int(ventas_resumen.get("tarjeta", 0))
+    transferencia = int(ventas_resumen.get("transferencia", 0))
+    credito       = int(ventas_resumen.get("credito", 0))
+    total_ventas  = int(ventas_resumen.get("total", 0))
+    ventas_count  = int(ventas_resumen.get("ventas_count", 0))
+
+    fondo_inicial = int(turno.get("fondo_inicial") or 0)
+    fondo_final   = int(turno.get("fondo_final") or 0)
+    ef_esperado   = fondo_inicial + efectivo
+    descuadre     = fondo_final - ef_esperado
+
+    def lp(label, val):
+        return _linea_precio(label, val, N)
+
+    def lc(label, val):
+        s = str(val)
+        return label[:N - len(s)].ljust(N - len(s)) + s
+
+    lineas = ["\n\n", SEP, nombre_neg.center(N)]
+    if direccion_neg:
+        lineas.append(direccion_neg.center(N))
+    if telefono_neg:
+        lineas.append(telefono_neg.center(N))
+    lineas += [SEP, "CIERRE DE TURNO".center(N), SEP]
+    lineas.append(f"Turno: #{turno.get('id', '')}")
+    lineas.append(f"Terminal: {terminal}")
+    if cajero:
+        lineas.append(f"Cajero: {cajero}")
+    if apertura_str:
+        lineas.append(f"Apertura: {apertura_str}")
+    if cierre_str:
+        lineas.append(f"Cierre:   {cierre_str}")
+
+    lineas += [SEP2, "VENTAS DEL TURNO".center(N), SEP2]
+    lineas.append(lc("Transacciones:", ventas_count))
+    if efectivo:
+        lineas.append(lp("Efectivo:", efectivo))
+    if tarjeta:
+        lineas.append(lp("Tarjeta:", tarjeta))
+    if transferencia:
+        lineas.append(lp("Transferencia:", transferencia))
+    if credito:
+        lineas.append(lp("Credito (fiado):", credito))
+    lineas.append(lp("TOTAL:", total_ventas))
+
+    lineas += [SEP2, "ARQUEO DE CAJA".center(N), SEP2]
+    lineas.append(lp("Fondo inicial:", fondo_inicial))
+    lineas.append(lp("Ventas efectivo:", efectivo))
+    lineas.append(lp("Efectivo esperado:", ef_esperado))
+    lineas.append(lp("Efectivo real:", fondo_final))
+    if descuadre == 0:
+        lineas.append("CUADRE EXACTO OK".center(N))
+    elif descuadre > 0:
+        lineas.append(lp("SOBRANTE:", descuadre))
+    else:
+        lineas.append(lp("FALTANTE:", abs(descuadre)))
+
+    # Denominaciones cierre
+    denoms_raw = turno.get("denominaciones_cierre")
+    if denoms_raw:
+        try:
+            denoms = _json.loads(denoms_raw) if isinstance(denoms_raw, str) else denoms_raw
+            d_items = sorted(
+                [(int(k), int(v)) for k, v in denoms.items() if int(v) > 0],
+                key=lambda x: -x[0]
+            )
+            if d_items:
+                lineas += [SEP2, "BILLETES Y MONEDAS".center(N), SEP2]
+                for denom, cant in d_items:
+                    label = f"{_clp(denom)} x {cant} ="
+                    lineas.append(lp(label, denom * cant))
+        except Exception:
+            pass
+
+    now = datetime.now()
+    lineas += [
+        SEP,
+        f"{_fecha_ticket(now)}  {_hora_ticket(now)}".center(N),
+        "ZERO POS".center(N),
+        SEP,
+        "\n\n\n\n\n",
+    ]
+    return "\n".join(lineas)
+
+
+def imprimir_cierre_turno(turno: dict, ventas_resumen: dict,
+                           config: dict, config_imp: dict) -> dict:
+    """Imprime el ticket de cierre de turno via enviar_crudo."""
+    texto = _formatear_cierre_turno(turno, ventas_resumen, config)
+    logger.info(f"Imprimiendo cierre turno #{turno.get('id')}")
+    return enviar_crudo(config_imp, texto, config)
+
+
 # ── FORMATOS TEXTO (simulación / logs) ────────────────────────────────────────
 
 def _formatear_texto(venta: dict, items: list, config: dict,

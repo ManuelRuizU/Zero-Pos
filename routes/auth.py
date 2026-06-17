@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 import time
 from collections import defaultdict
 from flask import Blueprint, request, jsonify, session
@@ -225,6 +226,11 @@ def cerrar_turno():
         fondo_final = float(data.get("fondo_final", 0))
     denoms_json = json.dumps(denoms) if denoms else None
 
+    turno_data = None
+    ventas_resumen = {}
+    config_negocio = {}
+    config_imp = {}
+
     with db_session() as conn:
         turno = conn.execute(
             "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
@@ -232,14 +238,109 @@ def cerrar_turno():
         if not turno:
             return jsonify({"error": "No hay turno abierto"}), 404
 
+        turno_id = turno["id"]
         conn.execute(
             """UPDATE turnos SET estado='cerrado', cierre=CURRENT_TIMESTAMP,
                fondo_final=?, denominaciones_cierre=?
                WHERE id=?""",
-            (fondo_final, denoms_json, turno["id"])
+            (fondo_final, denoms_json, turno_id)
         )
-        session.pop("turno_id", None)
-        return jsonify({"ok": True})
+
+        # Turno completo post-UPDATE (cierre ya está seteado)
+        row = conn.execute(
+            """SELECT t.*, u.nombre as cajero
+               FROM turnos t JOIN usuarios u ON t.usuario_id=u.id
+               WHERE t.id=?""",
+            (turno_id,)
+        ).fetchone()
+        if row:
+            turno_data = dict(row)
+
+        # Ventas del turno agrupadas por método de pago
+        rows = conn.execute(
+            """SELECT metodo_pago, COALESCE(SUM(total),0) as subtotal, COUNT(*) as n
+               FROM ventas WHERE turno_id=? AND estado='completada'
+               GROUP BY metodo_pago""",
+            (turno_id,)
+        ).fetchall()
+        for r in rows:
+            m = (r["metodo_pago"] or "").lower()
+            amt = int(r["subtotal"])
+            ventas_resumen["total"] = ventas_resumen.get("total", 0) + amt
+            ventas_resumen["ventas_count"] = ventas_resumen.get("ventas_count", 0) + int(r["n"])
+            if "efectivo" in m:
+                ventas_resumen["efectivo"] = ventas_resumen.get("efectivo", 0) + amt
+            elif "tarjeta" in m:
+                ventas_resumen["tarjeta"] = ventas_resumen.get("tarjeta", 0) + amt
+            elif "transferencia" in m:
+                ventas_resumen["transferencia"] = ventas_resumen.get("transferencia", 0) + amt
+            else:
+                ventas_resumen["credito"] = ventas_resumen.get("credito", 0) + amt
+
+        # Config para ticket e impresora
+        cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+        config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
+        config_imp = {
+            "tipo":   config_negocio.get("impresora_tipo", "red"),
+            "ip":     config_negocio.get("impresora_ip", "192.168.1.100"),
+            "puerto": config_negocio.get("impresora_puerto", "9100"),
+        }
+
+    session.pop("turno_id", None)
+
+    if turno_data:
+        def _print():
+            try:
+                from utils.impresora import imprimir_cierre_turno
+                imprimir_cierre_turno(turno_data, ventas_resumen, config_negocio, config_imp)
+            except Exception as e:
+                logger.warning(f"Error imprimiendo cierre turno: {e}")
+
+        threading.Thread(target=_print, daemon=True,
+                         name=f"cierre-turno-{turno_data.get('id')}").start()
+
+    return jsonify({"ok": True})
+
+
+@auth_bp.route("/turno/resumen", methods=["GET"])
+def turno_resumen():
+    """Resumen de ventas del turno abierto actual."""
+    uid = session.get("usuario_id")
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+
+    with db_session() as conn:
+        turno = conn.execute(
+            "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
+        ).fetchone()
+        if not turno:
+            return jsonify({"ventas_count": 0, "total": 0,
+                            "efectivo": 0, "tarjeta": 0,
+                            "transferencia": 0, "credito": 0})
+
+        rows = conn.execute(
+            """SELECT metodo_pago, COALESCE(SUM(total),0) as subtotal, COUNT(*) as n
+               FROM ventas WHERE turno_id=? AND estado='completada'
+               GROUP BY metodo_pago""",
+            (turno["id"],)
+        ).fetchall()
+
+    resumen = {"ventas_count": 0, "total": 0,
+               "efectivo": 0, "tarjeta": 0, "transferencia": 0, "credito": 0}
+    for r in rows:
+        m = (r["metodo_pago"] or "").lower()
+        amt = int(r["subtotal"])
+        resumen["total"] += amt
+        resumen["ventas_count"] += int(r["n"])
+        if "efectivo" in m:
+            resumen["efectivo"] += amt
+        elif "tarjeta" in m:
+            resumen["tarjeta"] += amt
+        elif "transferencia" in m:
+            resumen["transferencia"] += amt
+        else:
+            resumen["credito"] += amt
+    return jsonify(resumen)
 
 
 @auth_bp.route("/turno/actual", methods=["GET"])

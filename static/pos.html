@@ -1126,6 +1126,27 @@ body {
     </div>
     <div style="overflow-y:auto;flex:1;padding:16px">
       <p id="modalTurnoDesc" style="font-size:13px;color:var(--text-dim);margin:0 0 16px"></p>
+      <!-- Resumen ventas (modo cierre) -->
+      <div id="turnoResumenCierre" style="display:none;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--surface-alt,#f3f4f6);border-radius:8px;padding:10px;text-align:center">
+            <div id="trVentas" style="font-size:22px;font-weight:900">0</div>
+            <div style="font-size:11px;color:var(--text-dim)">ventas realizadas</div>
+          </div>
+          <div style="background:var(--surface-alt,#f3f4f6);border-radius:8px;padding:10px;text-align:center">
+            <div id="trTotal" style="font-size:20px;font-weight:900">$0</div>
+            <div style="font-size:11px;color:var(--text-dim)">Total</div>
+          </div>
+          <div style="background:var(--surface-alt,#f3f4f6);border-radius:8px;padding:10px;text-align:center">
+            <div id="trEfectivo" style="font-size:16px;font-weight:700">$0</div>
+            <div style="font-size:11px;color:var(--text-dim)">Efectivo</div>
+          </div>
+          <div style="background:var(--surface-alt,#f3f4f6);border-radius:8px;padding:10px;text-align:center">
+            <div id="trOtros" style="font-size:16px;font-weight:700">$0</div>
+            <div style="font-size:11px;color:var(--text-dim)">Otros</div>
+          </div>
+        </div>
+      </div>
       <!-- Contador denominaciones -->
       <div id="modalTurnoDenoms" style="display:none">
         <div style="font-size:12px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Contar efectivo (opcional)</div>
@@ -2432,6 +2453,22 @@ async function _abrirModalTurno(modo) {
   denoms.style.display = '';
   document.querySelectorAll('#modalTurnoDenoms input[data-denom]').forEach(i => i.value = 0);
   _calcTurnoTotal();
+
+  // Resumen de ventas al cerrar
+  const resumenDiv = document.getElementById('turnoResumenCierre');
+  if (modo === 'cerrar') {
+    resumenDiv.style.display = '';
+    fetch('/api/auth/turno/resumen', {credentials:'include'})
+      .then(r => r.json()).then(res => {
+        document.getElementById('trVentas').textContent   = res.ventas_count ?? 0;
+        document.getElementById('trTotal').textContent    = fmt(res.total ?? 0);
+        document.getElementById('trEfectivo').textContent = fmt(res.efectivo ?? 0);
+        const otros = (res.tarjeta||0) + (res.transferencia||0) + (res.credito||0);
+        document.getElementById('trOtros').textContent    = fmt(otros);
+      }).catch(() => {});
+  } else {
+    resumenDiv.style.display = 'none';
+  }
 
   document.getElementById('modalTurno').style.display = 'flex';
 }
