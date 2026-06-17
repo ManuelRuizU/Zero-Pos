@@ -280,7 +280,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
             tipo = pedido.get("tipo", "local")
             p.text(f"Pedido: {cliente_n} - {hora_str}\n")
             p.text(f"Empleado: {cajero}\n")
-            p.text("Terminal: ZERO POS\n")
+            p.text(f"Terminal: {config.get('nombre_terminal', 'ZERO POS')}\n")
             p.text(SEP + "\n")
 
             # Bloque cliente
@@ -326,7 +326,7 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
         else:
             p.text(f"Venta #{venta['id']} - {hora_str}\n")
             p.text(f"Empleado: {cajero}\n")
-            p.text("Terminal: ZERO POS\n")
+            p.text(f"Terminal: {config.get('nombre_terminal', 'ZERO POS')}\n")
             p.text(SEP + "\n")
 
         # ── ITEMS ─────────────────────────────────────────────────
@@ -650,7 +650,7 @@ def _formatear_texto(venta: dict, items: list, config: dict,
         lineas += [
             f"Pedido: {cliente_n} - {hora_str}",
             f"Empleado: {cajero}",
-            "Terminal: ZERO POS",
+            f"Terminal: {config.get('nombre_terminal', 'ZERO POS')}",
             SEP,
         ]
         if receptor_n:
@@ -690,7 +690,7 @@ def _formatear_texto(venta: dict, items: list, config: dict,
         lineas += [
             f"Venta #{venta['id']} - {hora_str}",
             f"Empleado: {cajero}",
-            "Terminal: ZERO POS",
+            f"Terminal: {config.get('nombre_terminal', 'ZERO POS')}",
             SEP,
         ]
 

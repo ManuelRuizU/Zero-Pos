@@ -893,6 +893,9 @@ def _seed_defaults(conn: sqlite3.Connection):
     conn.execute(
         "INSERT OR IGNORE INTO config (clave, valor) VALUES ('mensaje_ticket', '¡Gracias por preferirnos!')"
     )
+    conn.execute(
+        "INSERT OR IGNORE INTO config (clave, valor) VALUES ('nombre_terminal', 'Caja 1')"
+    )
 
     import bcrypt
     pin_default = b"1234"
