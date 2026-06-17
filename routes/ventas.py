@@ -9,7 +9,30 @@ from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
 
-# Estado en memoria para pantalla cliente (Orange Pi = servidor único)
+# ── Caché de configuración (TTL 60 s) ────────────────────────────────────────
+_config_cache: dict = {}
+_config_cache_ts: float = 0.0
+_CONFIG_TTL = 60  # segundos
+
+
+def _get_config_cached(conn) -> dict:
+    global _config_cache, _config_cache_ts
+    import time
+    ahora = time.time()
+    if ahora - _config_cache_ts < _CONFIG_TTL and _config_cache:
+        return _config_cache
+    rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+    _config_cache = {r["clave"]: r["valor"] for r in rows}
+    _config_cache_ts = ahora
+    return _config_cache
+
+
+def invalidar_config_cache() -> None:
+    global _config_cache_ts
+    _config_cache_ts = 0.0
+
+
+# ── Estado en memoria para pantalla cliente (Orange Pi = servidor único) ─────
 _pantalla: dict = {
     "items": [], "total": 0, "subtotal": 0, "iva": 0,
     "metodo_pago": "", "monto_recibido": 0, "vuelto": 0,
@@ -143,8 +166,7 @@ def crear_venta():
             })
 
         total = pesos(total - descuento_global)
-        cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
-        config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
+        config_negocio = _get_config_cached(conn)
 
         iva_pct = float(config_negocio.get("iva_porcentaje") or 19)
         impuesto = pesos(total * iva_pct / (100 + iva_pct))
@@ -183,14 +205,18 @@ def crear_venta():
                  it["precio_unit"], it["descuento"], it["subtotal"],
                  it.get("lote_id"), it.get("modificadores_desc"))
             )
-            if it.get("variante_id"):
-                registrar_movimiento_stock(
-                    conn, it["producto_id"], it["variante_id"],
-                    "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
-            elif it.get("modo_stock") != "sin_stock":
-                registrar_movimiento_stock(
-                    conn, it["producto_id"], None,
-                    "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
+            try:
+                if it.get("variante_id"):
+                    registrar_movimiento_stock(
+                        conn, it["producto_id"], it["variante_id"],
+                        "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
+                elif it.get("modo_stock") != "sin_stock":
+                    registrar_movimiento_stock(
+                        conn, it["producto_id"], None,
+                        "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
+            except ValueError as e:
+                conn.rollback()
+                return jsonify({"error": str(e)}), 409
             if it.get("modo_stock") != "sin_stock":
                 _check_stock_alerta(conn, it["producto_id"])
             # Descontar del lote si aplica
@@ -477,8 +503,7 @@ def venta_rapida():
     venta_id = None
 
     with db_session() as conn:
-        cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
-        config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
+        config_negocio = _get_config_cached(conn)
         config_imp = {
             "tipo": config_negocio.get("impresora_tipo", "red"),
             "ip": config_negocio.get("impresora_ip", "192.168.1.100"),

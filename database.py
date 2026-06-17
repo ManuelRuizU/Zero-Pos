@@ -78,8 +78,11 @@ def registrar_movimiento_stock(conn, producto_id, variante_id, tipo, cantidad,
         ).fetchone()
         stock_antes = int(row["stock"]) if row else 0
         if tipo == "salida":
-            conn.execute("UPDATE producto_variantes SET stock=stock-? WHERE id=?",
-                         (cantidad, variante_id))
+            result = conn.execute(
+                "UPDATE producto_variantes SET stock=stock-? WHERE id=? AND stock>=?",
+                (cantidad, variante_id, cantidad))
+            if result.rowcount == 0:
+                raise ValueError(f"Stock insuficiente para variante #{variante_id}")
             stock_despues = stock_antes - cantidad
         elif tipo == "ajuste":
             conn.execute("UPDATE producto_variantes SET stock=? WHERE id=?",
@@ -96,9 +99,11 @@ def registrar_movimiento_stock(conn, producto_id, variante_id, tipo, cantidad,
         ).fetchone()
         stock_antes = int(row["stock"]) if row else 0
         if tipo == "salida":
-            conn.execute(
-                "UPDATE productos SET stock=stock-?, actualizado_en=CURRENT_TIMESTAMP WHERE id=?",
-                (cantidad, producto_id))
+            result = conn.execute(
+                "UPDATE productos SET stock=stock-?, actualizado_en=CURRENT_TIMESTAMP WHERE id=? AND stock>=?",
+                (cantidad, producto_id, cantidad))
+            if result.rowcount == 0:
+                raise ValueError(f"Stock insuficiente para producto #{producto_id}")
             stock_despues = stock_antes - cantidad
         elif tipo == "ajuste":
             conn.execute(
@@ -531,6 +536,22 @@ def _m015_sync_columns(conn):
         logger.debug(f"_m015 trigger ventas: {e}")
 
 
+def _m016_stock_mov_sync(conn):
+    """stock_movimientos: referencia genérica, uuid y origin_device para sync."""
+    ensure_column(conn, 'stock_movimientos', 'referencia_tipo', 'TEXT')
+    ensure_column(conn, 'stock_movimientos', 'referencia_id',   'INTEGER')
+    ensure_column(conn, 'stock_movimientos', 'uuid',            'TEXT')
+    ensure_column(conn, 'stock_movimientos', 'origin_device',   'TEXT')
+    try:
+        conn.execute(
+            "UPDATE stock_movimientos SET uuid = lower(hex(randomblob(16))) WHERE uuid IS NULL"
+        )
+    except Exception as e:
+        logger.debug(f"_m016 uuid stock_movimientos: {e}")
+    ensure_index(conn, 'idx_stock_mov_producto',   'stock_movimientos', 'producto_id, creado_en')
+    ensure_index(conn, 'idx_stock_mov_referencia', 'stock_movimientos', 'referencia_tipo, referencia_id')
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -547,6 +568,7 @@ _MIGRACIONES = [
     (13, "publicidad: plantilla_id y datos_plantilla para plantillas HTML",       _m013_publicidad_plantillas),
     (14, "event_log: auditoría de eventos (ventas, precios, stock)",              _m014_event_log),
     (15, "Fase 1 sync: uuid, updated_at, deleted_at, origin_device tablas base", _m015_sync_columns),
+    (16, "stock_movimientos: referencia_tipo/id, uuid, origin_device e índices", _m016_stock_mov_sync),
 ]
 
 

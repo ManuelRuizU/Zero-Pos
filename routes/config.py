@@ -77,6 +77,9 @@ def guardar():
     with db_session() as conn:
         upsert_config(conn, data)
 
+    from routes.ventas import invalidar_config_cache
+    invalidar_config_cache()
+
     logger.info(f"Config actualizada: {list(data.keys())}")
     return jsonify({"ok": True})
 
