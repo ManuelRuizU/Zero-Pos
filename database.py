@@ -9,6 +9,33 @@ DB_PATH = BASE_DIR / "zero_pos.db"
 logger = logging.getLogger("zero_pos.db")
 
 
+def ensure_column(conn, tabla: str, columna: str, tipo: str, default: str = None) -> bool:
+    """Agrega una columna a una tabla si no existe. Retorna True si la agregó."""
+    try:
+        cols = [row[1] for row in conn.execute(f"PRAGMA table_info({tabla})")]
+        if columna not in cols:
+            sql = f"ALTER TABLE {tabla} ADD COLUMN {columna} {tipo}"
+            if default is not None:
+                sql += f" DEFAULT {default}"
+            conn.execute(sql)
+            logger.info(f"DB: columna {tabla}.{columna} agregada")
+            return True
+        return False
+    except Exception as e:
+        logger.warning(f"DB: error ensure_column {tabla}.{columna}: {e}")
+        return False
+
+
+def ensure_index(conn, nombre: str, tabla: str, columnas: str) -> bool:
+    """Crea un índice si no existe. columnas: string con columnas separadas por coma."""
+    try:
+        conn.execute(f"CREATE INDEX IF NOT EXISTS {nombre} ON {tabla} ({columnas})")
+        return True
+    except Exception as e:
+        logger.warning(f"DB: error ensure_index {nombre}: {e}")
+        return False
+
+
 def pesos(valor) -> int:
     """Convierte cualquier valor monetario a entero CLP (sin decimales)."""
     return int(round(float(valor or 0)))
@@ -128,7 +155,6 @@ def db_session():
 
 def _m001_stock_trazabilidad(conn):
     """Añade columnas de trazabilidad a stock_movimientos."""
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(stock_movimientos)").fetchall()}
     for col, defn in [
         ("variante_id",   "INTEGER"),
         ("stock_antes",   "INTEGER"),
@@ -139,13 +165,9 @@ def _m001_stock_trazabilidad(conn):
         ("devolucion_id", "INTEGER"),
         ("notas",         "TEXT"),
     ]:
-        if col not in cols:
-            conn.execute(f"ALTER TABLE stock_movimientos ADD COLUMN {col} {defn}")
-    try:
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_smov_venta ON stock_movimientos(venta_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_smov_compra ON stock_movimientos(compra_id)")
-    except Exception:
-        pass
+        ensure_column(conn, 'stock_movimientos', col, defn)
+    ensure_index(conn, 'idx_smov_venta', 'stock_movimientos', 'venta_id')
+    ensure_index(conn, 'idx_smov_compra', 'stock_movimientos', 'compra_id')
 
 
 def _m002_proveedor_productos(conn):
@@ -163,11 +185,8 @@ def _m002_proveedor_productos(conn):
         activo                INTEGER NOT NULL DEFAULT 1,
         UNIQUE(proveedor_id, producto_id)
     )""")
-    try:
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_pp_proveedor ON proveedor_productos(proveedor_id)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_pp_producto  ON proveedor_productos(producto_id)")
-    except Exception:
-        pass
+    ensure_index(conn, 'idx_pp_proveedor', 'proveedor_productos', 'proveedor_id')
+    ensure_index(conn, 'idx_pp_producto', 'proveedor_productos', 'producto_id')
 
 
 def _m003_indices_analiticos(conn):
@@ -209,25 +228,15 @@ def _m007_lotes_vencimientos(conn):
         notas       TEXT,
         creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
     )""")
-    for idx, sql in [
-        ("idx_lotes_producto", "CREATE INDEX IF NOT EXISTS idx_lotes_producto ON lotes(producto_id, estado)"),
-        ("idx_lotes_venc",     "CREATE INDEX IF NOT EXISTS idx_lotes_venc ON lotes(fecha_vencimiento)"),
-        ("idx_mermas_producto","CREATE INDEX IF NOT EXISTS idx_mermas_producto ON mermas(producto_id)"),
-    ]:
-        try:
-            conn.execute(sql)
-        except Exception:
-            pass
+    ensure_index(conn, 'idx_lotes_producto', 'lotes', 'producto_id, estado')
+    ensure_index(conn, 'idx_lotes_venc', 'lotes', 'fecha_vencimiento')
+    ensure_index(conn, 'idx_mermas_producto', 'mermas', 'producto_id')
 
     # Columna tiene_lotes en productos (0 = sin control de lotes, 1 = activado)
-    cols_p = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
-    if "tiene_lotes" not in cols_p:
-        conn.execute("ALTER TABLE productos ADD COLUMN tiene_lotes INTEGER NOT NULL DEFAULT 0")
+    ensure_column(conn, 'productos', 'tiene_lotes', 'INTEGER NOT NULL DEFAULT 0')
 
     # Columna lote_id en venta_items para trazabilidad
-    cols_vi = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
-    if "lote_id" not in cols_vi:
-        conn.execute("ALTER TABLE venta_items ADD COLUMN lote_id INTEGER REFERENCES lotes(id)")
+    ensure_column(conn, 'venta_items', 'lote_id', 'INTEGER REFERENCES lotes(id)')
 
 
 def _m006_cola_impresion(conn):
@@ -244,10 +253,7 @@ def _m006_cola_impresion(conn):
         creado_en      DATETIME DEFAULT CURRENT_TIMESTAMP,
         actualizado_en DATETIME DEFAULT CURRENT_TIMESTAMP
     )""")
-    try:
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_cola_estado ON cola_impresion(estado, creado_en)")
-    except Exception:
-        pass
+    ensure_index(conn, 'idx_cola_estado', 'cola_impresion', 'estado, creado_en')
 
 
 def _m004_metricas_agregadas(conn):
@@ -295,11 +301,8 @@ def _m004_metricas_agregadas(conn):
 
 def _m005_usuarios_permisos_sucursal(conn):
     """Agrega sucursal_id y permisos a usuarios."""
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(usuarios)").fetchall()}
-    if "sucursal_id" not in cols:
-        conn.execute("ALTER TABLE usuarios ADD COLUMN sucursal_id INTEGER REFERENCES sucursales(id)")
-    if "permisos" not in cols:
-        conn.execute("ALTER TABLE usuarios ADD COLUMN permisos TEXT DEFAULT NULL")
+    ensure_column(conn, 'usuarios', 'sucursal_id', 'INTEGER REFERENCES sucursales(id)')
+    ensure_column(conn, 'usuarios', 'permisos', 'TEXT', 'NULL')
 
 
 def _m008_vocabulario_local(conn):
@@ -381,22 +384,14 @@ def _m009_modificadores(conn):
         PRIMARY KEY (producto_id, modificador_id)
     )""")
     # Columna tiene_modificadores en productos para evitar join en listado POS
-    cols_p = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
-    if "tiene_modificadores" not in cols_p:
-        conn.execute("ALTER TABLE productos ADD COLUMN tiene_modificadores INTEGER NOT NULL DEFAULT 0")
+    ensure_column(conn, 'productos', 'tiene_modificadores', 'INTEGER NOT NULL DEFAULT 0')
     # Columna modificadores_desc en venta_items para persistir selecciones en ticket
-    cols_vi = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
-    if "modificadores_desc" not in cols_vi:
-        conn.execute("ALTER TABLE venta_items ADD COLUMN modificadores_desc TEXT")
+    ensure_column(conn, 'venta_items', 'modificadores_desc', 'TEXT')
 
 
 def _m011_dia_pago(conn):
     """Agrega columna dia_pago a clientes_fiado para cobros mensuales en día fijo."""
-    try:
-        conn.execute("ALTER TABLE clientes_fiado ADD COLUMN dia_pago INTEGER DEFAULT 15")
-        logger.info("Migración: dia_pago agregado a clientes_fiado")
-    except Exception as e:
-        logger.debug(f"dia_pago ya existe: {e}")
+    ensure_column(conn, 'clientes_fiado', 'dia_pago', 'INTEGER', '15')
 
 
 def _m012_publicidad(conn):
@@ -417,14 +412,8 @@ def _m012_publicidad(conn):
 
 def _m013_publicidad_plantillas(conn):
     """Agrega columnas plantilla_id y datos_plantilla a publicidad."""
-    for stmt in [
-        "ALTER TABLE publicidad ADD COLUMN plantilla_id TEXT DEFAULT NULL",
-        "ALTER TABLE publicidad ADD COLUMN datos_plantilla TEXT DEFAULT '{}'",
-    ]:
-        try:
-            conn.execute(stmt)
-        except Exception as e:
-            logger.debug(f"_m013: {e}")
+    ensure_column(conn, 'publicidad', 'plantilla_id', 'TEXT', 'NULL')
+    ensure_column(conn, 'publicidad', 'datos_plantilla', 'TEXT', "'{}'")
 
 
 _MIGRACIONES = [
@@ -635,46 +624,24 @@ def _migrate_columns(conn: sqlite3.Connection):
         creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
     )""")
 
-    cols_productos   = {r[1] for r in conn.execute("PRAGMA table_info(productos)").fetchall()}
-    cols_vitems      = {r[1] for r in conn.execute("PRAGMA table_info(venta_items)").fetchall()}
-    cols_aprendizaje = {r[1] for r in conn.execute("PRAGMA table_info(voz_aprendizaje)").fetchall()}
-    cols_ventas      = {r[1] for r in conn.execute("PRAGMA table_info(ventas)").fetchall()}
+    ensure_column(conn, 'productos', 'subcategoria_id', 'INTEGER REFERENCES subcategorias(id)')
+    ensure_column(conn, 'productos', 'tiene_variantes', 'INTEGER NOT NULL DEFAULT 0')
+    ensure_column(conn, 'productos', 'es_granel', 'INTEGER NOT NULL DEFAULT 0')
+    ensure_column(conn, 'productos', 'unidad_medida', "TEXT NOT NULL DEFAULT 'unidad'")
+    ensure_column(conn, 'productos', 'precio_por', "TEXT NOT NULL DEFAULT 'unidad'")
+    ensure_column(conn, 'productos', 'modo_stock', "TEXT NOT NULL DEFAULT 'normal'")
+    ensure_column(conn, 'productos', 'hora_reset_stock', "TEXT NOT NULL DEFAULT '06:00'")
+    ensure_column(conn, 'venta_items', 'variante_id', 'INTEGER REFERENCES producto_variantes(id)')
+    ensure_column(conn, 'venta_items', 'nombre_variante', 'TEXT')
+    ensure_column(conn, 'venta_items', 'notas', 'TEXT')
+    ensure_column(conn, 'voz_aprendizaje', 'tipo', "TEXT NOT NULL DEFAULT 'accion'")
+    ensure_column(conn, 'ventas', 'pedido_id', 'INTEGER REFERENCES pedidos(id)')
+    ensure_column(conn, 'productos', 'pendiente_verificar', 'INTEGER NOT NULL DEFAULT 0')
+    ensure_column(conn, 'productos', 'tiene_impuesto_adicional', 'INTEGER NOT NULL DEFAULT 0')
+    ensure_column(conn, 'productos', 'tasa_impuesto_adicional', 'REAL NOT NULL DEFAULT 0')
+    ensure_column(conn, 'productos', 'marca_id', 'INTEGER REFERENCES marcas(id)')
 
-    if "subcategoria_id" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN subcategoria_id INTEGER REFERENCES subcategorias(id)")
-    if "tiene_variantes" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN tiene_variantes INTEGER NOT NULL DEFAULT 0")
-    if "es_granel" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN es_granel INTEGER NOT NULL DEFAULT 0")
-    if "unidad_medida" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN unidad_medida TEXT NOT NULL DEFAULT 'unidad'")
-    if "precio_por" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN precio_por TEXT NOT NULL DEFAULT 'unidad'")
-    if "modo_stock" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN modo_stock TEXT NOT NULL DEFAULT 'normal'")
-    if "hora_reset_stock" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN hora_reset_stock TEXT NOT NULL DEFAULT '06:00'")
-    if "variante_id" not in cols_vitems:
-        conn.execute("ALTER TABLE venta_items ADD COLUMN variante_id INTEGER REFERENCES producto_variantes(id)")
-    if "nombre_variante" not in cols_vitems:
-        conn.execute("ALTER TABLE venta_items ADD COLUMN nombre_variante TEXT")
-    if "notas" not in cols_vitems:
-        conn.execute("ALTER TABLE venta_items ADD COLUMN notas TEXT")
-    if "tipo" not in cols_aprendizaje:
-        conn.execute("ALTER TABLE voz_aprendizaje ADD COLUMN tipo TEXT NOT NULL DEFAULT 'accion'")
-    if "pedido_id" not in cols_ventas:
-        conn.execute("ALTER TABLE ventas ADD COLUMN pedido_id INTEGER REFERENCES pedidos(id)")
-    if "pendiente_verificar" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN pendiente_verificar INTEGER NOT NULL DEFAULT 0")
-    if "tiene_impuesto_adicional" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN tiene_impuesto_adicional INTEGER NOT NULL DEFAULT 0")
-    if "tasa_impuesto_adicional" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN tasa_impuesto_adicional REAL NOT NULL DEFAULT 0")
-    if "marca_id" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN marca_id INTEGER REFERENCES marcas(id)")
-
-    if "sku" not in cols_productos:
-        conn.execute("ALTER TABLE productos ADD COLUMN sku TEXT")
+    if ensure_column(conn, 'productos', 'sku', 'TEXT'):
         import unicodedata as _ud
         def _mk_sku(cat, pid):
             clean = "".join(c for c in _ud.normalize("NFKD", (cat or "").upper()) if c.isascii() and c.isalpha())
@@ -685,18 +652,9 @@ def _migrate_columns(conn: sqlite3.Connection):
         for r in rows:
             conn.execute("UPDATE productos SET sku=? WHERE id=?", (_mk_sku(r["cn"], r["id"]), r["id"]))
 
-    cols_pedidos = {r[1] for r in conn.execute("PRAGMA table_info(pedidos)").fetchall()}
-    if "receptor_nombre" not in cols_pedidos:
-        conn.execute("ALTER TABLE pedidos ADD COLUMN receptor_nombre TEXT")
-    if "receptor_tel" not in cols_pedidos:
-        conn.execute("ALTER TABLE pedidos ADD COLUMN receptor_tel TEXT")
-
-    try:
-        cols_geo = {r[1] for r in conn.execute("PRAGMA table_info(geografia_local)").fetchall()}
-        if "direcciones_frecuentes" not in cols_geo:
-            conn.execute("ALTER TABLE geografia_local ADD COLUMN direcciones_frecuentes TEXT")
-    except Exception as e:
-        logger.debug(f"migrate geografia_local.direcciones_frecuentes: {e}")
+    ensure_column(conn, 'pedidos', 'receptor_nombre', 'TEXT')
+    ensure_column(conn, 'pedidos', 'receptor_tel', 'TEXT')
+    ensure_column(conn, 'geografia_local', 'direcciones_frecuentes', 'TEXT')
 
     # Unique index en voz_sinonimos_variante — silencioso si ya existe o hay duplicados
     try:
@@ -708,18 +666,11 @@ def _migrate_columns(conn: sqlite3.Connection):
         logger.debug(f"migrate idx_vsv_unique: {e}")
 
     # Columna apodo en proveedores (para búsqueda coloquial por voz)
-    try:
-        cols_prov = {r[1] for r in conn.execute("PRAGMA table_info(proveedores)").fetchall()}
-        if "apodo" not in cols_prov:
-            conn.execute("ALTER TABLE proveedores ADD COLUMN apodo TEXT")
-    except Exception as e:
-        logger.debug(f"migrate proveedores.apodo: {e}")
+    ensure_column(conn, 'proveedores', 'apodo', 'TEXT')
 
     # Departamento en categorías (jerarquía 3 niveles)
     try:
-        cols_cats = {r[1] for r in conn.execute("PRAGMA table_info(categorias)").fetchall()}
-        if "departamento" not in cols_cats:
-            conn.execute("ALTER TABLE categorias ADD COLUMN departamento TEXT DEFAULT 'Alimentación'")
+        if ensure_column(conn, 'categorias', 'departamento', "TEXT DEFAULT 'Alimentación'"):
             conn.execute("UPDATE categorias SET departamento='Bebidas con Alcohol' WHERE nombre IN ('Bebidas Alcohólicas','Vinos','Cervezas')")
             conn.execute("UPDATE categorias SET departamento='Cuidado Personal' WHERE nombre IN ('Higiene','Cuidado Personal','Farmacia')")
             conn.execute("UPDATE categorias SET departamento='Limpieza del Hogar' WHERE nombre IN ('Limpieza','Limpieza e Higiene','Detergentes')")
@@ -729,9 +680,7 @@ def _migrate_columns(conn: sqlite3.Connection):
 
     # Columna activo en categorias + unificar bebidas
     try:
-        cols_cats2 = {r[1] for r in conn.execute("PRAGMA table_info(categorias)").fetchall()}
-        if "activo" not in cols_cats2:
-            conn.execute("ALTER TABLE categorias ADD COLUMN activo INTEGER DEFAULT 1")
+        ensure_column(conn, 'categorias', 'activo', 'INTEGER DEFAULT 1')
         conn.execute("UPDATE categorias SET activo=1 WHERE activo IS NULL")
         # Unificar bebidas alcohólicas y no alcohólicas en departamento "Bebidas"
         conn.execute(
@@ -746,15 +695,8 @@ def _migrate_columns(conn: sqlite3.Connection):
         logger.debug(f"migrate categorias.activo+bebidas: {e}")
 
     # Índices de código de barras para escaneo O(1)
-    try:
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_productos_barras ON productos(codigo_barras)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_variantes_barras ON producto_variantes(codigo_barras)"
-        )
-    except Exception as e:
-        logger.debug(f"migrate barcode indices: {e}")
+    ensure_index(conn, 'idx_productos_barras', 'productos', 'codigo_barras')
+    ensure_index(conn, 'idx_variantes_barras', 'producto_variantes', 'codigo_barras')
 
     # Limpiar admins duplicados (bug: INSERT OR IGNORE sin constraint en DBs antiguas)
     conn.execute(
