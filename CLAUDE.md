@@ -157,6 +157,40 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Válido hasta: 12 Septiembre 2028
 - Para instalar en nuevos dispositivos: servir rootCA.pem por HTTP :5000
 
+### event_log (database.py)
+- Tabla para auditoría y futura sincronización cloud
+- Helper log_event(conn, entidad, accion, entidad_id, payload, usuario_id, usuario_nombre)
+- Registrar en: crear venta, anular venta, cambio precio, entrada stock
+- NO eliminar ni modificar la estructura de la tabla
+- pending_sync=1 significa pendiente de sincronizar con ZERO CLOUD
+
+### ensure_column() y ensure_index() (database.py)
+- Reemplazaron todos los ALTER TABLE repetidos
+- Usar SIEMPRE estas funciones para nuevas columnas
+- NUNCA usar try/except con ALTER TABLE directamente
+- ensure_column(conn, tabla, columna, tipo, default=None)
+- ensure_index(conn, nombre, tabla, columnas)
+
+### Stock insuficiente (pos.html)
+- 3 niveles: color en cantidad, botón cobrar, modal confirmación
+- Modal NO bloquea — permite confirmar igual
+- El dueño siempre tiene la última palabra
+- NO eliminar el modal ni convertirlo en bloqueo total
+
+### Iconos Tabler
+- CDN: https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css
+- Está en: pos.html, admin.html, inventario.html
+- Todos los iconos usan clase: <i class="ti ti-NOMBRE">
+- Colores con fondo por ítem en drawer pos.html
+- NO reemplazar por emojis ni otras librerías de iconos
+
+### Categorías inventario
+- Sidebar con grupos desplegables por departamento
+- Bebidas unifica alcohólicas y sin alcohol con sub-filtro
+- Departamentos activables desde admin (columna activo en categorias)
+- Stock por voz DESACTIVADO temporalmente (botón oculto)
+  Reactivar cuando mejore el reconocimiento
+
 ---
 
 ## Funcionalidades EN DESARROLLO (pueden modificarse)
@@ -179,6 +213,10 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 | PWA install en HTTP local | **Manual** | Chrome no permite prompt en HTTP |
 | Certificado SSL | **Auto-firmado** | Costo cero, usuario acepta una vez |
 | Framework frontend | **Ninguno** | Debe correr offline desde USB |
+| event_log estructura | **Fija** | Base de ZERO CLOUD sync — no modificar |
+| Migraciones DB | **ensure_column/ensure_index** | Estándar para nuevas columnas |
+| uuid + updated_at + deleted_at | **Pendiente** | Agregar antes del primer cliente real |
+| Services/domain layer | **Pendiente** | Cuando haya 5+ clientes activos |
 
 ---
 
