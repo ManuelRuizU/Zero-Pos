@@ -1,3 +1,4 @@
+# scripts/cargar_mapa_osm.py
 #!/usr/bin/env python3
 """
 Descarga y carga el mapa OSM de una región en la DB local de ZERO POS.

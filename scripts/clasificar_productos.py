@@ -1,3 +1,5 @@
+# scripts/clasificar_productos.py
+#scripts/clasificar_productos.py
 #!/usr/bin/env python3
 """
 Clasifica productos existentes en la DB por departamento y categoría

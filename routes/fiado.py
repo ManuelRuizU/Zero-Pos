@@ -1,3 +1,4 @@
+# routes/fiado.py
 import secrets
 import logging
 from datetime import date, timedelta
@@ -390,6 +391,7 @@ def generar_tarjeta(cid):
         cfg_rows = conn.execute(
             "SELECT clave,valor FROM config WHERE clave IN ('nombre_negocio','direccion_negocio','ip_local')"
         ).fetchall()
+        cfg_rows = [dict(r) for r in cfg_rows]
     if not c:
         return jsonify({"error": "No encontrado"}), 404
     c = dict(c)

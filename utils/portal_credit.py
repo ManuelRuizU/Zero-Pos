@@ -1,3 +1,4 @@
+# utils/portal_credit.py
 """Portal web ZERO CREDIT — página standalone para que el cliente vea su deuda."""
 from datetime import date
 

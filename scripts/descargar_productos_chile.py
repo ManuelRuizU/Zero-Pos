@@ -1,3 +1,4 @@
+#scripts/descargar_productos_chile.py
 #!/usr/bin/env python3
 """
 Descarga productos chilenos desde Open Food Facts
