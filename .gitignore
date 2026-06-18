@@ -40,3 +40,6 @@ logs/
 .idea/
 *.swp
 *.swo
+static/productos_img/
+static/rootCA.pem
+static/negocio/publicidad/
