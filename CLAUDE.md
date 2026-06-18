@@ -1,6 +1,6 @@
 # CLAUDE.md — Contrato de Desarrollo ZERO POS
 # Lee este archivo COMPLETO antes de tocar cualquier código.
-# Última actualización: 2026-06-16
+# Última actualización: 2026-06-18
 
 ---
 
@@ -138,11 +138,15 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - El mux está en _run_mux() líneas ~144-230
 
 ### Service Worker (static/sw.js)
-- CACHE_NAME actual: 'zeropos-v3'
+- CACHE_NAME actual: 'zeropos-v4'
 - Las rutas /api/ NO se interceptan — el handler hace return sin respondWith
 - Las rutas externas (url.origin !== self.location.origin) tampoco se interceptan
-- Solo se cachean archivos /static/
-- Para forzar reinstalación del SW: bump CACHE_NAME a v4, v5, etc.
+- Solo se cachean archivos /static/ con estrategia cache-first
+- Para forzar reinstalación del SW: bump CACHE_NAME a v5, v6, etc.
+- **LECCIÓN APRENDIDA:** cache-first significa que cambios en HTML/JS NO se ven
+  hasta que el SW renueve su caché. Ante bugs "el código viejo sigue corriendo"
+  → hacer bump del CACHE_NAME es el primer paso de diagnóstico.
+  self.skipWaiting() + clients.claim() activan el nuevo SW inmediatamente.
 
 ### Open Food Facts (routes/inventario.py)
 - _buscar_open_food_facts() funciona correctamente
@@ -191,6 +195,52 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Stock por voz DESACTIVADO temporalmente (botón oculto)
   Reactivar cuando mejore el reconocimiento
 
+### Overlay turno cerrado (pos.html)
+- `#overlayTurnoCerrado` cubre toda la caja cuando no hay turno abierto
+- **`display:flex` por defecto** — NUNCA cambiar a `display:none` en el HTML
+  Si empieza como `none`, el cajero ve la caja durante el fetch de verificarTurno()
+- z-index: 9999 (mayor que cualquier modal)
+- `verificarTurno(me)` lo oculta si hay turno abierto, lo muestra si no hay
+- `_confirmarTurno()` al abrir turno: oculta el overlay (todos los roles)
+- Al cerrar turno exitosamente → redirige a `login.html?modo=salida`
+- El botón "ABRIR EL TURNO" llama `_abrirModalTurno('abrir')` (con guión bajo)
+- **NO** agregar redirect a admin.html al abrir turno — todos los roles quedan en pos.html
+
+### Tickets de turno (utils/impresora.py + routes/auth.py)
+- `imprimir_apertura_turno(turno, config, config_imp)` — ticket al abrir turno
+- `imprimir_cierre_turno(turno, ventas_resumen, config, config_imp)` — ticket al cerrar
+- Ambos se llaman en threads daemon desde routes/auth.py después de cerrar el with db_session()
+- Estructura ticket cierre: Header → CIERRE DE TURNO → Fechas → VENTAS DEL TURNO
+  (brutas/reembolsos/$0/descuentos/$0/netas + desglose por método) →
+  CAJÓN DE EFECTIVO (fondo + cobros + teórico + real + descuadre) →
+  BILLETES Y MONEDAS → Footer
+- El ticket apertura incluye denominaciones_apertura si las hay
+- Fondo inicial del turno viene de turno.fondo_inicial (no de ventas_resumen)
+
+### Sistema de asistencia (migración _m017)
+- Tabla `asistencia`: tipos entrada/salida/salida_colacion/entrada_colacion
+- Columna `usuarios.jornada_horas_semanales INTEGER DEFAULT 45`
+- Se registra automáticamente en routes/auth.py `login()` leyendo campo `modo` del body
+- El campo `modo` se envía desde login.html junto con el PIN — no es un endpoint separado
+- Endpoints: GET /api/auth/asistencia (semana actual, tabla para admin)
+             GET /api/auth/asistencia/resumen (horas semana, jornada pactada)
+- login.html muestra 4 botones de modo antes del teclado PIN
+- URL ?modo=salida preselecciona el modo automáticamente (usado por cerrar turno)
+- Pantallas post-login: pantallaEntrada (auto-redirect 4s) / pantallaSalida /
+  pantallaSalidaColacion / pantallaEntradaColacion
+- Auto-redirect de pantallaEntrada → SIEMPRE a pos.html (no a admin.html)
+  Excepción: rol cocina → cocina.html
+- Admin accede a admin.html desde el botón dashboard en pos.html, no en el login
+- Vista asistencia en admin.html (tab Equipo): tabla + barras de progreso por usuario
+  Verde ≤90% jornada | Amarillo >90% | Rojo ≥100%
+
+### Flujo de navegación login → caja (LECCIÓN APRENDIDA)
+- Login (cualquier rol excepto cocina) → pos.html → overlay turno cerrado si no hay turno
+- Admin NO va a admin.html al hacer login — siempre pasa por pos.html primero
+- RAZÓN: el turno se abre desde pos.html, y admin también necesita abrir turno
+- Antes, abrir turno como admin redirigía a admin.html — esto fue eliminado
+  porque causaba que al ir de admin.html a pos.html apareciera la pantalla de turno cerrado
+
 ---
 
 ## Funcionalidades EN DESARROLLO (pueden modificarse)
@@ -215,8 +265,10 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 | Framework frontend | **Ninguno** | Debe correr offline desde USB |
 | event_log estructura | **Fija** | Base de ZERO CLOUD sync — no modificar |
 | Migraciones DB | **ensure_column/ensure_index** | Estándar para nuevas columnas |
-| uuid + updated_at + deleted_at | **Pendiente** | Agregar antes del primer cliente real |
+| uuid + updated_at + deleted_at | **Completado _m015** | Base de ZERO CLOUD sync |
 | Services/domain layer | **Pendiente** | Cuando haya 5+ clientes activos |
+| Login admin → pos.html | **pos.html siempre** | Admin necesita abrir turno desde pos.html |
+| Redirect post-abrir-turno | **Queda en pos.html** | Evita ciclo pos→admin→pos con turno cerrado |
 
 ### Fase 1 Sync — COMPLETADA (migración _m015)
 - uuid agregado en: productos, ventas, clientes, usuarios, categorias, turnos, pedidos
@@ -225,6 +277,16 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Triggers: trg_productos_updated_at, trg_ventas_updated_at
 - Índices: idx_productos_uuid, idx_ventas_uuid, idx_clientes_uuid, idx_usuarios_uuid
 - NO modificar estos campos — son base de ZERO CLOUD
+
+### Migración _m016 — stock_movimientos sync
+- referencia_tipo, referencia_id, uuid, origin_device en stock_movimientos
+- Índices: idx_stock_mov_producto, idx_stock_mov_referencia
+
+### Migración _m017 — asistencia (COMPLETADA)
+- Tabla asistencia con tipos entrada/salida/salida_colacion/entrada_colacion
+- Índices: idx_asistencia_usuario, idx_asistencia_fecha
+- Columna usuarios.jornada_horas_semanales INTEGER DEFAULT 45
+- Próxima migración disponible: _m018
 
 ### Fase 2 Sync — PENDIENTE
 - device_id en config (identificar cada instalación)
