@@ -1604,22 +1604,25 @@ async function marcarLeida(id) {
 // ── Escáner código de barras ──────────────────────────────────────────
 const mostrarToast = (msg, tipo) => showToast(msg, tipo || 'ok');
 
-function cargarZXing() {
-  if (typeof ZXing !== 'undefined') return Promise.resolve();
-  if (cargarZXing._promise) return cargarZXing._promise;
-  cargarZXing._promise = new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
-    s.onload = () => { console.log('[ZERO] ZXing cargado OK'); setTimeout(resolve, 100); };
-    s.onerror = e => { console.error('[ZERO] ZXing falló al cargar:', e); reject(e); };
-    document.head.appendChild(s);
-  });
-  return cargarZXing._promise;
-}
+const Escaner = {
+  _zxingPromise: null,
+  _cargarZXing() {
+    if (typeof ZXing !== 'undefined') return Promise.resolve();
+    if (this._zxingPromise) return this._zxingPromise;
+    this._zxingPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js';
+      s.onload = () => { console.log('[ZERO] ZXing cargado OK'); setTimeout(resolve, 100); };
+      s.onerror = e => { console.error('[ZERO] ZXing falló al cargar:', e); reject(e); };
+      document.head.appendChild(s);
+    });
+    return this._zxingPromise;
+  },
+};
 
 async function detectarConZXing(file) {
   try {
-    await cargarZXing();
+    await Escaner._cargarZXing();
     if (typeof ZXing === 'undefined') return null;
     return new Promise(resolve => {
       const img = new Image();
