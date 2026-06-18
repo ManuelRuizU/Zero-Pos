@@ -574,6 +574,52 @@ def _m017_asistencia(conn):
     ensure_column(conn, 'usuarios', 'jornada_horas_semanales', 'INTEGER', 45)
 
 
+def _m018_device_y_devices(conn):
+    """Fase 2 sync: tabla devices + device_id en config para identificar instalaciones."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS devices (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id   TEXT NOT NULL UNIQUE,
+            nombre      TEXT NOT NULL DEFAULT 'ZERO POS',
+            ip_local    TEXT,
+            tipo        TEXT NOT NULL DEFAULT 'pos'
+                        CHECK(tipo IN ('pos','admin','cocina','display')),
+            ultima_vez  DATETIME DEFAULT CURRENT_TIMESTAMP,
+            activo      INTEGER NOT NULL DEFAULT 1,
+            creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    ensure_index(conn, 'idx_devices_device_id', 'devices', 'device_id')
+
+    # Generar device_id único para esta instalación si no existe
+    existing = conn.execute(
+        "SELECT valor FROM config WHERE clave='device_id'"
+    ).fetchone()
+    if not existing:
+        import uuid as _uuid
+        device_id = str(_uuid.uuid4())
+        conn.execute(
+            "INSERT OR IGNORE INTO config (clave, valor) VALUES ('device_id', ?)",
+            (device_id,)
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO devices (device_id, nombre) VALUES (?, 'Este equipo')",
+            (device_id,)
+        )
+        logger.info(f"Device ID generado: {device_id}")
+
+
+def _m019_event_log_sync(conn):
+    """Fase 2 sync: ampliar event_log como cola de sincronización cloud."""
+    ensure_column(conn, 'event_log', 'sync_at',     'DATETIME')
+    ensure_column(conn, 'event_log', 'sync_error',  'TEXT')
+    ensure_column(conn, 'event_log', 'retry_count', 'INTEGER', 0)
+    # Índice para el worker de sync: pendientes en orden de creación
+    ensure_index(conn, 'idx_event_log_sync_queue',
+                 'event_log', 'pending_sync, retry_count, created_at')
+    ensure_index(conn, 'idx_event_log_sync_at', 'event_log', 'sync_at')
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -592,6 +638,8 @@ _MIGRACIONES = [
     (15, "Fase 1 sync: uuid, updated_at, deleted_at, origin_device tablas base", _m015_sync_columns),
     (16, "stock_movimientos: referencia_tipo/id, uuid, origin_device e índices", _m016_stock_mov_sync),
     (17, "asistencia: control de jornada entrada/salida/colación",               _m017_asistencia),
+    (18, "Fase 2 sync: tabla devices + device_id en config",                     _m018_device_y_devices),
+    (19, "Fase 2 sync: event_log ampliado como cola de sync cloud",              _m019_event_log_sync),
 ]
 
 

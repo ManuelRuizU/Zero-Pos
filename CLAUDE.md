@@ -278,7 +278,7 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Índices: idx_productos_uuid, idx_ventas_uuid, idx_clientes_uuid, idx_usuarios_uuid
 - NO modificar estos campos — son base de ZERO CLOUD
 
-### Migración _m016 — stock_movimientos sync
+### Migración _m016 — stock_movimientos sync (COMPLETADA)
 - referencia_tipo, referencia_id, uuid, origin_device en stock_movimientos
 - Índices: idx_stock_mov_producto, idx_stock_mov_referencia
 
@@ -286,12 +286,28 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Tabla asistencia con tipos entrada/salida/salida_colacion/entrada_colacion
 - Índices: idx_asistencia_usuario, idx_asistencia_fecha
 - Columna usuarios.jornada_horas_semanales INTEGER DEFAULT 45
-- Próxima migración disponible: _m018
 
-### Fase 2 Sync — PENDIENTE
-- device_id en config (identificar cada instalación)
-- Tabla devices para registry de equipos
-- Ampliar event_log para cola de sincronización
+### Migraciones _m018 y _m019 — Fase 2 Sync (COMPLETADAS)
+- Ver sección "Fase 2 Sync" arriba
+- Próxima migración disponible: _m020
+
+### Fase 2 Sync — COMPLETADA (migraciones _m018 y _m019)
+
+**_m018_device_y_devices:**
+- Tabla `devices`: id, device_id (UUID único), nombre, ip_local, tipo, ultima_vez, activo
+- `device_id` en config: UUID generado automáticamente al aplicar la migración
+- Identifica cada instalación ZERO POS de forma única para sincronización
+
+**_m019_event_log_sync:**
+- Columnas añadidas a event_log: sync_at, sync_error, retry_count
+- Índices: idx_event_log_sync_queue (pending_sync, retry_count, created_at)
+           idx_event_log_sync_at
+- event_log ya funciona como cola de sync — worker pendiente de implementar
+
+### Fase 3 Sync — PENDIENTE
+- Worker de sincronización cloud (leer pending_sync=1, enviar a API, marcar sync_at)
+- UI de estado sync en admin.html
+- Resolución de conflictos por updated_at + origin_device
 
 ### Reglas de migración
 - SIEMPRE usar ensure_column() para nuevas columnas
