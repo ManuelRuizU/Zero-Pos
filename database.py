@@ -718,11 +718,9 @@ def _migrate_pedidos_estados(conn: sqlite3.Connection):
         )
         conn.execute("DELETE FROM pedidos WHERE numero=-99 AND cliente_nombre='_test_'")
         conn.execute("RELEASE SAVEPOINT _chk_en_espera")
-        # Asegurar columna 'origen' si no existe (puede existir sin constraint)
-        cols = {r[1] for r in conn.execute("PRAGMA table_info(pedidos)").fetchall()}
-        if "origen" not in cols:
-            conn.execute("ALTER TABLE pedidos ADD COLUMN origen TEXT NOT NULL DEFAULT 'pos'")
-            conn.commit()
+        # Asegurar columna 'origen' si no existe
+        ensure_column(conn, 'pedidos', 'origen', "TEXT NOT NULL", "'pos'")
+        conn.commit()
         return
     except Exception:
         try:

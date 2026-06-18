@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timedelta
 from collections import defaultdict
 from flask import Blueprint, request, jsonify, session
-from database import db_session
+from database import db_session, ensure_column
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 logger = logging.getLogger("zero_pos.auth")
@@ -219,11 +219,8 @@ def abrir_turno():
     denoms_json = json.dumps(denoms) if denoms else None
 
     with db_session() as conn:
-        for col in ("denominaciones_apertura", "denominaciones_cierre"):
-            try:
-                conn.execute(f"ALTER TABLE turnos ADD COLUMN {col} TEXT")
-            except Exception:
-                pass
+        ensure_column(conn, 'turnos', 'denominaciones_apertura', 'TEXT')
+        ensure_column(conn, 'turnos', 'denominaciones_cierre', 'TEXT')
 
         abierto = conn.execute(
             "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
