@@ -346,6 +346,31 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 
 ---
 
+## Reglas de código
+
+### .gitignore — archivos excluidos del repositorio
+Estos paths NO deben commitarse nunca (datos de usuario o secretos):
+- `certs/` — certificados SSL del equipo
+- `static/negocio/` — imágenes y datos de negocio del cliente
+- `static/productos_img/` — fotos de productos (binarios pesados)
+- `static/rootCA.pem` — CA root de mkcert
+- `*.pem` — cualquier certificado o clave privada
+- `*.db` / `*.db-wal` / `*.db-shm` — base de datos SQLite local
+
+### Auditoría pendiente (revisar antes de cada release)
+1. **cargarZXing** — verificar que `_cargarZXing()` sigue siendo método INTERNO
+   del objeto `Escaner` en pos.html e inventario.html (nunca debe ser función global)
+2. **fmt() redeclaraciones** — buscar `function fmt(` o `const fmt =` en archivos HTML;
+   la única declaración válida es en `static/js/zero-utils.js`
+3. **zero-utils.js globals** — ninguna función de zero-utils.js debe redeclararse inline
+   en ningún HTML — causa SyntaxError silencioso que rompe todo el JS del archivo
+4. **Threads daemon** — toda llamada a impresora debe estar en `threading.Thread(daemon=True)`,
+   envuelta en try/except propio; nunca en el hilo principal de Flask
+5. **Colores hardcodeados** — grep `#[0-9a-fA-F]{3,6}` y `rgb(` en HTML/CSS nuevos;
+   todos los colores deben usar `var(--zero-...)` de zero-tokens.css
+
+---
+
 ## Contacto y jerarquía de decisiones
 
 - Product Owner y aprobador final: Manuel Ruiz (Manu)
