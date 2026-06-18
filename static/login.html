@@ -646,7 +646,7 @@ async function _mostrarPantallaPost(data) {
 
   if (!idPantalla) {
     // Fallback por rol
-    window.location.href = rol === 'cocina' ? 'cocina.html' : rol === 'admin' ? 'admin.html' : 'pos.html';
+    window.location.href = rol === 'cocina' ? 'cocina.html' : 'pos.html';
     return;
   }
 
@@ -654,11 +654,7 @@ async function _mostrarPantallaPost(data) {
     document.getElementById('entradaNombre').textContent     = nombre;
     document.getElementById('entradaHora').textContent       = hora;
     document.getElementById('entradaHorasSemana').textContent = horasSemana;
-    if (rol === 'admin' || rol === 'propietario') {
-      setTimeout(() => location.href = 'admin.html', 4000);
-    } else {
-      setTimeout(() => location.href = 'pos.html', 4000);
-    }
+    setTimeout(() => location.href = rol === 'cocina' ? 'cocina.html' : 'pos.html', 4000);
   } else if (modo === 'salida') {
     document.getElementById('salidaNombre').textContent  = nombre;
     document.getElementById('salidaHora').textContent    = hora;

@@ -2546,11 +2546,7 @@ async function _confirmarTurno() {
     if (r.ok) {
       document.getElementById('modalTurno').style.display = 'none';
       document.getElementById('overlayTurnoCerrado').style.display = 'none';
-      if (_meRol === 'admin' || _meRol === 'propietario') {
-        location.href = 'admin.html';
-      } else {
-        showToast('Turno abierto — ¡Listo para vender!', 'success');
-      }
+      showToast('Turno abierto — ¡Listo para vender!', 'success');
     } else {
       const d = await r.json();
       showToast(d.error || 'Error al abrir turno', 'error');
