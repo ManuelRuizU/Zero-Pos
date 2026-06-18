@@ -838,6 +838,15 @@ input:checked + .slider:before{transform:translateX(20px);}
     <div id="listaUsuarios">
       <p style="color:var(--text-dim);font-size:13px;">Cargando...</p>
     </div>
+
+    <!-- Asistencia -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:28px 0 12px;">
+      <h3 style="margin:0;font-size:15px;">🕐 Asistencia esta semana</h3>
+      <button class="btn" style="padding:6px 14px;font-size:13px" onclick="cargarAsistencia()">↻ Actualizar</button>
+    </div>
+    <div id="tablaAsistencia" style="overflow-x:auto">
+      <p style="color:var(--text-dim);font-size:13px;">Cargando...</p>
+    </div>
   </div>
 
   <!-- Modal Sucursal -->
@@ -891,6 +900,18 @@ input:checked + .slider:before{transform:translateX(20px);}
           </label>
         </div>
       </details>
+
+      <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Tipo de jornada</label>
+      <select id="usuJornada" class="flujo-input" style="margin-bottom:10px" onchange="_onJornadaChange()">
+        <option value="45">Jornada completa 45 hrs</option>
+        <option value="40">Jornada completa 40 hrs</option>
+        <option value="30">Part time 30 hrs</option>
+        <option value="20">Part time 20 hrs</option>
+        <option value="0">Part time personalizado</option>
+      </select>
+      <div id="jornadaCustomDiv" style="display:none;margin-bottom:10px">
+        <input id="usuJornadaCustom" class="flujo-input" type="number" min="1" max="60" placeholder="Horas semanales" style="width:100%">
+      </div>
 
       <input type="hidden" id="usuId">
       <div style="display:flex;gap:10px">
@@ -2109,6 +2130,61 @@ let _sucursales = [];
 
 async function cargarEquipo() {
   await Promise.all([cargarSucursales(), cargarUsuarios()]);
+  cargarAsistencia();
+}
+
+async function cargarAsistencia() {
+  const el = document.getElementById('tablaAsistencia');
+  if (!el) return;
+  el.innerHTML = '<p style="color:var(--text-dim);font-size:13px">Cargando...</p>';
+  try {
+    const rows = await fetch('/api/auth/asistencia?semana=actual', {credentials:'include'}).then(r=>r.json());
+    if (!rows.length) { el.innerHTML = '<p style="color:var(--text-dim);font-size:13px">Sin registros esta semana.</p>'; return; }
+
+    // Obtener resúmenes para barra de progreso
+    const resumenes = await fetch('/api/auth/asistencia/resumen', {credentials:'include'}).then(r=>r.json()).catch(()=>[]);
+    const resumMap = {};
+    (Array.isArray(resumenes) ? resumenes : [resumenes]).forEach(r => { resumMap[r.usuario_id] = r; });
+
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="color:var(--text-dim)">
+        <th style="text-align:left;padding:6px 8px">Fecha</th>
+        <th style="text-align:left;padding:6px 8px">Usuario</th>
+        <th style="text-align:left;padding:6px 8px">Entrada</th>
+        <th style="text-align:left;padding:6px 8px">Colación</th>
+        <th style="text-align:left;padding:6px 8px">Regreso</th>
+        <th style="text-align:left;padding:6px 8px">Salida</th>
+        <th style="text-align:left;padding:6px 8px">Horas</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(d => {
+          const col = d.salida_colacion ? `${d.salida_colacion}` : '—';
+          const reg = d.entrada_colacion ? `${d.entrada_colacion}` : '—';
+          const hrs = d.horas !== null ? `${d.horas}h` : '—';
+          return `<tr style="border-top:1px solid var(--border)">
+            <td style="padding:8px;color:var(--text-dim)">${d.fecha}</td>
+            <td style="padding:8px;font-weight:600">${d.usuario_nombre}</td>
+            <td style="padding:8px">${d.entrada || '—'}</td>
+            <td style="padding:8px;color:var(--text-dim)">${col}</td>
+            <td style="padding:8px;color:var(--text-dim)">${reg}</td>
+            <td style="padding:8px">${d.salida || '—'}</td>
+            <td style="padding:8px;font-weight:600;color:${d.horas>=8?'#22c55e':'var(--text)'}">${hrs}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table>
+    ${Object.values(resumMap).map(r => {
+      const pct = Math.min(100, Math.round((r.horas_semana / r.jornada_pactada) * 100));
+      const color = pct >= 100 ? '#ef4444' : pct >= 90 ? '#f59e0b' : '#22c55e';
+      return `<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">
+        <span style="font-weight:600;color:var(--text)">${r.usuario_nombre}</span>
+        — ${r.horas_semana}h de ${r.jornada_pactada}h pactadas (${pct}%)
+        <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;transition:width .4s"></div>
+        </div></div>`;
+    }).join('')}`;
+  } catch(e) {
+    el.innerHTML = '<p style="color:#ef4444;font-size:13px">Error cargando asistencia.</p>';
+  }
 }
 
 async function cargarSucursales() {
@@ -2227,6 +2303,11 @@ function abrirModalUsuario() {
   m.style.display = 'flex';
 }
 
+function _onJornadaChange() {
+  const v = document.getElementById('usuJornada').value;
+  document.getElementById('jornadaCustomDiv').style.display = v === '0' ? '' : 'none';
+}
+
 async function editarUsuario(id) {
   const rows = await fetch('/api/auth/usuarios', {credentials:'include'}).then(r=>r.json()).catch(()=>[]);
   const u = rows.find(r=>r.id===id);
@@ -2240,6 +2321,17 @@ async function editarUsuario(id) {
   sel.innerHTML = '<option value="">Sin sucursal (ve todo)</option>' +
     _sucursales.filter(s=>s.activa).map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
   sel.value = u.sucursal_id || '';
+  // Jornada
+  const jh = u.jornada_horas_semanales ?? 45;
+  const jornadaOpts = [45,40,30,20];
+  if (jornadaOpts.includes(jh)) {
+    document.getElementById('usuJornada').value = String(jh);
+    document.getElementById('jornadaCustomDiv').style.display = 'none';
+  } else {
+    document.getElementById('usuJornada').value = '0';
+    document.getElementById('usuJornadaCustom').value = jh;
+    document.getElementById('jornadaCustomDiv').style.display = '';
+  }
   // Aplicar permisos custom si existen
   actualizarPermisosUI();
   if (u.permisos) {
@@ -2274,7 +2366,12 @@ async function guardarUsuario() {
   if (!nombre) return alert('El nombre es requerido');
   if (!id && (pin.length !== 4 || !/^\d{4}$/.test(pin))) return alert('PIN de 4 dígitos requerido');
 
-  const body = { nombre, rol, sucursal_id: suc ? parseInt(suc) : null, permisos };
+  const jornadaSel = document.getElementById('usuJornada').value;
+  const jornada = jornadaSel === '0'
+    ? (parseInt(document.getElementById('usuJornadaCustom').value) || 45)
+    : parseInt(jornadaSel);
+  const body = { nombre, rol, sucursal_id: suc ? parseInt(suc) : null, permisos,
+                 jornada_horas_semanales: jornada };
   if (pin) body.pin = pin;
 
   const url = id ? `/api/auth/usuarios/${id}` : '/api/auth/usuarios';

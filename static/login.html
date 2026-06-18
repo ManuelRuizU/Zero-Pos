@@ -294,6 +294,50 @@ body {
   position: fixed; bottom: 16px;
   color: rgba(255,255,255,0.1); font-size: 11px;
 }
+
+/* ── Selector de modo acceso ───────────────────────────────── */
+.modo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: min(280px, 90vw);
+  margin-bottom: 24px;
+}
+.btn-modo {
+  padding: 10px 6px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.6);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.btn-modo.activo {
+  border-color: #22c55e;
+  background: rgba(34,197,94,0.12);
+  color: #22c55e;
+}
+.btn-modo:hover:not(.activo) {
+  border-color: rgba(255,255,255,0.25);
+  color: rgba(255,255,255,0.8);
+}
+
+/* ── Pantallas post-login ──────────────────────────────────── */
+.pantalla-post {
+  position: fixed; inset: 0;
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: #0f0f1a;
+  z-index: 10;
+}
+.pantalla-post.activa { display: flex; }
+.post-hora {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -2px;
+}
 </style>
 </head>
 <body>
@@ -314,6 +358,14 @@ body {
     <div class="avatar-usuario" id="pinAvatar"></div>
     <div id="pinNombreUsuario">Introduce tu PIN</div>
     <div id="pinSubtitulo">4 dígitos</div>
+
+    <!-- Selector modo acceso -->
+    <div class="modo-grid" style="margin-top:16px">
+      <button class="btn-modo activo" id="btnModoEntrada"          onclick="seleccionarModo('entrada')">ENTRADA</button>
+      <button class="btn-modo"        id="btnModoSalida"           onclick="seleccionarModo('salida')">SALIDA</button>
+      <button class="btn-modo"        id="btnModoSalidaColacion"   onclick="seleccionarModo('salida_colacion')">INICIO COLACIÓN</button>
+      <button class="btn-modo"        id="btnModoEntradaColacion"  onclick="seleccionarModo('entrada_colacion')">FIN COLACIÓN</button>
+    </div>
 
     <div class="pin-circulos">
       <div class="circulo-pin" id="pc0"></div>
@@ -342,12 +394,74 @@ body {
   </div>
 </div>
 
+<!-- ── Pantalla: ENTRADA ────────────────────────────────────── -->
+<div id="pantallaEntrada" class="pantalla-post">
+  <div style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#fff;margin-bottom:32px">ZERO<span style="color:#6366f1">POS</span></div>
+  <div style="font-size:15px;color:#64748b;margin-bottom:6px">Bienvenido/a</div>
+  <div id="entradaNombre" style="font-size:32px;font-weight:700;color:#fff;margin-bottom:4px"></div>
+  <div id="entradaHora" class="post-hora" style="font-size:56px;font-weight:200;color:#22c55e;margin-bottom:24px"></div>
+  <div id="entradaHorasSemana" style="font-size:13px;color:#64748b;margin-bottom:32px"></div>
+  <button onclick="location.href='pos.html'" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer">IR A LA CAJA</button>
+</div>
+
+<!-- ── Pantalla: SALIDA ─────────────────────────────────────── -->
+<div id="pantallaSalida" class="pantalla-post">
+  <div style="font-size:64px;margin-bottom:16px">🌙</div>
+  <div style="font-size:15px;color:#64748b">Hasta mañana</div>
+  <div id="salidaNombre" style="font-size:32px;font-weight:700;color:#fff;margin-bottom:4px"></div>
+  <div id="salidaHora" class="post-hora" style="font-size:48px;font-weight:200;color:#6366f1;margin-bottom:16px"></div>
+  <div id="salidaResumen" style="font-size:14px;color:#64748b;margin-bottom:12px"></div>
+  <div style="font-size:16px;color:#e2e8f0;margin-bottom:32px">Buenas noches 👋</div>
+  <button onclick="location.href='login.html'" style="background:#1e1e2e;border:1px solid #2d2d5e;color:#e2e8f0;font-size:15px;font-weight:600;padding:14px 40px;border-radius:12px;cursor:pointer">CERRAR</button>
+</div>
+
+<!-- ── Pantalla: SALIDA COLACIÓN ────────────────────────────── -->
+<div id="pantallaSalidaColacion" class="pantalla-post">
+  <div style="font-size:64px;margin-bottom:16px">☕</div>
+  <div id="salidaColNombre" style="font-size:28px;font-weight:700;color:#fff;margin-bottom:8px"></div>
+  <div style="font-size:16px;color:#64748b;margin-bottom:8px">Buen provecho</div>
+  <div id="salidaColHora" style="font-size:18px;color:#f59e0b;margin-bottom:8px"></div>
+  <div style="font-size:14px;color:#64748b;margin-bottom:32px">Recuerda regresar en 30–60 minutos</div>
+  <button onclick="location.href='login.html'" style="background:#1e1e2e;border:1px solid #2d2d5e;color:#e2e8f0;font-size:15px;font-weight:600;padding:14px 40px;border-radius:12px;cursor:pointer">CERRAR</button>
+</div>
+
+<!-- ── Pantalla: ENTRADA COLACIÓN ───────────────────────────── -->
+<div id="pantallaEntradaColacion" class="pantalla-post">
+  <div style="font-size:64px;margin-bottom:16px">👋</div>
+  <div id="entradaColNombre" style="font-size:28px;font-weight:700;color:#fff;margin-bottom:8px"></div>
+  <div style="font-size:16px;color:#64748b;margin-bottom:8px">Bienvenido/a de vuelta</div>
+  <div id="entradaColHora" style="font-size:18px;color:#22c55e;margin-bottom:8px"></div>
+  <div style="font-size:14px;color:#64748b;margin-bottom:32px">¡Continuemos!</div>
+  <button onclick="location.href='pos.html'" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer">IR A LA CAJA</button>
+</div>
+
 <script>
 const _COLORES = [
   '#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#0ea5e9'
 ];
 let pin = '';
 let usuarioSeleccionado = null;
+let _modoAcceso = 'entrada';
+
+const _MODO_BTN = {
+  entrada:           'btnModoEntrada',
+  salida:            'btnModoSalida',
+  salida_colacion:   'btnModoSalidaColacion',
+  entrada_colacion:  'btnModoEntradaColacion',
+};
+
+function seleccionarModo(modo) {
+  _modoAcceso = modo;
+  Object.entries(_MODO_BTN).forEach(([m, id]) => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.toggle('activo', m === modo);
+  });
+}
+
+function _horaActual() {
+  const d = new Date();
+  return d.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit', hour12:false});
+}
 
 function _avatarColor(nombre) {
   let h = 0;
@@ -479,7 +593,7 @@ function triggerError() {
 async function intentarLogin() {
   if (pin.length !== 4) return;
   try {
-    const body = {pin};
+    const body = {pin, modo: _modoAcceso};
     if (usuarioSeleccionado) body.usuario_id = usuarioSeleccionado.id;
     const r = await fetch('/api/auth/login', {
       method: 'POST',
@@ -490,12 +604,7 @@ async function intentarLogin() {
     const data = await r.json();
     if (r.ok) {
       actualizarCirculos('correcto');
-      setTimeout(() => {
-        const destino = data.usuario.rol === 'cocina' ? 'cocina.html'
-                      : data.usuario.rol === 'admin'  ? 'admin.html'
-                      : 'pos.html';
-        window.location.href = destino;
-      }, 300);
+      setTimeout(() => _mostrarPantallaPost(data), 300);
     } else if (data.upgrade) {
       setError('Límite de sesiones alcanzado. Pide al admin que cierre una.');
       triggerError();
@@ -511,12 +620,84 @@ async function intentarLogin() {
   }
 }
 
+async function _mostrarPantallaPost(data) {
+  const nombre  = data.usuario?.nombre || '';
+  const modo    = data.modo || _modoAcceso;
+  const hora    = _horaActual();
+  const rol     = data.usuario?.rol || '';
+
+  // Calcular resumen asistencia para pantalla entrada
+  let horasSemana = '';
+  if (modo === 'entrada') {
+    try {
+      const res = await fetch('/api/auth/asistencia/resumen', {credentials:'include'}).then(r=>r.json());
+      const hrs  = res.horas_semana ?? 0;
+      const pact = res.jornada_pactada ?? 45;
+      horasSemana = `Esta semana: ${hrs} hrs trabajadas de ${pact} hrs pactadas`;
+    } catch(e) {}
+  }
+
+  const idPantalla = {
+    entrada:          'pantallaEntrada',
+    salida:           'pantallaSalida',
+    salida_colacion:  'pantallaSalidaColacion',
+    entrada_colacion: 'pantallaEntradaColacion',
+  }[modo];
+
+  if (!idPantalla) {
+    // Fallback por rol
+    window.location.href = rol === 'cocina' ? 'cocina.html' : rol === 'admin' ? 'admin.html' : 'pos.html';
+    return;
+  }
+
+  if (modo === 'entrada') {
+    document.getElementById('entradaNombre').textContent     = nombre;
+    document.getElementById('entradaHora').textContent       = hora;
+    document.getElementById('entradaHorasSemana').textContent = horasSemana;
+    if (rol === 'admin' || rol === 'propietario') {
+      setTimeout(() => location.href = 'admin.html', 4000);
+    } else {
+      setTimeout(() => location.href = 'pos.html', 4000);
+    }
+  } else if (modo === 'salida') {
+    document.getElementById('salidaNombre').textContent  = nombre;
+    document.getElementById('salidaHora').textContent    = hora;
+    // Calcular horas trabajadas hoy
+    try {
+      const res = await fetch('/api/auth/asistencia/resumen', {credentials:'include'}).then(r=>r.json());
+      if (res.ultima_entrada) {
+        const ini = new Date(res.ultima_entrada.replace(' ','T'));
+        const fin = new Date();
+        const diffMin = Math.round((fin - ini) / 60000);
+        const h = Math.floor(diffMin / 60);
+        const m = diffMin % 60;
+        document.getElementById('salidaResumen').textContent = `Hoy trabajaste ${h} hrs ${m} min`;
+      }
+    } catch(e) {}
+  } else if (modo === 'salida_colacion') {
+    document.getElementById('salidaColNombre').textContent = nombre;
+    document.getElementById('salidaColHora').textContent   = `Colación iniciada a las ${hora}`;
+  } else if (modo === 'entrada_colacion') {
+    document.getElementById('entradaColNombre').textContent = nombre;
+    document.getElementById('entradaColHora').textContent   = `Son las ${hora}`;
+  }
+
+  document.getElementById(idPantalla).classList.add('activa');
+}
+
 document.addEventListener('keydown', e => {
   if (!document.getElementById('pantallaPin').classList.contains('activa')) return;
   if (e.key >= '0' && e.key <= '9') presionarPin(e.key);
   else if (e.key === 'Backspace') borrarPin();
   else if (e.key === 'Escape') volverUsuarios();
 });
+
+// Detectar ?modo= en URL
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const m = params.get('modo');
+  if (m && _MODO_BTN[m]) seleccionarModo(m);
+})();
 
 cargarUsuarios();
 </script>

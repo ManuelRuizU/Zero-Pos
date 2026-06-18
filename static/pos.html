@@ -2566,8 +2566,7 @@ async function _confirmarTurno() {
     });
     if (r.ok) {
       document.getElementById('modalTurno').style.display = 'none';
-      document.getElementById('overlayTurnoCerrado').style.display = 'flex';
-      showToast('Turno cerrado', 'success');
+      location.href = 'login.html?modo=salida';
     } else {
       const d = await r.json();
       showToast(d.error || 'Error al cerrar turno', 'error');

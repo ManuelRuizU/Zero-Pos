@@ -553,6 +553,27 @@ def _m016_stock_mov_sync(conn):
     ensure_index(conn, 'idx_stock_mov_referencia', 'stock_movimientos', 'referencia_tipo, referencia_id')
 
 
+def _m017_asistencia(conn):
+    """Tabla asistencia para control de jornada laboral + columna jornada en usuarios."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS asistencia (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id  INTEGER NOT NULL,
+            tipo        TEXT NOT NULL CHECK(tipo IN
+                        ('entrada','salida','salida_colacion','entrada_colacion')),
+            fecha       DATETIME DEFAULT CURRENT_TIMESTAMP,
+            turno_id    INTEGER,
+            uuid        TEXT DEFAULT (lower(hex(randomblob(16)))),
+            lat         REAL,
+            lon         REAL,
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    """)
+    ensure_index(conn, 'idx_asistencia_usuario', 'asistencia', 'usuario_id, fecha')
+    ensure_index(conn, 'idx_asistencia_fecha',   'asistencia', 'fecha')
+    ensure_column(conn, 'usuarios', 'jornada_horas_semanales', 'INTEGER', 45)
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -570,6 +591,7 @@ _MIGRACIONES = [
     (14, "event_log: auditoría de eventos (ventas, precios, stock)",              _m014_event_log),
     (15, "Fase 1 sync: uuid, updated_at, deleted_at, origin_device tablas base", _m015_sync_columns),
     (16, "stock_movimientos: referencia_tipo/id, uuid, origin_device e índices", _m016_stock_mov_sync),
+    (17, "asistencia: control de jornada entrada/salida/colación",               _m017_asistencia),
 ]
 
 

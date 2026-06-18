@@ -2,6 +2,7 @@ import json
 import logging
 import threading
 import time
+from datetime import datetime, timedelta
 from collections import defaultdict
 from flask import Blueprint, request, jsonify, session
 from database import db_session
@@ -65,6 +66,10 @@ def login():
 
     data = request.get_json(silent=True) or {}
     pin = str(data.get("pin", "")).strip()
+    modo_asistencia = data.get("modo", "entrada")
+    _MODOS_VALIDOS = {"entrada", "salida", "salida_colacion", "entrada_colacion"}
+    if modo_asistencia not in _MODOS_VALIDOS:
+        modo_asistencia = "entrada"
 
     if not pin or len(pin) != 4 or not pin.isdigit():
         return jsonify({"error": "PIN inválido"}), 400
@@ -121,11 +126,34 @@ def login():
                 permisos_raw = u["permisos"] if "permisos" in u.keys() else None
                 session["usuario_permisos"] = permisos_raw
 
-                from database import permisos_efectivos
+                from database import permisos_efectivos, log_event
                 perms = permisos_efectivos(dict(session))
-                logger.info(f"Login exitoso: {u['nombre']} (rol={u['rol']}, sucursal={suc_id})")
+
+                # Registrar asistencia
+                turno_id_actual = None
+                try:
+                    t = conn.execute(
+                        "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'",
+                        (u["id"],)
+                    ).fetchone()
+                    if t:
+                        turno_id_actual = t["id"]
+                    conn.execute(
+                        "INSERT INTO asistencia (usuario_id, tipo, turno_id) VALUES (?,?,?)",
+                        (u["id"], modo_asistencia, turno_id_actual)
+                    )
+                    log_event(conn, 'asistencia', modo_asistencia,
+                              entidad_id=u["id"],
+                              payload={'hora': datetime.now().isoformat()},
+                              usuario_id=u["id"],
+                              usuario_nombre=u["nombre"])
+                except Exception as _ae:
+                    logger.warning(f"Error registrando asistencia: {_ae}")
+
+                logger.info(f"Login exitoso: {u['nombre']} (rol={u['rol']}, sucursal={suc_id}, modo={modo_asistencia})")
                 return jsonify({
                     "ok": True,
+                    "modo": modo_asistencia,
                     "usuario": {
                         "id":         u["id"],
                         "nombre":     u["nombre"],
@@ -523,5 +551,170 @@ def actualizar_usuario(uid):
             import json as _json
             pj = _json.dumps(data["permisos"]) if isinstance(data["permisos"], dict) else None
             conn.execute("UPDATE usuarios SET permisos=? WHERE id=?", (pj, uid))
+        if "jornada_horas_semanales" in data:
+            jornada = data["jornada_horas_semanales"]
+            conn.execute("UPDATE usuarios SET jornada_horas_semanales=? WHERE id=?",
+                         (int(jornada) if jornada is not None else 45, uid))
 
         return jsonify({"ok": True})
+
+
+# ── Asistencia ────────────────────────────────────────────────────────────────
+
+@auth_bp.route("/asistencia", methods=["GET"])
+def listar_asistencia():
+    uid = session.get("usuario_id")
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+
+    semana = request.args.get("semana", "actual")
+    hoy = datetime.now().date()
+    lunes = hoy - timedelta(days=hoy.weekday())
+    domingo = lunes + timedelta(days=6)
+    fecha_desde = str(lunes)
+    fecha_hasta = str(domingo)
+
+    with db_session() as conn:
+        is_admin = session.get("usuario_rol") == "admin"
+        if is_admin:
+            rows = conn.execute(
+                """SELECT a.*, u.nombre as usuario_nombre
+                   FROM asistencia a JOIN usuarios u ON a.usuario_id = u.id
+                   WHERE date(a.fecha) BETWEEN ? AND ?
+                   ORDER BY a.fecha""",
+                (fecha_desde, fecha_hasta)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT a.*, u.nombre as usuario_nombre
+                   FROM asistencia a JOIN usuarios u ON a.usuario_id = u.id
+                   WHERE a.usuario_id = ? AND date(a.fecha) BETWEEN ? AND ?
+                   ORDER BY a.fecha""",
+                (uid, fecha_desde, fecha_hasta)
+            ).fetchall()
+
+        # Agrupar por usuario y fecha
+        dias: dict = {}
+        for r in rows:
+            d = dict(r)
+            key = f"{d['usuario_id']}_{d['fecha'][:10]}"
+            if key not in dias:
+                dias[key] = {
+                    "usuario_id":     d["usuario_id"],
+                    "usuario_nombre": d["usuario_nombre"],
+                    "fecha":          d["fecha"][:10],
+                    "entrada":        None,
+                    "salida_colacion": None,
+                    "entrada_colacion": None,
+                    "salida":         None,
+                    "horas":          None,
+                }
+            t = d["tipo"]
+            if t == "entrada" and dias[key]["entrada"] is None:
+                dias[key]["entrada"] = d["fecha"][11:16]
+            elif t == "salida_colacion":
+                dias[key]["salida_colacion"] = d["fecha"][11:16]
+            elif t == "entrada_colacion":
+                dias[key]["entrada_colacion"] = d["fecha"][11:16]
+            elif t == "salida":
+                dias[key]["salida"] = d["fecha"][11:16]
+
+        # Calcular horas por día
+        resultados = []
+        for item in dias.values():
+            if item["entrada"] and item["salida"]:
+                try:
+                    base = datetime.now().date()
+                    e = datetime.strptime(f"{base} {item['entrada']}", "%Y-%m-%d %H:%M")
+                    s = datetime.strptime(f"{base} {item['salida']}", "%Y-%m-%d %H:%M")
+                    diff = (s - e).total_seconds() / 3600
+                    # Descontar colación si ambos registros existen
+                    if item["salida_colacion"] and item["entrada_colacion"]:
+                        sc = datetime.strptime(f"{base} {item['salida_colacion']}", "%Y-%m-%d %H:%M")
+                        ec = datetime.strptime(f"{base} {item['entrada_colacion']}", "%Y-%m-%d %H:%M")
+                        colacion_h = max(0, (ec - sc).total_seconds() / 3600)
+                        diff -= colacion_h
+                    item["horas"] = round(max(0, diff), 2)
+                except Exception:
+                    pass
+            resultados.append(item)
+
+        return jsonify(sorted(resultados, key=lambda x: (x["fecha"], x["usuario_nombre"])))
+
+
+@auth_bp.route("/asistencia/resumen", methods=["GET"])
+def resumen_asistencia():
+    uid = session.get("usuario_id")
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+
+    hoy = datetime.now().date()
+    lunes = hoy - timedelta(days=hoy.weekday())
+    fecha_desde = str(lunes)
+    fecha_hasta = str(hoy)
+
+    with db_session() as conn:
+        is_admin = session.get("usuario_rol") == "admin"
+        usuario_ids = []
+        if is_admin:
+            rows_u = conn.execute(
+                "SELECT id, nombre, jornada_horas_semanales FROM usuarios WHERE activo=1"
+            ).fetchall()
+            usuario_ids = [dict(r) for r in rows_u]
+        else:
+            r = conn.execute(
+                "SELECT id, nombre, jornada_horas_semanales FROM usuarios WHERE id=?", (uid,)
+            ).fetchone()
+            if r:
+                usuario_ids = [dict(r)]
+
+        resumen = []
+        for u_info in usuario_ids:
+            u_id = u_info["id"]
+            jornada = u_info.get("jornada_horas_semanales") or 45
+
+            filas = conn.execute(
+                """SELECT tipo, fecha FROM asistencia
+                   WHERE usuario_id=? AND date(fecha) BETWEEN ? AND ?
+                   ORDER BY fecha""",
+                (u_id, fecha_desde, fecha_hasta)
+            ).fetchall()
+
+            # Calcular horas totales de la semana
+            dias_trabajados = set()
+            ultima_entrada = None
+            ultima_salida = None
+            horas_totales = 0.0
+            pendiente_entrada = None
+
+            for f in filas:
+                t = f["tipo"]
+                ts = f["fecha"]
+                fecha_dia = ts[:10]
+                if t == "entrada":
+                    pendiente_entrada = ts
+                    ultima_entrada = ts
+                    dias_trabajados.add(fecha_dia)
+                elif t == "salida" and pendiente_entrada:
+                    try:
+                        e = datetime.strptime(pendiente_entrada, "%Y-%m-%d %H:%M:%S")
+                        s = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+                        horas_totales += max(0, (s - e).total_seconds() / 3600)
+                    except Exception:
+                        pass
+                    ultima_salida = ts
+                    pendiente_entrada = None
+
+            resumen.append({
+                "usuario_id":      u_id,
+                "usuario_nombre":  u_info["nombre"],
+                "horas_semana":    round(horas_totales, 2),
+                "dias_trabajados": len(dias_trabajados),
+                "jornada_pactada": jornada,
+                "ultima_entrada":  ultima_entrada,
+                "ultima_salida":   ultima_salida,
+            })
+
+        if not is_admin and resumen:
+            return jsonify(resumen[0])
+        return jsonify(resumen)
