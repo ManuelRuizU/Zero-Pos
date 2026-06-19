@@ -252,7 +252,8 @@ def crear_venta():
     # La transacción ya está committed. Imprimir sin afectar la respuesta.
     try:
         _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                               config_negocio, config_imp, pedido_data, empleado)
+                               config_negocio, config_imp, pedido_data, empleado,
+                               neto=neto, impuesto=impuesto)
     except Exception as e:
         logger.error(f"Error al imprimir ticket venta #{venta_id}: {e}")
 
@@ -260,7 +261,7 @@ def crear_venta():
 
 
 def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, config_imp,
-                           pedido=None, empleado=""):
+                           pedido=None, empleado="", neto=0, impuesto=0):
     """Encola el ticket PRIMERO (la venta ya está guardada), luego imprime en hilo separado.
     Si la impresión falla, el ticket queda en cola para reintento automático.
     La venta NUNCA se pierde aunque falle la impresora."""
@@ -588,7 +589,8 @@ def venta_rapida():
 
     _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
                            config_negocio, config_imp,
-                           empleado=session.get("usuario_nombre", ""))
+                           empleado=session.get("usuario_nombre", ""),
+                           neto=neto, impuesto=impuesto)
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
 
