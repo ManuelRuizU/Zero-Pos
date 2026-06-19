@@ -3,6 +3,7 @@ import sys
 import socket
 import threading
 import logging
+from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from flask import Flask, redirect, url_for, send_from_directory, request
@@ -260,6 +261,8 @@ def create_app() -> Flask:
         SESSION_USE_SIGNER=True,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=True,
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
         MAX_CONTENT_LENGTH=50 * 1024 * 1024,
         # Flask-Compress
         COMPRESS_MIMETYPES=[

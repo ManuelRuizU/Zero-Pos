@@ -693,6 +693,14 @@ def _m022_indices_sii(conn):
     ensure_index(conn, 'idx_ventas_cliente_rut', 'ventas', 'cliente_rut, creado_en')
 
 
+def _m023_turnos_descuadre(conn):
+    """Columnas de resumen financiero en turnos para descuadre automático."""
+    ensure_column(conn, 'turnos', 'descuadre',       'INTEGER')
+    ensure_column(conn, 'turnos', 'ventas_efectivo', 'INTEGER')
+    ensure_column(conn, 'turnos', 'ventas_total',    'INTEGER')
+    ensure_column(conn, 'turnos', 'ventas_count',    'INTEGER')
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -716,6 +724,7 @@ _MIGRACIONES = [
     (20, "índices compuestos ventas por fecha/estado y usuario/fecha",           _m020_indices_reportes),
     (21, "SII/DTE: tablas cafs y boletas para futura integración boleta elect.", _m021_sii),
     (22, "SII: índice ventas.cliente_rut para consultas por RUT",               _m022_indices_sii),
+    (23, "turnos: descuadre, ventas_efectivo, ventas_total, ventas_count",      _m023_turnos_descuadre),
 ]
 
 

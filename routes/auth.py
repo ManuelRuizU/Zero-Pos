@@ -287,17 +287,48 @@ def cerrar_turno():
 
     with db_session() as conn:
         turno = conn.execute(
-            "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
+            "SELECT id, fondo_inicial FROM turnos WHERE usuario_id=? AND estado='abierto'",
+            (uid,)
         ).fetchone()
         if not turno:
             return jsonify({"error": "No hay turno abierto"}), 404
 
         turno_id = turno["id"]
+        fondo_inicial = int(turno["fondo_inicial"] or 0)
+
+        # Calcular ventas del turno antes de cerrar
+        resumen = conn.execute(
+            """SELECT COUNT(*) as count,
+                      COALESCE(SUM(total), 0) as total,
+                      COALESCE(SUM(CASE WHEN metodo_pago='efectivo'
+                                   THEN total ELSE 0 END), 0) as efectivo
+               FROM ventas
+               WHERE turno_id=? AND estado='completada'""",
+            (turno_id,)
+        ).fetchone()
+
+        ventas_efectivo = int(resumen["efectivo"])
+        ventas_total    = int(resumen["total"])
+        ventas_count    = int(resumen["count"])
+
+        fondo_esperado = fondo_inicial + ventas_efectivo
+        descuadre      = int(fondo_final) - fondo_esperado
+
+        if descuadre != 0:
+            logger.warning(
+                f"Turno #{turno_id} cerrado con "
+                f"{'sobrante' if descuadre > 0 else 'faltante'} "
+                f"de ${abs(descuadre):,}"
+            )
+
         conn.execute(
             """UPDATE turnos SET estado='cerrado', cierre=CURRENT_TIMESTAMP,
-               fondo_final=?, denominaciones_cierre=?
+               fondo_final=?, denominaciones_cierre=?,
+               descuadre=?, ventas_efectivo=?, ventas_total=?, ventas_count=?
                WHERE id=?""",
-            (fondo_final, denoms_json, turno_id)
+            (fondo_final, denoms_json,
+             descuadre, ventas_efectivo, ventas_total, ventas_count,
+             turno_id)
         )
 
         # Turno completo post-UPDATE (cierre ya está seteado)
