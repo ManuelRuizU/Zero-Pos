@@ -341,6 +341,10 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
 
         # ── TOTAL ─────────────────────────────────────────────────
         p.text(SEP + "\n")
+        if venta.get("neto") and venta.get("impuesto", 0) > 0:
+            iva_pct = float(config.get("iva_porcentaje") or 19)
+            p.text(_linea_precio("Neto:", venta["neto"], N) + "\n")
+            p.text(_linea_precio(f"IVA ({iva_pct:.0f}%):", venta["impuesto"], N) + "\n")
         p.set(bold=True)
         p.text(_linea_precio("TOTAL:", venta["total"], N) + "\n")
         p.set(bold=False)
@@ -902,8 +906,14 @@ def _formatear_texto(venta: dict, items: list, config: dict,
         if it.get("notas"):
             lineas.append("  *** " + limpiar_texto(it["notas"]))
 
-    lineas += [
-        SEP,
+    iva_lineas = []
+    if venta.get("neto") and venta.get("impuesto", 0) > 0:
+        iva_pct = float(config.get("iva_porcentaje") or 19)
+        iva_lineas = [
+            _linea_precio("Neto:", venta["neto"], N),
+            _linea_precio(f"IVA ({iva_pct:.0f}%):", venta["impuesto"], N),
+        ]
+    lineas += [SEP] + iva_lineas + [
         _linea_precio("TOTAL:", venta["total"], N),
         "Pago: " + limpiar_texto(venta.get("metodo_pago", "efectivo")).capitalize(),
     ]

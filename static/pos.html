@@ -5216,6 +5216,11 @@ function _renderDetalleVenta(v) {
   const totales = [];
   if (venta.descuento > 0) totales.push(`<div style="display:flex;justify-content:space-between;color:#f59e0b"><span>Descuento</span><span>-${fmt(venta.descuento)}</span></div>`);
   if (venta.costo_delivery > 0) totales.push(`<div style="display:flex;justify-content:space-between"><span>Despacho</span><span>${fmt(venta.costo_delivery)}</span></div>`);
+  if (venta.neto && venta.impuesto > 0) {
+    const ivaPct = Math.round((venta.impuesto / venta.neto) * 100);
+    totales.push(`<div style="display:flex;justify-content:space-between;color:var(--text-dim);font-size:12px"><span>Neto</span><span>${fmt(venta.neto)}</span></div>`);
+    totales.push(`<div style="display:flex;justify-content:space-between;color:var(--text-dim);font-size:12px"><span>IVA (${ivaPct}%)</span><span>${fmt(venta.impuesto)}</span></div>`);
+  }
   totales.push(`<div style="display:flex;justify-content:space-between;font-weight:700;font-size:15px"><span>Total</span><span>${fmt(venta.total)}</span></div>`);
   totales.push(`<div style="display:flex;justify-content:space-between;color:var(--text-dim)"><span style="text-transform:capitalize">${venta.metodo_pago||'—'}</span><span>${fmt(venta.total)}</span></div>`);
   document.getElementById('dvTotales').innerHTML = totales.join('');

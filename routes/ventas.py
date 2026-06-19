@@ -1,4 +1,5 @@
 import logging
+import re
 import threading
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
@@ -75,7 +76,9 @@ def crear_venta():
             return jsonify({"error": "No tienes permiso para aplicar descuentos"}), 403
 
     cliente_nombre = data.get("cliente_nombre")
-    cliente_rut = data.get("cliente_rut")
+    cliente_rut = (data.get("cliente_rut") or "").strip() or None
+    if cliente_rut and not re.match(r'^\d{1,8}-[\dkK]$', cliente_rut):
+        return jsonify({"error": "RUT inválido. Formato: 12345678-9"}), 400
     notas = data.get("notas")
     pedido_id = data.get("pedido_id")
     turno_id  = session.get("turno_id")
@@ -169,7 +172,8 @@ def crear_venta():
         config_negocio = _get_config_cached(conn)
 
         iva_pct = float(config_negocio.get("iva_porcentaje") or 19)
-        impuesto = pesos(total * iva_pct / (100 + iva_pct))
+        neto     = pesos(total / (1 + iva_pct / 100))
+        impuesto = total - neto
 
         # Leer config de impresora desde DB (misma fuente que usa test_conexion)
         config_imp = {
@@ -180,10 +184,10 @@ def crear_venta():
 
         cur = conn.execute(
             """INSERT INTO ventas
-               (turno_id, usuario_id, pedido_id, total, descuento, impuesto,
+               (turno_id, usuario_id, pedido_id, total, descuento, neto, impuesto,
                 metodo_pago, cliente_nombre, cliente_rut, notas)
-               VALUES (?,?,?,?,?,?,?,?,?,?)""",
-            (turno_id, uid, pedido_id, total, descuento_global, impuesto,
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (turno_id, uid, pedido_id, total, descuento_global, neto, impuesto,
              metodo_pago, cliente_nombre, cliente_rut, notas)
         )
         venta_id = cur.lastrowid
@@ -425,7 +429,8 @@ def anular_venta(vid):
         for it in items:
             registrar_movimiento_stock(
                 conn, it["producto_id"], it["variante_id"],
-                "entrada", it["cantidad"], "anulacion", uid, venta_id=vid)
+                "entrada", it["cantidad"], "anulacion", uid, venta_id=vid,
+                notas=f"Devolución por anulación venta #{vid}")
 
         conn.execute(
             "UPDATE ventas SET estado='anulada' WHERE id=?", (vid,)
@@ -552,14 +557,15 @@ def venta_rapida():
                 "subtotal": subtotal,
             })
 
-        total = pesos(total - descuento_global)
-        impuesto = pesos(total * iva_pct / (100 + iva_pct))
+        total    = pesos(total - descuento_global)
+        neto     = pesos(total / (1 + iva_pct / 100))
+        impuesto = total - neto
 
         cur = conn.execute(
             """INSERT INTO ventas
-               (turno_id, usuario_id, pedido_id, total, descuento, impuesto, metodo_pago)
-               VALUES (?,?,?,?,?,?,?)""",
-            (turno_id, uid, pedido_id_rapida, total, descuento_global, impuesto, metodo_pago)
+               (turno_id, usuario_id, pedido_id, total, descuento, neto, impuesto, metodo_pago)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (turno_id, uid, pedido_id_rapida, total, descuento_global, neto, impuesto, metodo_pago)
         )
         venta_id = cur.lastrowid
 

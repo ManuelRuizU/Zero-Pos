@@ -693,6 +693,11 @@ def _m022_indices_sii(conn):
     ensure_index(conn, 'idx_ventas_cliente_rut', 'ventas', 'cliente_rut, creado_en')
 
 
+def _m024_ventas_neto(conn):
+    """Columna neto en ventas para desglose IVA = total - neto."""
+    ensure_column(conn, 'ventas', 'neto', 'INTEGER')
+
+
 def _m023_turnos_descuadre(conn):
     """Columnas de resumen financiero en turnos para descuadre automático."""
     ensure_column(conn, 'turnos', 'descuadre',       'INTEGER')
@@ -725,6 +730,7 @@ _MIGRACIONES = [
     (21, "SII/DTE: tablas cafs y boletas para futura integración boleta elect.", _m021_sii),
     (22, "SII: índice ventas.cliente_rut para consultas por RUT",               _m022_indices_sii),
     (23, "turnos: descuadre, ventas_efectivo, ventas_total, ventas_count",      _m023_turnos_descuadre),
+    (24, "ventas: columna neto para desglose IVA separado",                    _m024_ventas_neto),
 ]
 
 
