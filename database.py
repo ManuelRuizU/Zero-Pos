@@ -626,6 +626,68 @@ def _m020_indices_reportes(conn):
     ensure_index(conn, 'idx_ventas_usuario_fecha',  'ventas', 'usuario_id, creado_en')
 
 
+# ── SII/DTE ──────────────────────────────────────
+# Tablas preparadas para futura integración boleta
+# electrónica Chile. No activar hasta tener:
+# - RUT empresa con giro comercio
+# - CAF autorizado por SII (tipo DTE 39)
+# - Certificado digital empresa
+# - Ambiente certificación SII aprobado
+# ─────────────────────────────────────────────────
+def _m021_sii(conn):
+    """Tablas base para futura integración SII/DTE."""
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS cafs (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            rut_emisor        TEXT NOT NULL,
+            rs_emisor         TEXT,
+            tipo_dte          INTEGER NOT NULL DEFAULT 39,
+            folio_inicio      INTEGER NOT NULL,
+            folio_fin         INTEGER NOT NULL,
+            folio_actual      INTEGER NOT NULL,
+            archivo_xml       TEXT NOT NULL,
+            fecha_autorizacion DATE,
+            fecha_vencimiento  DATE,
+            activo            INTEGER DEFAULT 1,
+            creado_en         DATETIME DEFAULT CURRENT_TIMESTAMP,
+            uuid              TEXT DEFAULT (lower(hex(randomblob(16))))
+        );
+
+        CREATE TABLE IF NOT EXISTS boletas (
+            id                TEXT PRIMARY KEY
+                              DEFAULT (lower(hex(randomblob(16)))),
+            folio             INTEGER,
+            caf_id            INTEGER REFERENCES cafs(id),
+            venta_id          INTEGER REFERENCES ventas(id),
+            fecha_emision     DATETIME DEFAULT CURRENT_TIMESTAMP,
+            total             INTEGER NOT NULL,
+            cliente_rut       TEXT,
+            cliente_nombre    TEXT,
+            xml_firmado       TEXT,
+            pdf_url           TEXT,
+            estado            TEXT NOT NULL DEFAULT 'pendiente_sync'
+                              CHECK(estado IN (
+                                'pendiente_sync','enviada',
+                                'rechazada_sii','no_aplica'
+                              )),
+            intentos_envio    INTEGER DEFAULT 0,
+            ultimo_error      TEXT,
+            creado_en         DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+            origin_device     TEXT,
+            pending_sync      INTEGER DEFAULT 1
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_boletas_estado
+            ON boletas (estado, creado_en);
+        CREATE INDEX IF NOT EXISTS idx_boletas_venta
+            ON boletas (venta_id);
+        CREATE INDEX IF NOT EXISTS idx_cafs_activo
+            ON cafs (activo, tipo_dte);
+    """)
+    logger.info("DB: tablas SII (cafs, boletas) creadas")
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -647,6 +709,7 @@ _MIGRACIONES = [
     (18, "Fase 2 sync: tabla devices + device_id en config",                     _m018_device_y_devices),
     (19, "Fase 2 sync: event_log ampliado como cola de sync cloud",              _m019_event_log_sync),
     (20, "índices compuestos ventas por fecha/estado y usuario/fecha",           _m020_indices_reportes),
+    (21, "SII/DTE: tablas cafs y boletas para futura integración boleta elect.", _m021_sii),
 ]
 
 
