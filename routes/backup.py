@@ -1,4 +1,8 @@
+import io
 import logging
+import shutil
+import sqlite3 as _sqlite3
+import tempfile
 import threading
 from pathlib import Path
 from flask import Blueprint, request, jsonify, session, send_file, current_app
@@ -24,12 +28,10 @@ def descargar_backup(nombre):
     if session.get("usuario_rol") != "admin":
         return jsonify({"error": "Sin permisos"}), 403
 
-    base    = (Path(current_app.root_path) / "backups").resolve()
-    archivo = (base / nombre).resolve()
-    if not archivo.is_relative_to(base):
-        return jsonify({"error": "Acceso denegado"}), 403
-    if not archivo.exists():
-        return jsonify({"error": "Archivo no encontrado"}), 404
+    base_resolved = (Path(current_app.root_path) / "backups").resolve()
+    archivo       = (base_resolved / nombre).resolve()
+    if not archivo.exists() or base_resolved not in archivo.parents:
+        return jsonify({"error": "Archivo inválido"}), 404
 
     return send_file(str(archivo), as_attachment=True)
 
@@ -60,21 +62,42 @@ def restaurar_backup():
     if not archivo or not archivo.filename:
         return jsonify({"error": "No se seleccionó archivo"}), 400
 
-    raiz = Path(current_app.root_path)
-    temp_dir = raiz / "temp"
-    temp_dir.mkdir(exist_ok=True)
-    (temp_dir / "backup_incoming.zip").write_bytes(archivo.read())
-    (raiz / ".restaurar_flag").write_text(archivo.filename)
+    from utils.backup import restaurar_backup_cifrado
 
-    def _salir():
-        import time, os
-        time.sleep(1)
-        os._exit(0)  # systemd/supervisord reinicia el proceso
+    tmp_dir = Path(tempfile.mkdtemp())
+    tmp_db  = tmp_dir / "test_restore.db"
 
-    threading.Thread(target=_salir, daemon=True).start()
+    # 1. Descifrar a directorio temporal
+    resultado = restaurar_backup_cifrado(io.BytesIO(archivo.read()), destino_path=tmp_db)
+    if not resultado.get("ok"):
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return jsonify(resultado), 400
+
+    # 2. Validar que la DB restaurada abre y tiene tablas clave
+    try:
+        test_conn = _sqlite3.connect(str(tmp_db))
+        test_conn.execute("SELECT COUNT(*) FROM ventas")
+        test_conn.execute("SELECT COUNT(*) FROM productos")
+        test_conn.execute("SELECT COUNT(*) FROM usuarios")
+        test_conn.close()
+    except Exception as e:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+        return jsonify({"error": f"Backup corrupto o incompatible: {e}"}), 400
+
+    # 3. Respaldar DB actual antes de pisar
+    db_actual = Path(current_app.root_path) / "zero_pos.db"
+    if db_actual.exists():
+        shutil.copy2(db_actual, db_actual.with_suffix(".db.pre-restore"))
+        logger.info("DB actual respaldada como .db.pre-restore")
+
+    # 4. Reemplazar DB con la restaurada
+    shutil.move(str(tmp_db), str(db_actual))
+    shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    logger.info("DB restaurada exitosamente desde backup")
     return jsonify({
         "ok": True,
-        "mensaje": "Reiniciando para restaurar... El sistema estará listo en 10 segundos."
+        "msg": "Restaurado exitosamente. Reinicia el sistema."
     })
 
 

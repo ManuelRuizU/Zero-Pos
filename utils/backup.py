@@ -41,10 +41,10 @@ def crear_backup_cifrado() -> dict:
         return {"ok": False, "error": str(e)}
 
 
-def restaurar_backup_cifrado(archivo) -> dict:
+def restaurar_backup_cifrado(archivo, destino_path=None) -> dict:
     try:
         clave = _leer_clave_cifrado()
-        contenido = archivo.read()
+        contenido = archivo.read() if hasattr(archivo, "read") else Path(archivo).read_bytes()
 
         with zipfile.ZipFile(io.BytesIO(contenido)) as zf:
             if "zero_pos.db.enc" not in zf.namelist():
@@ -52,6 +52,11 @@ def restaurar_backup_cifrado(archivo) -> dict:
             datos_cifrados = zf.read("zero_pos.db.enc")
 
         datos_db = _descifrar(datos_cifrados, clave)
+
+        if destino_path is not None:
+            Path(destino_path).write_bytes(datos_db)
+            return {"ok": True}
+
         db_path = BASE_DIR / "zero_pos.db"
         backup_prev = BASE_DIR / "zero_pos.db.prev"
         if db_path.exists():

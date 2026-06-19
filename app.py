@@ -735,6 +735,33 @@ def revisar_fiados_vencidos(app: Flask):
             logger.debug(f"revisar_fiados_vencidos: {e}")
 
 
+def _limpiar_backups_antiguos(dias: int = 30):
+    """Elimina backups más antiguos que N días."""
+    from datetime import datetime, timedelta
+    backup_dir = BASE_DIR / "backups"
+    if not backup_dir.exists():
+        return
+    limite = datetime.now() - timedelta(days=dias)
+    for archivo in backup_dir.glob("*.zip"):
+        if datetime.fromtimestamp(archivo.stat().st_mtime) < limite:
+            archivo.unlink()
+            logger.info(f"Backup antiguo eliminado: {archivo.name}")
+
+
+def _backup_automatico():
+    """Backup automático diario a las 2 AM."""
+    try:
+        from utils.backup import crear_backup_cifrado
+        resultado = crear_backup_cifrado()
+        if resultado.get("ok"):
+            logger.info(f"Backup automático OK: {resultado.get('archivo')}")
+            _limpiar_backups_antiguos(dias=30)
+        else:
+            logger.warning(f"Backup automático falló: {resultado}")
+    except Exception as e:
+        logger.error(f"Error en backup automático: {e}")
+
+
 def start_backup_scheduler(app: Flask):
     try:
         import schedule
@@ -743,12 +770,13 @@ def start_backup_scheduler(app: Flask):
 
         hora_backup = obtener_config_backup().get("backup_hora", "03:00")
         schedule.every().day.at(hora_backup).do(ejecutar_backup_completo)
+        schedule.every().day.at("02:00").do(_backup_automatico)
         schedule.every().day.at("06:00").do(_reset_stock_produccion)
         schedule.every().day.at("08:00").do(revisar_fiados_vencidos, app)
         schedule.every().day.at("23:59").do(calcular_metricas_dia, app)
         schedule.every(60).seconds.do(procesar_cola_impresion, app)
         schedule.every().day.at("04:00").do(_check_mantenimiento_db)
-        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00) + fiados (08:00) + métricas (23:59) + cola impresión (60s) + mantenimiento DB (04:00 si 30d)")
+        logger.info("Backup scheduler iniciado (03:00) + auto-backup (02:00) + reset produccion (06:00) + fiados (08:00) + métricas (23:59) + cola impresión (60s) + mantenimiento DB (04:00 si 30d)")
 
         def loop():
             while True:
