@@ -388,6 +388,11 @@ input:checked + .slider:before{transform:translateX(20px);}
             <input type="text" id="cfg_nombre_terminal" placeholder="Ej: Caja 1, Caja Norte, Caja Express">
             <div style="font-size:0.78rem;color:var(--zero-text-muted,#888);margin-top:3px">Aparece en cada ticket impreso</div>
           </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Plantilla mensaje WhatsApp</label>
+            <textarea id="cfg_whatsapp_plantilla" rows="4" style="width:100%;resize:vertical" placeholder="Hola! Gracias por tu compra en {negocio}..."></textarea>
+            <div style="font-size:0.78rem;color:var(--zero-text-muted,#888);margin-top:3px">Variables: {negocio} {total} {items} {fecha}</div>
+          </div>
         </div>
         <div class="cfg-save">
           <span class="save-feedback" id="fb_negocio">✓ Guardado</span>
@@ -1427,6 +1432,7 @@ async function cargarConfig() {
   set('cfg_rut_negocio',         cfgActual.rut_negocio);
   set('cfg_comuna_negocio',      cfgActual.comuna_negocio);
   set('cfg_mensaje_ticket',      cfgActual.mensaje_ticket);
+  set('cfg_whatsapp_plantilla',  cfgActual.whatsapp_plantilla);
   set('cfg_moneda',              cfgActual.moneda || 'CLP');
   set('cfg_iva_porcentaje',      cfgActual.iva_porcentaje ?? '19');
   set('cfg_impresora_tipo',         cfgActual.impresora_tipo || 'red');
@@ -1492,7 +1498,7 @@ function toggleImpresora() {
 }
 
 const SECCIONES = {
-  negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje','comuna_negocio','mensaje_ticket','nombre_terminal'],
+  negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje','comuna_negocio','mensaje_ticket','nombre_terminal','whatsapp_plantilla'],
   impresora: ['impresora_tipo','impresora_ip','impresora_puerto','impresora_autocorte','impresora_corte_tipo'],
   khipu:     ['khipu_receiver_id','khipu_secret'],
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
