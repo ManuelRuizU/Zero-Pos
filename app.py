@@ -3,6 +3,7 @@ import sys
 import socket
 import threading
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from flask import Flask, redirect, url_for, send_from_directory, request
 from flask_cors import CORS
@@ -27,6 +28,21 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("zero_pos")
+
+_logs_dir = BASE_DIR / "logs"
+_logs_dir.mkdir(exist_ok=True)
+_file_handler = RotatingFileHandler(
+    _logs_dir / "zero_pos.log",
+    maxBytes=5 * 1024 * 1024,
+    backupCount=3,
+    encoding="utf-8",
+)
+_file_handler.setLevel(logging.INFO)
+_file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+))
+logging.getLogger().addHandler(_file_handler)
+logger.info("Logging a archivo iniciado")
 
 def get_or_create_ssl_cert() -> tuple[Path, Path]:
     """Generate a persistent self-signed cert (only on first run)."""
