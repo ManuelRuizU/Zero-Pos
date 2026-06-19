@@ -154,7 +154,7 @@ def actualizar_proveedor_producto(conn, proveedor_id, producto_id, precio_compra
 
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+    conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=10.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -620,6 +620,12 @@ def _m019_event_log_sync(conn):
     ensure_index(conn, 'idx_event_log_sync_at', 'event_log', 'sync_at')
 
 
+def _m020_indices_reportes(conn):
+    """Índices compuestos para acelerar reportes por fecha y usuario."""
+    ensure_index(conn, 'idx_ventas_fecha_estado',  'ventas', 'creado_en, estado')
+    ensure_index(conn, 'idx_ventas_usuario_fecha',  'ventas', 'usuario_id, creado_en')
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -640,6 +646,7 @@ _MIGRACIONES = [
     (17, "asistencia: control de jornada entrada/salida/colación",               _m017_asistencia),
     (18, "Fase 2 sync: tabla devices + device_id en config",                     _m018_device_y_devices),
     (19, "Fase 2 sync: event_log ampliado como cola de sync cloud",              _m019_event_log_sync),
+    (20, "índices compuestos ventas por fecha/estado y usuario/fecha",           _m020_indices_reportes),
 ]
 
 
@@ -678,6 +685,18 @@ def _migrate_stock_model(conn):
 def init_db():
     schema_main = BASE_DIR / "models" / "schema.sql"
     schema_inv  = BASE_DIR / "models" / "schema_inventario.sql"
+
+    if DB_PATH.exists() and DB_PATH.stat().st_size > 1024:
+        logger.info("DB existente detectada — ejecutando solo migraciones")
+        try:
+            with db_session() as conn:
+                _migrate_montos(conn)
+                _migrate_columns(conn)
+                aplicar_migraciones(conn)
+                _migrate_pedidos_estados(conn)
+        except Exception as e:
+            logger.warning(f"init_db migraciones sobre DB existente: {e}")
+        return
 
     # Bloque 1: schema principal — executescript() maneja sus propios commits
     if schema_main.exists():
