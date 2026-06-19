@@ -1,5 +1,6 @@
 import datetime
 import logging
+import re as _re
 import subprocess
 from flask import Blueprint, request, jsonify, session
 from database import db_session
@@ -43,6 +44,16 @@ CLAVES_PERMITIDAS = {
     "backup_email_destino", "backup_destinos", "backup_retener_dias", "backup_rclone_remote",
     "wifi_ssid", "wifi_password",
     "nombre_terminal",
+    "whatsapp_plantilla",
+}
+
+_VALIDADORES = {
+    "iva_porcentaje":             lambda v: 0 <= float(v) <= 30,
+    "impresora_puerto":           lambda v: 1 <= int(v) <= 65535,
+    "impresora_cocina_puerto":    lambda v: 1 <= int(v) <= 65535,
+    "moneda":                     lambda v: v in ["CLP", "USD", "ARS"],
+    "backup_hora":                lambda v: bool(_re.match(r'^\d{2}:\d{2}$', v)) if v else True,
+    "jornada_horas_semanales":    lambda v: 1 <= int(v) <= 60,
 }
 
 
@@ -74,6 +85,14 @@ def guardar():
     rechazadas = [k for k in data if k not in CLAVES_PERMITIDAS]
     if rechazadas:
         return jsonify({"error": f"Claves no permitidas: {rechazadas}"}), 400
+
+    for clave, valor in data.items():
+        if clave in _VALIDADORES and valor not in (None, ''):
+            try:
+                if not _VALIDADORES[clave](str(valor)):
+                    return jsonify({"error": f"Valor inválido para {clave}: {valor}"}), 400
+            except (ValueError, TypeError):
+                return jsonify({"error": f"Formato incorrecto para {clave}: {valor}"}), 400
 
     with db_session() as conn:
         upsert_config(conn, data)
