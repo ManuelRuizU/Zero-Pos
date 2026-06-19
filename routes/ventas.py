@@ -269,7 +269,7 @@ def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     venta_data = {
         "id": venta_id, "total": total, "metodo_pago": metodo_pago,
-        "creado_en": now_str, "cajero": empleado,
+        "creado_en": now_str, "cajero": empleado, "neto": neto, "impuesto": impuesto,
     }
 
     # Generar contenido del ticket de forma síncrona antes del hilo
