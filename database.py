@@ -688,6 +688,11 @@ def _m021_sii(conn):
     logger.info("DB: tablas SII (cafs, boletas) creadas")
 
 
+def _m022_indices_sii(conn):
+    """Índice RUT cliente en ventas — útil para consultas SII por RUT."""
+    ensure_index(conn, 'idx_ventas_cliente_rut', 'ventas', 'cliente_rut, creado_en')
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -710,6 +715,7 @@ _MIGRACIONES = [
     (19, "Fase 2 sync: event_log ampliado como cola de sync cloud",              _m019_event_log_sync),
     (20, "índices compuestos ventas por fecha/estado y usuario/fecha",           _m020_indices_reportes),
     (21, "SII/DTE: tablas cafs y boletas para futura integración boleta elect.", _m021_sii),
+    (22, "SII: índice ventas.cliente_rut para consultas por RUT",               _m022_indices_sii),
 ]
 
 

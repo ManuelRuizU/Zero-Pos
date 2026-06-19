@@ -1,5 +1,6 @@
 # factura.py
 
+import json
 import logging
 from flask import Blueprint, request, jsonify, session
 from database import db_session
@@ -18,6 +19,12 @@ def subir_factura():
         return jsonify({"error": "Se requiere un archivo PDF"}), 400
 
     proveedor_id = request.form.get("proveedor_id")
+    datos_json = request.form.get("datos_json")
+    if datos_json:
+        try:
+            json.loads(datos_json)
+        except (json.JSONDecodeError, TypeError):
+            return jsonify({"error": "datos_json inválido"}), 400
 
     from utils.lector_facturas import procesar_pdf_factura
     resultado = procesar_pdf_factura(archivo, proveedor_id)
