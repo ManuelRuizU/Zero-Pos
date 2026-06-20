@@ -1668,25 +1668,27 @@ let carrito = [];
 let cfgApp = {};  // config del negocio cargada al inicio
 let _meId  = null;
 let _meRol = null;
+let _fetchProductosCtrl = null;
 
 // ── Cart localStorage ────────────────────────────────────────
 window.guardarCarritoLocal = function(items, usuarioId) {
+  if (items.length > 200) {
+    typeof showToast === 'function' && showToast('Máximo 200 productos por venta', 'warning');
+    return;
+  }
   try {
     localStorage.setItem('zero_carrito_v1', JSON.stringify({
       items: items.map(item => ({
         id: item.producto_id,
         nombre: item.nombre,
-        precio: item.precio_unit,
-        precio_unit: item.precio_unit,
         cantidad: item.cantidad,
         variante_id: item.variante_id || null,
-        variante_nombre: item.nombre_variante || null,
-        imagen_url: item.imagen_url || null
+        precio: item.precio_unit
       })),
       usuario_id: usuarioId,
       timestamp: Date.now()
     }));
-  } catch(e) { console.warn('Error guardando carrito', e); }
+  } catch(e) { console.warn('localStorage lleno:', e); }
 };
 window.recuperarCarritoLocal = function(usuarioId) {
   try {
@@ -2603,6 +2605,8 @@ async function _confirmarTurno() {
       body: JSON.stringify(body),
     });
     if (r.ok) {
+      const td = await r.json().catch(() => ({}));
+      if (td.turno_id) sessionStorage.setItem('turno_id', String(td.turno_id));
       document.getElementById('modalTurno').style.display = 'none';
       document.getElementById('overlayTurnoCerrado').style.display = 'none';
       document.getElementById('overlayColacion').style.display = 'none';
@@ -2733,11 +2737,17 @@ function selSubcat(btn, id) {
 
 // ── Productos ─────────────────────────────────────────────────
 async function cargarProductos() {
+  if (_fetchProductosCtrl) _fetchProductosCtrl.abort();
+  _fetchProductosCtrl = new AbortController();
+  const _sig = _fetchProductosCtrl.signal;
   const q = document.getElementById('searchInput').value;
 
   // Initial unfiltered load: fetch everything (products + variants) in one request
   if (!categoriaActual && !q) {
-    let prods = await fetch('/api/productos/completos', {credentials:'include'}).then(r => r.json()).catch(() => []);
+    let prods;
+    try {
+      prods = await fetch('/api/productos/completos', {credentials:'include', signal: _sig}).then(r => r.json());
+    } catch(e) { if (e.name === 'AbortError') return; prods = []; }
     todosProductos = prods;
     todosProductosMap = {};
     indiceCodigo = new Map();
@@ -2760,7 +2770,10 @@ async function cargarProductos() {
 
   // Filtered load: server-side search/category filter, variants from in-memory cache
   const url = `/api/productos?activos=1${categoriaActual ? '&categoria_id=' + categoriaActual : ''}${q ? '&q=' + encodeURIComponent(q) : ''}`;
-  let prods = await fetch(url, {credentials:'include'}).then(r => r.json()).catch(() => []);
+  let prods;
+  try {
+    prods = await fetch(url, {credentials:'include', signal: _sig}).then(r => r.json());
+  } catch(e) { if (e.name === 'AbortError') return; prods = []; }
 
   if (subcatActual) {
     prods = prods.filter(p => String(p.subcategoria_id) === String(subcatActual));
@@ -2814,7 +2827,25 @@ function renderProductos(lista) {
     return;
   }
 
-  lista.forEach(p => {
+  _productosFiltrados = lista;
+  _paginaProductos = 0;
+  if (_observerVScroll) { _observerVScroll.disconnect(); _observerVScroll = null; }
+  const _btnViejo = document.getElementById('btnVerMasProductos');
+  if (_btnViejo) _btnViejo.remove();
+  _renderPaginaGrid(grid, 0);
+}
+
+const PRODUCTOS_POR_PAGINA = 50;
+let _productosFiltrados = [];
+let _paginaProductos = 0;
+let _observerVScroll = null;
+
+function _renderPaginaGrid(grid, pagina) {
+  const inicio = pagina * PRODUCTOS_POR_PAGINA;
+  const fin    = inicio + PRODUCTOS_POR_PAGINA;
+  const slice  = _productosFiltrados.slice(inicio, fin);
+
+  slice.forEach(p => {
     productoMap[p.id] = p;
     const modoStock = p.modo_stock || 'normal';
     const sinStock = !p.tiene_variantes && modoStock !== 'sin_stock' && p.stock <= 0;
@@ -2823,19 +2854,16 @@ function renderProductos(lista) {
     div.setAttribute('data-producto-id', p.id);
 
     const emoji = p.imagen_url
-      ? `<img src="${p.imagen_url}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" style="width:60px;height:60px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 2px"><span style="display:none;font-size:36px;display:none">${getProductEmoji(p)}</span>`
+      ? `<img loading="lazy" src="${escH(p.imagen_url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" style="width:60px;height:60px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 2px"><span style="display:none;font-size:36px;display:none">${getProductEmoji(p)}</span>`
       : getProductEmoji(p);
-    // Escape name for safe innerHTML insertion
-    const nombreSafe = (p.nombre || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const nombreSafe = escH(p.nombre);
 
     let innerContent;
 
     if (p.tiene_variantes && p._variantes && p._variantes.length) {
-      // Card with inline variant pills
-      // Layout: emoji → name → pills (name+price per pill)
       const pillsHTML = p._variantes.map(v => {
         const agotado = v.stock <= 0;
-        const nombreV = (v.nombre || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const nombreV = escH(v.nombre);
         const clickAttr = agotado ? '' : `onclick="event.stopPropagation();agregarVarianteById(${p.id},${v.id})"`;
         return `<button class="variante-pill${agotado ? ' disabled' : ''}" ${clickAttr}>
           ${nombreV}<span class="vprecio">${fmt(v.precio)}</span>
@@ -2846,7 +2874,6 @@ function renderProductos(lista) {
         <span class="prod-nombre">${nombreSafe}</span>
         <div class="prod-variantes">${pillsHTML}</div>`;
     } else if (p.tiene_variantes) {
-      // Variants exist but not loaded yet — fallback to modal
       innerContent = `
         <span class="prod-emoji">${emoji}</span>
         <span class="prod-nombre">${nombreSafe}</span>
@@ -2869,7 +2896,6 @@ function renderProductos(lista) {
         <span class="prod-precio">${fmt(p.precio)}</span>`;
       if (!agotado) div.onclick = () => agregarAlCarrito(p);
     } else {
-      // Normal: emoji → name → stock → price
       const bajo = p.stock > 0 && p.stock <= p.stock_minimo;
       const stockTxt = `Stock: ${p.stock}${bajo ? ' ⚠️' : ''}`;
       innerContent = `
@@ -2883,6 +2909,36 @@ function renderProductos(lista) {
     div.innerHTML = innerContent;
     grid.appendChild(div);
   });
+
+  const hayMas = fin < _productosFiltrados.length;
+  if (hayMas) {
+    let btn = document.getElementById('btnVerMasProductos');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = 'btnVerMasProductos';
+      btn.className = 'btn';
+      btn.style.cssText = 'width:100%;margin:8px 0;padding:12px;grid-column:1/-1';
+      grid.parentElement.appendChild(btn);
+    }
+    btn.textContent = `Ver más (${_productosFiltrados.length - fin} restantes)`;
+    btn.onclick = () => { _paginaProductos++; _renderPaginaGrid(grid, _paginaProductos); };
+    const cards = grid.querySelectorAll('.prod-card');
+    if (cards.length > 0) {
+      if (_observerVScroll) _observerVScroll.disconnect();
+      _observerVScroll = new IntersectionObserver(entries => {
+        if (entries[0].isIntersecting) {
+          _observerVScroll.disconnect();
+          _paginaProductos++;
+          _renderPaginaGrid(grid, _paginaProductos);
+        }
+      }, {threshold: 0.1});
+      _observerVScroll.observe(cards[cards.length - 1]);
+    }
+  } else {
+    const btn = document.getElementById('btnVerMasProductos');
+    if (btn) btn.remove();
+    if (_observerVScroll) { _observerVScroll.disconnect(); _observerVScroll = null; }
+  }
 }
 
 function agregarVarianteById(prodId, varId) {
@@ -3309,6 +3365,8 @@ function confirmarVentaConStockBajo() {
 
 function abrirCobro() {
   if (!carrito.length) return;
+  const turnoActivo = sessionStorage.getItem('turno_id') || window._turnoId;
+  if (!turnoActivo) { showToast('Debes abrir el turno antes de cobrar', 'error'); return; }
   const insuf = verificarStockCarrito();
   if (insuf.length) { _mostrarModalStockInsuficiente(insuf); return; }
   _procesarCobro();
@@ -3960,7 +4018,10 @@ async function confirmarPago() {
 }
 
 // ── ZERO CREDIT ──────────────────────────────────────────────
-function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escH(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
 
 // ── Paso 1: 3 opciones ────────────────────────────────────────
 function renderPasoCredito() {
@@ -4705,9 +4766,10 @@ async function cerrarSesion() {
 }
 
 function showToast(msg, type = 'success') {
+  document.querySelectorAll('.zero-toast').forEach(t => t.classList.remove('show'));
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = `toast show ${type}`;
+  t.className = `toast zero-toast show ${type}`;
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => t.classList.remove('show'), 3000);
 }
@@ -4907,7 +4969,7 @@ function _renderProductosLista(lista, grid) {
     const modoStock = p.modo_stock || 'normal';
     const sinStock = !p.tiene_variantes && modoStock !== 'sin_stock' && p.stock <= 0;
     const color = _COLORES_LISTA[idx % _COLORES_LISTA.length];
-    const nombreSafe = (p.nombre || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const nombreSafe = escH(p.nombre);
 
     const fila = document.createElement('div');
     fila.className = 'prod-fila' + (sinStock ? ' sin-stock' : '');
@@ -4915,7 +4977,7 @@ function _renderProductosLista(lista, grid) {
 
     let imgHtml;
     if (p.imagen_url) {
-      imgHtml = `<div class="fila-img" style="background:${color}20"><img src="${p.imagen_url}" onerror="this.parentElement.innerHTML='${getProductEmoji(p)}'"></div>`;
+      imgHtml = `<div class="fila-img" style="background:${color}20"><img loading="lazy" src="${escH(p.imagen_url)}" onerror="this.style.display='none'"></div>`;
     } else {
       imgHtml = `<div class="fila-img" style="background:${color}20">${getProductEmoji(p)}</div>`;
     }
