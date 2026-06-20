@@ -589,6 +589,23 @@ def actualizar_usuario(uid):
 
 # ── Asistencia ────────────────────────────────────────────────────────────────
 
+@auth_bp.route("/asistencia", methods=["POST"])
+def registrar_asistencia():
+    uid = session.get("usuario_id")
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+    data = request.get_json(silent=True) or {}
+    tipo = data.get("tipo")
+    if tipo not in ("entrada", "salida", "salida_colacion", "entrada_colacion"):
+        return jsonify({"error": "Tipo inválido"}), 400
+    with db_session() as conn:
+        conn.execute(
+            "INSERT INTO asistencia (usuario_id, tipo, turno_id) VALUES (?,?,?)",
+            (uid, tipo, session.get("turno_id"))
+        )
+    return jsonify({"ok": True})
+
+
 @auth_bp.route("/asistencia", methods=["GET"])
 def listar_asistencia():
     uid = session.get("usuario_id")

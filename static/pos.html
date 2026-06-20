@@ -1146,6 +1146,34 @@ body {
   <div id="overlayTurnoUsuario" style="font-size:13px;color:var(--text-dim)"></div>
 </div>
 
+<!-- ── Overlay colación ──────────────────────────────────────── -->
+<div id="overlayColacion" style="
+  display:none;
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  background:var(--bg);
+  z-index:9000;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:24px;
+">
+  <div style="font-size:64px">☕</div>
+  <div style="font-size:28px;font-weight:700;letter-spacing:2px;color:var(--text)">
+    ZERO<span style="color:#6366f1">POS</span>
+  </div>
+  <div style="text-align:center">
+    <div style="font-size:20px;font-weight:600;color:#f59e0b;margin-bottom:8px">En colación</div>
+    <div id="overlayColacionNombre" style="font-size:16px;color:var(--text);margin-bottom:4px"></div>
+    <div style="font-size:13px;color:var(--text-dim)">Salió a las <span id="overlayColacionHora"></span></div>
+  </div>
+  <button onclick="_abrirModalTurno('abrir')" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer">
+    ABRIR TURNO
+  </button>
+  <div style="font-size:13px;color:var(--text-dim);text-align:center;max-width:280px">
+    Otro cajero puede abrir su turno mientras tanto
+  </div>
+</div>
+
 <!-- ── Modal apertura/cierre turno ──────────────────────────── -->
 <div class="modal-overlay" id="modalTurno" style="display:none;z-index:10000">
   <div class="modal" style="max-width:400px;width:100%;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column">
@@ -1298,6 +1326,12 @@ body {
     <div id="menuVersion" style="font-size:11px;color:#2d3748;margin-bottom:4px">ZERO POS</div>
     <button onclick="cerrarNavbar();_abrirModalTurno('cerrar')" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#94a3b8;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:12px">
       <span class="nav-icon-box" style="background:#1e1e3a"><i class="ti ti-lock nav-icono" style="color:#94a3b8;font-size:18px"></i></span> Cerrar turno
+    </button>
+    <button onclick="cerrarNavbar();_irAColacion()" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#f59e0b;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:12px">
+      <div style="width:28px;height:28px;background:#2a1f0a;border-radius:7px;display:flex;align-items:center;justify-content:center">
+        <i class="ti ti-coffee" style="color:#f59e0b;font-size:15px"></i>
+      </div>
+      Ir a colación
     </button>
     <button id="btnCerrarSesionMenu" onclick="cerrarSesion()" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #2d1515;color:#ef4444;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:none;align-items:center;gap:12px">
       <span class="nav-icon-box" style="background:#2d1515"><i class="ti ti-logout nav-icono" style="color:#ef4444;font-size:18px"></i></span> Cerrar sesión
@@ -2468,6 +2502,31 @@ async function verificarTurno(me) {
   }
 }
 
+async function _irAColacion() {
+  if (!confirm('¿Confirmas que vas a colación?')) return;
+
+  await fetch('/api/auth/asistencia', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({tipo: 'salida_colacion'})
+  });
+
+  await fetch('/api/auth/turno/cerrar', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({fondo_final: 0, denominaciones: {}})
+  });
+
+  const nombre = document.getElementById('overlayTurnoUsuario')?.textContent || '';
+  const hora = new Date().toLocaleTimeString('es-CL', {hour: '2-digit', minute: '2-digit'});
+  document.getElementById('overlayColacionNombre').textContent = nombre;
+  document.getElementById('overlayColacionHora').textContent = hora;
+  document.getElementById('overlayColacion').style.display = 'flex';
+  document.getElementById('overlayTurnoCerrado').style.display = 'none';
+}
+
 async function _abrirModalTurno(modo) {
   console.log('[ZERO] _abrirModalTurno:', modo);
   _turnoModo = modo;
@@ -2546,6 +2605,7 @@ async function _confirmarTurno() {
     if (r.ok) {
       document.getElementById('modalTurno').style.display = 'none';
       document.getElementById('overlayTurnoCerrado').style.display = 'none';
+      document.getElementById('overlayColacion').style.display = 'none';
       showToast('Turno abierto — ¡Listo para vender!', 'success');
     } else {
       const d = await r.json();
