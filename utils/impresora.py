@@ -882,6 +882,89 @@ def imprimir_cierre_turno(turno: dict, ventas_resumen: dict,
     return enviar_crudo(config_imp, texto, config)
 
 
+# ── COLACIÓN ──────────────────────────────────────────────────────────────────
+
+def _formatear_salida_colacion(usuario: dict, turno: dict,
+                                resumen: dict, config: dict) -> str:
+    N    = ANCHO
+    SEP  = _sep('=', N)
+    SEP2 = _sep2(N)
+    nombre   = limpiar_texto(usuario.get('nombre', ''))
+    terminal = limpiar_texto(config.get('nombre_terminal', 'Caja 1'))
+    negocio  = limpiar_texto(config.get('nombre_negocio', 'ZERO POS'))
+    hora  = datetime.now().strftime("%H:%M")
+    fecha = datetime.now().strftime("%d-%m-%y %I:%M %p")
+
+    lineas = [
+        "\n",
+        SEP,
+        negocio.center(N),
+        SEP,
+        "SALIDA A COLACION".center(N),
+        SEP,
+        f"Cajero:   {nombre}",
+        f"Terminal: {terminal}",
+        f"Salida:   {hora} hrs",
+        SEP2,
+        f"Turno #{turno.get('id', '')}",
+        "Ventas hasta ahora:",
+        f"  Transacciones:  {resumen.get('count', 0)}",
+        _linea_precio("  Total recaudado:", resumen.get('total', 0), N),
+        SEP,
+        fecha.center(N),
+        SEP,
+        "\n\n\n\n",
+    ]
+    return "\n".join(lineas)
+
+
+def imprimir_salida_colacion(usuario: dict, turno: dict, resumen: dict,
+                              config: dict, config_imp: dict) -> dict:
+    """Imprime ticket de salida a colación."""
+    texto = _formatear_salida_colacion(usuario, turno, resumen, config)
+    logger.info(f"Imprimiendo salida colación {usuario.get('nombre')}")
+    return enviar_crudo(config_imp, texto, config)
+
+
+def _formatear_entrada_colacion(usuario: dict, config: dict,
+                                 hora_salida: str, minutos: int) -> str:
+    N    = ANCHO
+    SEP  = _sep('=', N)
+    nombre       = limpiar_texto(usuario.get('nombre', ''))
+    terminal     = limpiar_texto(config.get('nombre_terminal', 'Caja 1'))
+    negocio      = limpiar_texto(config.get('nombre_negocio', 'ZERO POS'))
+    hora_entrada = datetime.now().strftime("%H:%M")
+    fecha        = datetime.now().strftime("%d-%m-%y %I:%M %p")
+
+    lineas = [
+        "\n",
+        SEP,
+        negocio.center(N),
+        SEP,
+        "REGRESO DE COLACION".center(N),
+        SEP,
+        f"Cajero:   {nombre}",
+        f"Terminal: {terminal}",
+        f"Salida:   {hora_salida} hrs",
+        f"Entrada:  {hora_entrada} hrs",
+        f"Duracion: {minutos} minutos",
+        SEP,
+        fecha.center(N),
+        SEP,
+        "\n\n\n\n",
+    ]
+    return "\n".join(lineas)
+
+
+def imprimir_entrada_colacion(usuario: dict, config: dict,
+                               config_imp: dict, hora_salida: str,
+                               minutos: int) -> dict:
+    """Imprime ticket de regreso de colación."""
+    texto = _formatear_entrada_colacion(usuario, config, hora_salida, minutos)
+    logger.info(f"Imprimiendo entrada colación {usuario.get('nombre')}")
+    return enviar_crudo(config_imp, texto, config)
+
+
 # ── FORMATOS TEXTO (simulación / logs) ────────────────────────────────────────
 
 def _formatear_texto(venta: dict, items: list, config: dict,

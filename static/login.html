@@ -429,9 +429,9 @@ body {
 <div id="pantallaEntradaColacion" class="pantalla-post">
   <div style="font-size:64px;margin-bottom:16px">👋</div>
   <div id="entradaColNombre" style="font-size:28px;font-weight:700;color:#fff;margin-bottom:8px"></div>
-  <div style="font-size:16px;color:#64748b;margin-bottom:8px">Bienvenido/a de vuelta</div>
-  <div id="entradaColHora" style="font-size:18px;color:#22c55e;margin-bottom:8px"></div>
-  <div style="font-size:14px;color:#64748b;margin-bottom:32px">¡Continuemos!</div>
+  <div style="font-size:16px;color:#64748b;margin-bottom:8px">Bienvenido de vuelta</div>
+  <div id="entradaColMinutos" style="font-size:22px;font-weight:700;color:#f59e0b;margin-bottom:8px"></div>
+  <div id="entradaColHora" style="font-size:18px;color:#22c55e;margin-bottom:32px"></div>
   <button onclick="location.href='pos.html'" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer">IR A LA CAJA</button>
 </div>
 
@@ -680,6 +680,18 @@ async function _mostrarPantallaPost(data) {
   } else if (modo === 'entrada_colacion') {
     document.getElementById('entradaColNombre').textContent = nombre;
     document.getElementById('entradaColHora').textContent   = `Son las ${hora}`;
+    try {
+      const rCol = await fetch('/api/auth/asistencia', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({tipo: 'entrada_colacion'})
+      }).then(r => r.json());
+      if (rCol.minutos != null) {
+        document.getElementById('entradaColMinutos').textContent =
+          `Colación: ${rCol.minutos} minutos`;
+      }
+    } catch(e) {}
+    setTimeout(() => location.href = 'pos.html', 3000);
   }
 
   document.getElementById(idPantalla).classList.add('activa');

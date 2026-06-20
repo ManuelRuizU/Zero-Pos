@@ -655,11 +655,93 @@ def registrar_asistencia():
     tipo = data.get("tipo")
     if tipo not in ("entrada", "salida", "salida_colacion", "entrada_colacion"):
         return jsonify({"error": "Tipo inválido"}), 400
+
+    usuario_info  = {}
+    turno_info    = {}
+    resumen_col   = {}
+    config_negocio = {}
+    config_imp    = {}
+    hora_salida   = ""
+    minutos_col   = 0
+
     with db_session() as conn:
         conn.execute(
             "INSERT INTO asistencia (usuario_id, tipo, turno_id) VALUES (?,?,?)",
             (uid, tipo, session.get("turno_id"))
         )
+
+        if tipo == 'salida_colacion':
+            u_row = conn.execute("SELECT * FROM usuarios WHERE id=?", (uid,)).fetchone()
+            if u_row:
+                usuario_info = dict(u_row)
+            t_row = conn.execute(
+                "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
+            ).fetchone()
+            turno_info = dict(t_row) if t_row else {}
+            if turno_info.get('id'):
+                r = conn.execute(
+                    """SELECT COUNT(*) as count, COALESCE(SUM(total),0) as total
+                       FROM ventas WHERE turno_id=? AND estado='completada'""",
+                    (turno_info['id'],)
+                ).fetchone()
+                if r:
+                    resumen_col = {'count': int(r['count']), 'total': int(r['total'])}
+            cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+            config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
+            config_imp = {
+                "tipo":   config_negocio.get("impresora_tipo", "red"),
+                "ip":     config_negocio.get("impresora_ip", "192.168.1.100"),
+                "puerto": config_negocio.get("impresora_puerto", "9100"),
+            }
+            hora_salida = datetime.now().strftime("%H:%M")
+
+        elif tipo == 'entrada_colacion':
+            u_row = conn.execute("SELECT * FROM usuarios WHERE id=?", (uid,)).fetchone()
+            if u_row:
+                usuario_info = dict(u_row)
+            sc = conn.execute(
+                """SELECT fecha FROM asistencia
+                   WHERE usuario_id=? AND tipo='salida_colacion'
+                   ORDER BY fecha DESC LIMIT 1""",
+                (uid,)
+            ).fetchone()
+            if sc:
+                try:
+                    ts_salida = datetime.strptime(sc['fecha'], "%Y-%m-%d %H:%M:%S")
+                    hora_salida = ts_salida.strftime("%H:%M")
+                    minutos_col = max(0, int((datetime.now() - ts_salida).total_seconds() / 60))
+                except Exception:
+                    pass
+            cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+            config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
+            config_imp = {
+                "tipo":   config_negocio.get("impresora_tipo", "red"),
+                "ip":     config_negocio.get("impresora_ip", "192.168.1.100"),
+                "puerto": config_negocio.get("impresora_puerto", "9100"),
+            }
+
+    if tipo == 'salida_colacion' and usuario_info:
+        _u, _t, _r, _cfg, _imp = usuario_info, turno_info, resumen_col, config_negocio, config_imp
+        def _print_sc():
+            try:
+                from utils.impresora import imprimir_salida_colacion
+                imprimir_salida_colacion(_u, _t, _r, _cfg, _imp)
+            except Exception as _e:
+                logger.warning(f"Error ticket salida colación: {_e}")
+        threading.Thread(target=_print_sc, daemon=True, name="ticket-col-salida").start()
+        return jsonify({"ok": True, "hora_salida": hora_salida})
+
+    elif tipo == 'entrada_colacion' and usuario_info:
+        _u, _hs, _min, _cfg, _imp = usuario_info, hora_salida, minutos_col, config_negocio, config_imp
+        def _print_ec():
+            try:
+                from utils.impresora import imprimir_entrada_colacion
+                imprimir_entrada_colacion(_u, _cfg, _imp, _hs, _min)
+            except Exception as _e:
+                logger.warning(f"Error ticket entrada colación: {_e}")
+        threading.Thread(target=_print_ec, daemon=True, name="ticket-col-entrada").start()
+        return jsonify({"ok": True, "minutos": minutos_col})
+
     return jsonify({"ok": True})
 
 
