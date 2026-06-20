@@ -2,9 +2,12 @@ import importlib.util
 import logging
 import os
 import socket
+import threading
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
+
+IMPRESORA_LOCK = threading.Lock()
 
 BASE_DIR = Path(__file__).parent.parent
 
@@ -93,8 +96,8 @@ def _sep2(n=ANCHO) -> str:
 def _linea_precio(nombre, precio, n=ANCHO) -> str:
     precio_str = _clp(precio)
     libre = n - len(precio_str)
-    if len(nombre) >= libre:
-        nombre = nombre[:libre - 1]
+    if len(nombre) > libre:
+        nombre = nombre[:libre - 3] + '...'
     return nombre.ljust(libre) + precio_str
 
 
@@ -233,6 +236,23 @@ def imprimir_qr(p, contenido: str, size: int = 200, align: str = 'center') -> No
         p.set(align='left')
 
 
+def _verificar_estado_impresora(p) -> dict:
+    """Lee estado ESC/POS (DLE EOT). Retorna {ok, error}."""
+    try:
+        p._raw(b'\x10\x04\x01')
+        import time as _t
+        _t.sleep(0.1)
+        if hasattr(p, 'device') and hasattr(p.device, 'read'):
+            status = p.device.read(1)
+            if status:
+                byte = status[0]
+                if bool(byte & 0x60):
+                    return {"ok": False, "error": "Sin papel — recarga el rollo"}
+    except Exception as e:
+        logger.debug(f"No se pudo leer estado impresora: {e}")
+    return {"ok": True}
+
+
 # ── BOLETA CLIENTE ────────────────────────────────────────────────────────────
 
 def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
@@ -243,8 +263,21 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
         logger.info(f"[SIMULADO] Ticket venta #{venta['id']}")
         return {"ok": True, "simulado": True, "texto": texto}
 
-    try:
+    ip = config_imp.get("ip", "").strip()
+    if config_imp.get("tipo", "red") == "red" and (not ip or ip in ("192.168.1.100", "127.0.0.1")):
+        return {"ok": False, "error": "Impresora no configurada. Ve a Admin → Config → Impresora"}
+
+    import time as _time
+
+    def _exec_recibo():
         p = _get_printer(config_imp)
+        _est = _verificar_estado_impresora(p)
+        if not _est["ok"]:
+            try:
+                p.close()
+            except Exception:
+                pass
+            return {"ok": False, "error": _est["error"]}
         N = ANCHO
         SEP  = _sep('=', N)
         SEP2 = _sep2(N)
@@ -414,9 +447,19 @@ def imprimir_recibo(venta: dict, items: list, config: dict, config_imp: dict,
         cortar_ticket(p, config)
         p.close()
         return {"ok": True}
-    except Exception as e:
-        logger.error(f"Error impresora: {e}")
-        return {"ok": False, "error": str(e)}
+
+    with IMPRESORA_LOCK:
+        _ultimo = None
+        for _i in range(3):
+            try:
+                return _exec_recibo()
+            except Exception as _e:
+                _ultimo = _e
+                logger.warning(f"Intento {_i+1}/3 impresora venta #{venta.get('id','?')}: {_e}")
+                if _i < 2:
+                    _time.sleep(2)
+        logger.error(f"Impresora falló 3 intentos venta #{venta.get('id','?')}: {_ultimo}", exc_info=True)
+        return {"ok": False, "error": str(_ultimo)}
 
 
 # ── COMANDA COCINA ────────────────────────────────────────────────────────────
@@ -429,8 +472,21 @@ def imprimir_comanda(venta: dict, items: list, config: dict, config_imp: dict,
         logger.info(f"[SIMULADO] Comanda venta #{venta['id']}")
         return {"ok": True, "simulado": True, "texto": texto}
 
-    try:
+    ip = config_imp.get("ip", "").strip()
+    if config_imp.get("tipo", "red") == "red" and (not ip or ip in ("192.168.1.100", "127.0.0.1")):
+        return {"ok": False, "error": "Impresora no configurada. Ve a Admin → Config → Impresora"}
+
+    import time as _time
+
+    def _exec_comanda():
         p = _get_printer(config_imp)
+        _est = _verificar_estado_impresora(p)
+        if not _est["ok"]:
+            try:
+                p.close()
+            except Exception:
+                pass
+            return {"ok": False, "error": _est["error"]}
         N = ANCHO
         SEP  = _sep('=', N)
         SEP2 = _sep2(N)
@@ -515,9 +571,19 @@ def imprimir_comanda(venta: dict, items: list, config: dict, config_imp: dict,
         cortar_ticket(p, config)
         p.close()
         return {"ok": True}
-    except Exception as e:
-        logger.error(f"Error comanda: {e}")
-        return {"ok": False, "error": str(e)}
+
+    with IMPRESORA_LOCK:
+        _ultimo = None
+        for _i in range(3):
+            try:
+                return _exec_comanda()
+            except Exception as _e:
+                _ultimo = _e
+                logger.warning(f"Intento {_i+1}/3 comanda venta #{venta.get('id','?')}: {_e}")
+                if _i < 2:
+                    _time.sleep(2)
+        logger.error(f"Comanda falló 3 intentos venta #{venta.get('id','?')}: {_ultimo}", exc_info=True)
+        return {"ok": False, "error": str(_ultimo)}
 
 
 def enviar_crudo(config_imp: dict, texto: str, config: dict | None = None) -> dict:
