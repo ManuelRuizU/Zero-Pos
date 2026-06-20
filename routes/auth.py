@@ -10,6 +10,8 @@ from database import db_session, ensure_column
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 logger = logging.getLogger("zero_pos.auth")
 
+ROLES_VALIDOS = {'admin', 'cajero', 'cocina', 'propietario'}
+
 _MAX_INTENTOS = 10
 _BLOQUEO_SEGUNDOS = 300  # 5 minutos
 
@@ -181,6 +183,7 @@ def login():
         logger.warning(f"IP bloqueada por fuerza bruta: {ip}")
         return jsonify({"error": f"Demasiados intentos. Bloqueado por {_BLOQUEO_SEGUNDOS // 60} minutos."}), 429
 
+    time.sleep(0.3)  # Evita timing attack — iguala tiempo con "usuario no existe"
     return jsonify({"error": "PIN incorrecto"}), 401
 
 
@@ -241,17 +244,23 @@ def abrir_turno():
         ensure_column(conn, 'turnos', 'denominaciones_apertura', 'TEXT')
         ensure_column(conn, 'turnos', 'denominaciones_cierre', 'TEXT')
 
-        abierto = conn.execute(
-            "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
-        ).fetchone()
-        if abierto:
-            return jsonify({"error": "Ya tienes un turno abierto", "turno_id": abierto["id"]}), 409
-
         cur = conn.execute(
             """INSERT INTO turnos (usuario_id, fondo_inicial, estado, denominaciones_apertura)
-               VALUES (?, ?, 'abierto', ?)""",
-            (uid, fondo, denoms_json)
+               SELECT ?, ?, 'abierto', ?
+               WHERE NOT EXISTS (
+                   SELECT 1 FROM turnos
+                   WHERE usuario_id=? AND estado='abierto'
+               )""",
+            (uid, fondo, denoms_json, uid)
         )
+        if cur.rowcount == 0:
+            abierto = conn.execute(
+                "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
+            ).fetchone()
+            return jsonify({
+                "error": "Ya tienes un turno abierto",
+                "turno_id": abierto["id"] if abierto else None,
+            }), 409
         turno_id = cur.lastrowid
         session["turno_id"] = turno_id
 
@@ -491,7 +500,6 @@ def crear_usuario():
     if not nombre or len(pin) != 4 or not pin.isdigit():
         return jsonify({"error": "Datos inválidos"}), 400
 
-    from database import ROLES_VALIDOS
     if rol not in ROLES_VALIDOS:
         return jsonify({"error": "Rol inválido"}), 400
 
@@ -584,7 +592,6 @@ def actualizar_usuario(uid):
             hashed = bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
             conn.execute("UPDATE usuarios SET pin_hash=? WHERE id=?", (hashed, uid))
 
-        from database import ROLES_VALIDOS
         if "nombre" in data:
             conn.execute("UPDATE usuarios SET nombre=? WHERE id=?", (data["nombre"], uid))
         if "rol" in data and data["rol"] in ROLES_VALIDOS:
