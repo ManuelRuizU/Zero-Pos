@@ -111,6 +111,15 @@ def login():
                             "upgrade": True,
                         }), 403
 
+                # Bloquear PIN default 1234
+                if bcrypt.checkpw(b"1234", u["pin_hash"].encode()):
+                    return jsonify({
+                        "ok": False,
+                        "cambiar_pin": True,
+                        "usuario_id":  u["id"],
+                        "mensaje":     "Debes cambiar tu PIN antes de continuar",
+                    }), 200
+
                 # Login exitoso — limpiar contador
                 _intentos.pop(ip, None)
                 _bloqueado_hasta.pop(ip, None)
@@ -217,6 +226,16 @@ def abrir_turno():
     else:
         fondo = float(data.get("fondo_inicial", 0))
     denoms_json = json.dumps(denoms) if denoms else None
+
+    # Backup pre-turno
+    try:
+        import shutil as _shutil
+        from database import DB_PATH as _DB_PATH
+        _bak = _DB_PATH.with_suffix('.db.bak')
+        _shutil.copy2(_DB_PATH, _bak)
+        logger.info(f"Backup pre-turno creado: {_bak}")
+    except Exception as _e:
+        logger.warning(f"No se pudo crear backup pre-turno: {_e}")
 
     with db_session() as conn:
         ensure_column(conn, 'turnos', 'denominaciones_apertura', 'TEXT')
@@ -585,6 +604,37 @@ def actualizar_usuario(uid):
                          (int(jornada) if jornada is not None else 45, uid))
 
         return jsonify({"ok": True})
+
+
+# ── Cambio PIN (pre-login, no requiere sesión) ───────────────────────────────
+
+@auth_bp.route("/cambiar-pin", methods=["POST"])
+def cambiar_pin():
+    data = request.get_json(silent=True) or {}
+    usuario_id = data.get("usuario_id")
+    pin_nuevo  = str(data.get("pin_nuevo", "")).strip()
+
+    if not usuario_id:
+        return jsonify({"error": "usuario_id requerido"}), 400
+    if not pin_nuevo or len(pin_nuevo) != 4 or not pin_nuevo.isdigit():
+        return jsonify({"error": "PIN debe ser exactamente 4 dígitos"}), 400
+    if pin_nuevo == "1234":
+        return jsonify({"error": "No puedes usar 1234 como PIN"}), 400
+
+    import bcrypt as _bcrypt
+    hashed = _bcrypt.hashpw(pin_nuevo.encode(), _bcrypt.gensalt()).decode()
+
+    with db_session() as conn:
+        n = conn.execute(
+            "UPDATE usuarios SET pin_hash=? WHERE id=? AND activo=1",
+            (hashed, usuario_id)
+        ).rowcount
+
+    if not n:
+        return jsonify({"error": "Usuario no encontrado"}), 404
+
+    logger.info(f"PIN cambiado para usuario_id={usuario_id}")
+    return jsonify({"ok": True})
 
 
 # ── Asistencia ────────────────────────────────────────────────────────────────

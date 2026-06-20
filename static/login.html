@@ -602,6 +602,10 @@ async function intentarLogin() {
       credentials: 'include',
     });
     const data = await r.json();
+    if (data.cambiar_pin) {
+      _mostrarModalCambioPin(data.usuario_id);
+      return;
+    }
     if (r.ok) {
       actualizarCirculos('correcto');
       setTimeout(() => _mostrarPantallaPost(data), 300);
@@ -697,6 +701,95 @@ document.addEventListener('keydown', e => {
 
 cargarUsuarios();
 </script>
+<!-- ── Modal cambio PIN obligatorio ───────────────────────────── -->
+<div id="modalCambioPin" style="
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.85);
+  z-index:9999;
+  align-items:center;justify-content:center;
+">
+  <div style="background:#1e1e2e;border-radius:16px;padding:32px 24px;
+    max-width:320px;width:90%;text-align:center">
+    <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+    <div style="font-size:18px;font-weight:700;color:#f1f5f9;margin-bottom:8px">
+      Cambia tu PIN
+    </div>
+    <div style="font-size:13px;color:#94a3b8;margin-bottom:24px;line-height:1.5">
+      Por seguridad debes establecer un PIN personal antes de continuar
+    </div>
+    <input id="inputPinNuevo" type="password" inputmode="numeric"
+      maxlength="4" placeholder="Nuevo PIN (4 dígitos)"
+      style="width:100%;box-sizing:border-box;padding:12px;border-radius:8px;
+        border:1px solid #334155;background:#0f172a;color:#f1f5f9;
+        font-size:16px;text-align:center;margin-bottom:10px">
+    <input id="inputPinConfirmar" type="password" inputmode="numeric"
+      maxlength="4" placeholder="Confirmar PIN"
+      style="width:100%;box-sizing:border-box;padding:12px;border-radius:8px;
+        border:1px solid #334155;background:#0f172a;color:#f1f5f9;
+        font-size:16px;text-align:center;margin-bottom:16px">
+    <div id="modalCambioPinError"
+      style="color:#ef4444;font-size:13px;min-height:18px;margin-bottom:12px"></div>
+    <button onclick="_guardarPinNuevo()"
+      style="width:100%;padding:14px;background:#6366f1;border:none;
+        color:#fff;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer">
+      Guardar PIN
+    </button>
+  </div>
+</div>
+
+<script>
+let _cambiarPinUsuarioId = null;
+
+function _mostrarModalCambioPin(usuarioId) {
+  _cambiarPinUsuarioId = usuarioId;
+  document.getElementById('inputPinNuevo').value = '';
+  document.getElementById('inputPinConfirmar').value = '';
+  document.getElementById('modalCambioPinError').textContent = '';
+  document.getElementById('modalCambioPin').style.display = 'flex';
+  document.getElementById('inputPinNuevo').focus();
+}
+
+async function _guardarPinNuevo() {
+  const pinNuevo     = document.getElementById('inputPinNuevo').value.trim();
+  const pinConfirmar = document.getElementById('inputPinConfirmar').value.trim();
+  const errEl        = document.getElementById('modalCambioPinError');
+
+  if (pinNuevo.length !== 4 || !/^\d{4}$/.test(pinNuevo)) {
+    errEl.textContent = 'El PIN debe tener exactamente 4 dígitos';
+    return;
+  }
+  if (pinNuevo !== pinConfirmar) {
+    errEl.textContent = 'Los PINs no coinciden';
+    return;
+  }
+  if (pinNuevo === '1234') {
+    errEl.textContent = 'No puedes usar 1234 como PIN';
+    return;
+  }
+
+  errEl.textContent = '';
+  try {
+    const r = await fetch('/api/auth/cambiar-pin', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({usuario_id: _cambiarPinUsuarioId, pin_nuevo: pinNuevo}),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) {
+      errEl.textContent = d.error || 'Error al guardar PIN';
+      return;
+    }
+    document.getElementById('modalCambioPin').style.display = 'none';
+    // Continuar con el login usando el PIN nuevo
+    pin = pinNuevo;
+    await intentarLogin();
+  } catch(e) {
+    errEl.textContent = 'Error de conexión';
+  }
+}
+</script>
+
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
