@@ -22,6 +22,7 @@ SSL_KEY  = SSL_DIR / "key.pem"
 
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_FILE = BASE_DIR / ".secret_key"
+IP_CACHE = BASE_DIR / ".ip_cache"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -132,18 +133,31 @@ def is_hotspot_mode() -> bool:
 def get_ip_local() -> str:
     if is_hotspot_mode():
         return HOTSPOT_IP
+    # Intentar leer cache primero
+    if IP_CACHE.exists():
+        try:
+            ip = IP_CACHE.read_text().strip()
+            if ip and ip != "127.0.0.1":
+                return ip
+        except Exception:
+            pass
+    # Calcular IP real
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.settimeout(0.5)
         s.connect(("10.255.255.255", 1))
         ip = s.getsockname()[0]
         s.close()
-        return ip
     except Exception:
         try:
-            return socket.gethostbyname(socket.gethostname())
+            ip = socket.gethostbyname(socket.gethostname())
         except Exception:
-            return "127.0.0.1"
+            ip = "127.0.0.1"
+    # Guardar en cache
+    try:
+        IP_CACHE.write_text(ip)
+    except Exception:
+        pass
+    return ip
 
 
 def is_port_free(port: int) -> bool:
@@ -152,9 +166,13 @@ def is_port_free(port: int) -> bool:
 
 
 def find_free_port(preferred: int = 5000) -> int:
-    for port in (preferred, preferred + 1):
-        if is_port_free(port):
-            return port
+    for port in range(preferred, preferred + 10):
+        try:
+            with socket.socket() as s:
+                s.bind(("", port))
+                return port
+        except OSError:
+            continue
     return preferred
 
 
@@ -468,7 +486,26 @@ self.addEventListener('fetch', e => {{
 
     @app.route("/health")
     def health():
-        return {"status": "ok", "version": "1.0.0"}
+        import shutil
+        from database import db_session as _db_session
+        db_ok = False
+        try:
+            with _db_session() as conn:
+                conn.execute("SELECT 1")
+                db_ok = True
+        except Exception:
+            pass
+        disco = shutil.disk_usage(BASE_DIR)
+        disco_libre_mb = disco.free // (1024 * 1024)
+        from flask import jsonify as _jsonify
+        return _jsonify({
+            "status":        "ok" if db_ok else "error",
+            "version":       "1.0.0",
+            "db":            "connected" if db_ok else "error",
+            "disco_libre_mb": disco_libre_mb,
+            "disco_alerta":  disco_libre_mb < 500,
+            "modo":          "lite" if (BASE_DIR / "zero_lite.flag").exists() else "pro",
+        })
 
     @app.route("/api/sistema/version")
     def sistema_version():
