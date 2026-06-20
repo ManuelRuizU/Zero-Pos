@@ -81,7 +81,6 @@ def crear_venta():
         return jsonify({"error": "RUT inválido. Formato: 12345678-9"}), 400
     notas = data.get("notas")
     pedido_id = data.get("pedido_id")
-    turno_id  = session.get("turno_id")
     empleado  = session.get("usuario_nombre", "")
 
     venta_id = None
@@ -91,6 +90,13 @@ def crear_venta():
     config_imp = {}
 
     with db_session() as conn:
+        turno = conn.execute(
+            "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
+        ).fetchone()
+        if not turno:
+            return jsonify({"error": "Debes abrir turno antes de vender"}), 409
+        turno_id = turno["id"]
+
         items_validados = []
 
         for item in items:
@@ -151,6 +157,8 @@ def crear_venta():
                     lote_info = {"id": lr["id"], "numero_lote": lr["numero_lote"],
                                  "vencimiento": lr["fecha_vencimiento"]}
 
+            if descuento_item > precio_unit * qty:
+                return jsonify({"error": f"Descuento excede el precio en '{prod['nombre']}'"}), 400
             subtotal = pesos((precio_unit * qty) - descuento_item)
             total += subtotal
             items_validados.append({
@@ -169,6 +177,8 @@ def crear_venta():
             })
 
         total = pesos(total - descuento_global)
+        if total < 0:
+            return jsonify({"error": "El descuento global genera total negativo"}), 400
         config_negocio = _get_config_cached(conn)
 
         iva_pct = float(config_negocio.get("iva_porcentaje") or 19)
@@ -500,7 +510,6 @@ def venta_rapida():
     descuento_global = float(data.get("descuento", 0))
     guardar_productos = data.get("guardar_productos", False)
     pedido_id_rapida = data.get("pedido_id")
-    turno_id = session.get("turno_id")
 
     total = 0
     items_para_ticket = []
@@ -509,6 +518,13 @@ def venta_rapida():
     venta_id = None
 
     with db_session() as conn:
+        turno = conn.execute(
+            "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
+        ).fetchone()
+        if not turno:
+            return jsonify({"error": "Debes abrir turno antes de vender"}), 409
+        turno_id = turno["id"]
+
         config_negocio = _get_config_cached(conn)
         config_imp = {
             "tipo": config_negocio.get("impresora_tipo", "red"),
@@ -558,7 +574,9 @@ def venta_rapida():
                 "subtotal": subtotal,
             })
 
-        total    = pesos(total - descuento_global)
+        total = pesos(total - descuento_global)
+        if total < 0:
+            return jsonify({"error": "El descuento global genera total negativo"}), 400
         neto     = pesos(total / (1 + iva_pct / 100))
         impuesto = total - neto
 
