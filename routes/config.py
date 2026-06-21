@@ -45,6 +45,7 @@ CLAVES_PERMITIDAS = {
     "wifi_ssid", "wifi_password",
     "nombre_terminal",
     "whatsapp_plantilla",
+    "sumup_api_key", "sumup_merchant_code", "sumup_currency",
 }
 
 _VALIDADORES = {
