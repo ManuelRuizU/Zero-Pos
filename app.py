@@ -338,13 +338,14 @@ def create_app() -> Flask:
     from routes.modificadores import modificadores_bp
     from routes.fiado import fiado_bp
     from routes.publicidad import publicidad_bp
+    from routes.sumup import sumup_bp
 
     for bp in (
         auth_bp, ventas_bp, productos_bp, reportes_bp,
         impresora_bp, backup_bp, inventario_bp, facturas_bp,
         comprobante_bp, qr_bp, khipu_bp, multi_bp, config_bp,
         onboarding_bp, voz_bp, pedidos_bp, direcciones_bp,
-        modificadores_bp, fiado_bp,
+        modificadores_bp, fiado_bp, sumup_bp,
     ):
         app.register_blueprint(bp)
 

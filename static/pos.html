@@ -1383,6 +1383,12 @@ body {
       <div class="metodo-btn" data-met="khipu" onclick="selMetodo(this)">
         <div class="metodo-icon">🏦</div>Khipu
       </div>
+      <div class="metodo-btn" data-met="sumup" onclick="selMetodo(this)">
+        <div class="metodo-icon">📡</div>SumUp Air
+      </div>
+    </div>
+    <div id="secSumup" style="display:none;padding:12px 0;text-align:center;color:var(--text-dim);font-size:13px">
+      Se procesará en el lector SumUp Air.<br>El cliente paga en el dispositivo físico.
     </div>
     <div class="credito-divider">
       <div class="credito-divider-line"></div>
@@ -3763,6 +3769,7 @@ function _abrirModalCobro() {
   document.getElementById('secEfectivo').style.display = 'none';
   document.getElementById('secTransferencia').style.display = 'none';
   document.getElementById('secKhipu').style.display = 'none';
+  document.getElementById('secSumup').style.display = 'none';
   document.getElementById('secCredito').style.display = 'none';
   metodoPago = '';
 }
@@ -3787,6 +3794,7 @@ function selMetodo(btn) {
   document.getElementById('secEfectivo').style.display = metodoPago === 'efectivo' ? 'block' : 'none';
   document.getElementById('secTransferencia').style.display = metodoPago === 'transferencia' ? 'block' : 'none';
   document.getElementById('secKhipu').style.display = metodoPago === 'khipu' ? 'block' : 'none';
+  document.getElementById('secSumup').style.display = metodoPago === 'sumup' ? 'block' : 'none';
   document.getElementById('secCredito').style.display = metodoPago === 'credito' ? 'block' : 'none';
   if (metodoPago === 'transferencia') cargarQrPago();
   if (metodoPago === 'credito') {
@@ -3841,6 +3849,7 @@ async function confirmarPago() {
     showToast('Selecciona un cliente para fiado', 'error'); return;
   }
   if (metodoPago === 'khipu') { await crearPagoKhipu(); return; }
+  if (metodoPago === 'sumup')  { await cobrarConSumUp(); return; }
 
   const btn = document.getElementById('btnConfirmar') || document.getElementById('btnConfirmarCredito');
   if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
@@ -4305,6 +4314,60 @@ async function crearPagoKhipu() {
   } finally {
     btn.disabled = false; btn.textContent = '✓ Confirmar pago';
   }
+}
+
+// ── SumUp Air ────────────────────────────────────────────────
+let _sumupPollingInterval = null;
+
+async function cobrarConSumUp() {
+  if (_sumupPollingInterval) { clearInterval(_sumupPollingInterval); _sumupPollingInterval = null; }
+  const btn = document.getElementById('btnConfirmar');
+  btn.disabled = true;
+  btn.textContent = 'Iniciando SumUp...';
+  try {
+    const resp = await fetch('/api/sumup/crear_checkout', {
+      method: 'POST', credentials: 'include',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({monto: total, descripcion: `Venta ZERO POS #${Date.now()}`}),
+    });
+    const data = await resp.json();
+    if (!data.ok) {
+      showToast(data.error || 'Error SumUp', 'error');
+      btn.disabled = false; btn.textContent = '✓ Confirmar pago';
+      return;
+    }
+    btn.textContent = '⏳ Esperando pago...';
+    showToast('💳 Presenta el lector SumUp Air al cliente', 'info');
+    _iniciarPollingCheckout(data.checkout_id);
+  } catch(e) {
+    showToast('Error de conexión', 'error');
+    btn.disabled = false; btn.textContent = '✓ Confirmar pago';
+  }
+}
+
+function _iniciarPollingCheckout(checkoutId) {
+  const MAX_ESPERA = 120;
+  let segundos = 0;
+  _sumupPollingInterval = setInterval(async () => {
+    segundos += 3;
+    if (segundos >= MAX_ESPERA) {
+      clearInterval(_sumupPollingInterval); _sumupPollingInterval = null;
+      showToast('Tiempo de espera SumUp agotado', 'error');
+      const btn = document.getElementById('btnConfirmar');
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar pago'; }
+      return;
+    }
+    try {
+      const r = await fetch(`/api/sumup/estado/${checkoutId}`, {credentials: 'include'});
+      const estado = await r.json();
+      if (estado.pagado) {
+        clearInterval(_sumupPollingInterval); _sumupPollingInterval = null;
+        showToast('✅ Pago aprobado con SumUp', 'success');
+        metodoPago = 'tarjeta';
+        await confirmarPago();
+      }
+    } catch(e) { /* ignorar errores transitorios de red */ }
+  }, 3000);
 }
 
 // ── Variantes (modal fallback) ───────────────────────────────

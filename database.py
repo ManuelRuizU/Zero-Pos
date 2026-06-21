@@ -1072,6 +1072,13 @@ def _seed_defaults(conn: sqlite3.Connection):
         ("whatsapp_plantilla",
          "Hola! Gracias por tu compra en {negocio} 🛍️\nTotal: ${total}\nProductos: {items}\n¡Vuelve pronto! 😊")
     )
+    for _clave in ("sumup_api_key", "sumup_merchant_code"):
+        conn.execute(
+            "INSERT OR IGNORE INTO config (clave, valor) VALUES (?, '')", (_clave,)
+        )
+    conn.execute(
+        "INSERT OR IGNORE INTO config (clave, valor) VALUES ('sumup_currency', 'CLP')"
+    )
 
     import bcrypt
     pin_default = b"1234"
