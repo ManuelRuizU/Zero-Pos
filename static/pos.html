@@ -4325,7 +4325,7 @@ async function cobrarConSumUp() {
   btn.disabled = true;
   btn.textContent = 'Iniciando SumUp...';
   try {
-    const resp = await fetch('/api/sumup/crear_checkout', {
+    const resp = await fetch('/api/sumup/crear_link_pago', {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({monto: total, descripcion: `Venta ZERO POS #${Date.now()}`}),
@@ -4336,8 +4336,21 @@ async function cobrarConSumUp() {
       btn.disabled = false; btn.textContent = '✓ Confirmar pago';
       return;
     }
+    // Mostrar QR en pantalla cliente
+    try {
+      await fetch('/api/ventas/pantalla-cliente/estado', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          estado:      'cobrar_tarjeta',
+          total,
+          checkout_id: data.checkout_id,
+          link_pago:   data.link_pago,
+        }),
+      });
+    } catch(e) { /* pantalla cliente opcional */ }
     btn.textContent = '⏳ Esperando pago...';
-    showToast('💳 Presenta el lector SumUp Air al cliente', 'info');
+    showToast('💳 El cliente puede escanear el QR o usar el lector Air', 'info');
     _iniciarPollingCheckout(data.checkout_id);
   } catch(e) {
     showToast('Error de conexión', 'error');

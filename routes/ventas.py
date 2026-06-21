@@ -38,6 +38,7 @@ _pantalla: dict = {
     "items": [], "total": 0, "subtotal": 0, "iva": 0,
     "metodo_pago": "", "monto_recibido": 0, "vuelto": 0,
     "estado": "idle", "activa": False,
+    "checkout_id": "", "link_pago": "",
 }
 
 @ventas_bp.after_request
@@ -645,6 +646,8 @@ def pantalla_cliente_set():
         "vuelto":         pesos(data.get("vuelto", 0)),
         "estado":         estado,
         "activa":         bool(items),
+        "checkout_id":    str(data.get("checkout_id", "") or ""),
+        "link_pago":      str(data.get("link_pago", "") or ""),
     }
     return jsonify({"ok": True})
 

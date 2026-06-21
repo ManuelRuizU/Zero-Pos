@@ -2,7 +2,7 @@ import logging
 import uuid
 import requests
 from flask import Blueprint, request, jsonify, session
-from database import db_session
+from database import db_session, ensure_column
 
 sumup_bp = Blueprint("sumup", __name__, url_prefix="/api/sumup")
 logger = logging.getLogger("zero_pos.sumup")
@@ -26,11 +26,13 @@ def _ensure_tabla(conn) -> None:
             checkout_id    TEXT NOT NULL,
             checkout_ref   TEXT,
             monto          REAL,
+            link_pago      TEXT,
             estado         TEXT DEFAULT 'pendiente',
             creado_en      DATETIME DEFAULT CURRENT_TIMESTAMP,
             actualizado_en DATETIME
         )
     """)
+    ensure_column(conn, 'pagos_sumup', 'link_pago', 'TEXT')
 
 
 def _get_access_token(api_key: str) -> str:
@@ -213,3 +215,90 @@ def webhook():
             logger.error(f"Error webhook SumUp: {e}")
 
     return "OK", 200
+
+
+@sumup_bp.route("/crear_link_pago", methods=["POST"])
+def crear_link_pago():
+    """Crea checkout SumUp y devuelve link de pago para QR en pantalla cliente."""
+    if not session.get("usuario_id"):
+        return jsonify({"error": "No autenticado"}), 401
+
+    data        = request.get_json(silent=True) or {}
+    venta_id    = data.get("venta_id")
+    descripcion = str(data.get("descripcion", "Venta ZERO POS")).strip()
+
+    try:
+        monto = float(data.get("monto", 0))
+        if not (1 <= monto <= 10_000_000):
+            return jsonify({"error": "Monto inválido (1–10.000.000)"}), 400
+    except (ValueError, TypeError):
+        return jsonify({"error": "Monto debe ser numérico"}), 400
+
+    with db_session() as conn:
+        cfg = _get_sumup_config(conn)
+
+    api_key       = cfg.get("sumup_api_key", "")
+    merchant_code = cfg.get("sumup_merchant_code", "")
+    currency      = cfg.get("sumup_currency", "CLP")
+
+    if not api_key or not merchant_code:
+        return jsonify({"error": "SumUp no configurado. Ve a Admin → Config → Pagos."}), 503
+
+    try:
+        checkout_ref = f"zpos-{venta_id or uuid.uuid4().hex[:8]}"
+
+        resp = requests.post(
+            f"{SUMUP_API_BASE}/checkouts",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "checkout_reference": checkout_ref,
+                "amount": round(float(monto), 2),
+                "currency": currency,
+                "merchant_code": merchant_code,
+                "description": descripcion,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        checkout    = resp.json()
+        checkout_id = checkout.get("id")
+        link_pago   = f"https://pay.sumup.com/b2c/checkout/{checkout_id}"
+
+        with db_session() as conn:
+            _ensure_tabla(conn)
+            conn.execute(
+                """INSERT INTO pagos_sumup
+                       (venta_id, checkout_id, checkout_ref, monto, link_pago)
+                   VALUES (?,?,?,?,?)""",
+                (venta_id, checkout_id, checkout_ref, monto, link_pago),
+            )
+
+        logger.info(f"SumUp link creado: {checkout_id} monto={monto}")
+        return jsonify({"ok": True, "checkout_id": checkout_id, "link_pago": link_pago})
+
+    except requests.HTTPError as e:
+        logger.error(f"SumUp API error crear_link_pago: {e.response.text}")
+        return jsonify({"error": f"Error SumUp: {e.response.status_code}"}), 502
+    except Exception as e:
+        logger.error(f"Error crear_link_pago: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@sumup_bp.route("/estado_cliente", methods=["GET"])
+def estado_cliente():
+    """Estado de pago para pantalla cliente — sin autenticación."""
+    checkout_id = request.args.get("checkout_id", "")
+    if not checkout_id:
+        return jsonify({"error": "checkout_id requerido"}), 400
+    with db_session() as conn:
+        _ensure_tabla(conn)
+        row = conn.execute(
+            "SELECT estado, monto, link_pago FROM pagos_sumup WHERE checkout_id=?",
+            (checkout_id,),
+        ).fetchone()
+    if not row:
+        return jsonify({"error": "No encontrado"}), 404
+    return jsonify(dict(row))

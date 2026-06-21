@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="manifest" href="/static/manifest.json">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <meta name="theme-color" content="#0a0a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -349,6 +350,40 @@ body {
   padding: 10px 24px;
 }
 
+/* ── Estado Cobrar Tarjeta (SumUp QR) ────────────────────── */
+#estadoCobrarTarjeta {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 20px;
+  background: radial-gradient(ellipse at center, rgba(99,102,241,0.18) 0%, #0a0a14 70%);
+}
+.tarjeta-titulo {
+  font-size: clamp(20px, 3.5vw, 38px);
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+.tarjeta-instruccion {
+  font-size: clamp(13px, 1.6vw, 18px);
+  color: rgba(255,255,255,0.55);
+}
+#qrWrapper {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(99,102,241,0.35);
+}
+#totalCobrarTarjeta {
+  font-size: clamp(28px, 5.5vw, 62px);
+  font-weight: 900;
+  letter-spacing: -2px;
+  color: var(--negocio-color);
+}
+
 /* ── Slides publicidad ────────────────────────────────────── */
 .slide-pub {
   position: absolute;
@@ -484,6 +519,14 @@ body {
   <div class="gracias-titulo">¡Gracias!</div>
   <div id="montoGracias"></div>
   <div id="vueltoGracias"></div>
+</div>
+
+<!-- ═══ ESTADO 4: COBRAR TARJETA (SumUp QR) ══════════════════ -->
+<div id="estadoCobrarTarjeta" class="estado">
+  <div class="tarjeta-titulo">Pago con tarjeta</div>
+  <div id="totalCobrarTarjeta">$0</div>
+  <div id="qrWrapper"><div id="qrCanvas"></div></div>
+  <div class="tarjeta-instruccion">Escanea el QR con tu teléfono o usa el lector</div>
 </div>
 
 <script>
@@ -638,6 +681,7 @@ let estadoActual = 'idle';
 let _pagadoTimer = null;
 let _negocioNombre = 'ZERO POS';
 let _slidesActuales = [];
+let _linkPagoActual = null;
 
 function _setEstado(nombre) {
   document.querySelectorAll('.estado').forEach(el => el.classList.remove('activo'));
@@ -671,6 +715,33 @@ function mostrarEstadoGracias(total, vuelto) {
   setTimeout(() => {
     mostrarEstadoIdle();
   }, 3000);
+}
+
+function mostrarEstadoCobrarTarjeta(total, linkPago) {
+  _setEstado('cobrarTarjeta');
+  if (carruselIdle)  carruselIdle.detener();
+  if (carruselVenta) carruselVenta.detener();
+  document.getElementById('totalCobrarTarjeta').textContent = fmt(total);
+  if (linkPago === _linkPagoActual) return;
+  _linkPagoActual = linkPago;
+  const canvas = document.getElementById('qrCanvas');
+  canvas.innerHTML = '';
+  if (linkPago) {
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(canvas, {
+        text:         linkPago,
+        width:        220,
+        height:       220,
+        colorDark:    '#000000',
+        colorLight:   '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+    } else {
+      // Fallback si CDN no cargó
+      canvas.textContent = linkPago;
+      canvas.style.cssText = 'color:#000;font-size:10px;word-break:break-all;width:220px;padding:8px';
+    }
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -839,10 +910,17 @@ async function sincronizarPantalla() {
     const resp = await fetch('/api/ventas/pantalla-cliente', { cache: 'no-store' });
     if (!resp.ok) return;
     const data = await resp.json();
-    if (data && data.activa) {
+    if (data.estado === 'cobrar_tarjeta') {
+      mostrarEstadoCobrarTarjeta(data.total || 0, data.link_pago || '');
+    } else if (data && data.activa) {
+      _linkPagoActual = null;
       mostrarEstadoVenta();
       actualizarDatosVenta(data);
+    } else if (data.estado === 'pagado') {
+      _linkPagoActual = null;
+      mostrarEstadoGracias(data.total || 0, data.vuelto || 0);
     } else {
+      _linkPagoActual = null;
       mostrarEstadoIdle();
     }
   } catch(e) {
