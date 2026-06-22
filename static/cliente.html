@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="manifest" href="/static/manifest.json">
-<script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <meta name="theme-color" content="#0a0a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -350,13 +350,13 @@ body {
   padding: 10px 24px;
 }
 
-/* ── Estado Cobrar Tarjeta (SumUp Widget) ─────────────────── */
+/* ── Estado Cobrar Tarjeta (SumUp QR) ────────────────────── */
 #estadoCobrarTarjeta {
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 16px;
+  gap: 20px;
   padding: 24px;
   background: #0a0a14;
 }
@@ -366,18 +366,11 @@ body {
   letter-spacing: -2px;
   color: #22c55e;
 }
-#sumup-card {
-  width: 100%;
-  max-width: 420px;
-  min-height: 200px;
+#clienteQRCanvas {
   background: white;
-  border-radius: 12px;
   padding: 16px;
+  border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-}
-#sumupEstadoMsg {
-  font-size: 13px;
-  color: rgba(255,255,255,0.5);
 }
 
 /* ── Slides publicidad ────────────────────────────────────── */
@@ -517,12 +510,17 @@ body {
   <div id="vueltoGracias"></div>
 </div>
 
-<!-- ═══ ESTADO 4: COBRAR TARJETA (SumUp Widget) ═══════════════ -->
+<!-- ═══ ESTADO 4: COBRAR TARJETA (SumUp QR) ══════════════════ -->
 <div id="estadoCobrarTarjeta" class="estado">
-  <div style="font-size:18px;font-weight:700;color:white;text-align:center">💳 Pago con tarjeta</div>
+  <div style="font-size:18px;font-weight:700;color:white;text-align:center">💳 Paga con tu teléfono</div>
   <div id="clienteTotalTarjeta">$0</div>
-  <div id="sumup-card"></div>
-  <div id="sumupEstadoMsg">Ingresa los datos de tu tarjeta</div>
+  <div id="clienteQRCanvas"><!-- QR se genera aquí --></div>
+  <div style="font-size:15px;color:rgba(255,255,255,0.55);text-align:center;max-width:280px">
+    Escanea el código QR con la cámara de tu teléfono para pagar
+  </div>
+  <div style="font-size:13px;color:#f59e0b;display:flex;align-items:center;gap:6px">
+    ⏳ Esperando confirmación de pago...
+  </div>
 </div>
 
 <script>
@@ -677,8 +675,8 @@ let estadoActual = 'idle';
 let _pagadoTimer = null;
 let _negocioNombre = 'ZERO POS';
 let _slidesActuales = [];
-let _sumupCardWidget  = null;
-let _checkoutIdActual = null;
+let _qrInstance    = null;
+let _linkPagoActual = null;
 
 function _setEstado(nombre) {
   document.querySelectorAll('.estado').forEach(el => el.classList.remove('activo'));
@@ -714,71 +712,32 @@ function mostrarEstadoGracias(total, vuelto) {
   }, 3000);
 }
 
-async function montarWidgetSumUp(checkoutId, total) {
+function mostrarQRPago(linkPago, total) {
   document.getElementById('clienteTotalTarjeta').textContent =
     '$' + (Math.round(Number(total)) || 0).toLocaleString('es-CL');
 
-  // No remontar si ya está activo el mismo checkout
-  if (checkoutId === _checkoutIdActual && estadoActual === 'cobrarTarjeta') return;
-  _checkoutIdActual = checkoutId;
+  const canvas = document.getElementById('clienteQRCanvas');
 
-  if (_sumupCardWidget) {
-    try { _sumupCardWidget.unmount(); } catch(e) {}
-    _sumupCardWidget = null;
+  if (linkPago !== _linkPagoActual) {
+    _linkPagoActual = linkPago;
+    canvas.innerHTML = '';
+    if (linkPago && typeof QRCode !== 'undefined') {
+      _qrInstance = new QRCode(canvas, {
+        text:         linkPago,
+        width:        240,
+        height:       240,
+        colorDark:    '#000000',
+        colorLight:   '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+    } else if (linkPago) {
+      canvas.innerHTML = `<div style="font-size:11px;color:#000;padding:8px;word-break:break-all;max-width:240px">${linkPago}</div>`;
+    }
   }
-  document.getElementById('sumup-card').innerHTML = '';
-  document.getElementById('sumupEstadoMsg').textContent = 'Ingresa los datos de tu tarjeta';
 
   _setEstado('cobrarTarjeta');
   if (carruselIdle)  carruselIdle.detener();
   if (carruselVenta) carruselVenta.detener();
-
-  if (typeof SumUpCard === 'undefined') {
-    document.getElementById('sumupEstadoMsg').textContent = 'Error: Widget SumUp no disponible';
-    return;
-  }
-
-  _sumupCardWidget = SumUpCard.mount({
-    id:          'sumup-card',
-    checkoutId:  checkoutId,
-    locale:      'es-CL',
-    country:     'CL',
-    showFooter:  true,
-    onLoad: function() {
-      document.getElementById('sumupEstadoMsg').textContent = 'Ingresa los datos de tu tarjeta';
-    },
-    onResponse: function(type, body) {
-      console.log('SumUp response:', type, body);
-      if (type === 'success') {
-        document.getElementById('sumupEstadoMsg').textContent = '✅ Pago procesado correctamente';
-        _notificarPagoExitoso(checkoutId);
-      } else if (type === 'error') {
-        document.getElementById('sumupEstadoMsg').textContent = '❌ Error en el pago. Intenta nuevamente.';
-      } else if (type === 'fail') {
-        document.getElementById('sumupEstadoMsg').textContent = '⚠️ Pago cancelado.';
-      }
-    },
-  });
-}
-
-async function _notificarPagoExitoso(checkoutId) {
-  try {
-    await fetch('/api/sumup/confirmar_webhook', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({checkout_id: checkoutId, status: 'PAID'}),
-    });
-    setTimeout(() => {
-      _checkoutIdActual = null;
-      _setEstado('idle');
-      if (_sumupCardWidget) {
-        try { _sumupCardWidget.unmount(); } catch(e) {}
-        _sumupCardWidget = null;
-      }
-    }, 3000);
-  } catch(e) {
-    console.error('Error notificando pago:', e);
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -948,16 +907,16 @@ async function sincronizarPantalla() {
     if (!resp.ok) return;
     const data = await resp.json();
     if (data.estado === 'cobrar_tarjeta') {
-      montarWidgetSumUp(data.checkout_id, data.total || 0);
+      mostrarQRPago(data.link_pago || '', data.total || 0);
     } else if (data && data.activa) {
-      _checkoutIdActual = null;
+      _linkPagoActual = null;
       mostrarEstadoVenta();
       actualizarDatosVenta(data);
     } else if (data.estado === 'pagado') {
-      _checkoutIdActual = null;
+      _linkPagoActual = null;
       mostrarEstadoGracias(data.total || 0, data.vuelto || 0);
     } else {
-      _checkoutIdActual = null;
+      _linkPagoActual = null;
       mostrarEstadoIdle();
     }
   } catch(e) {
