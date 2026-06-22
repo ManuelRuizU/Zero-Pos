@@ -302,13 +302,15 @@ def crear_link_pago():
                    if merchant_code else {}),
                 **({"pay_to_email": pay_to_email}
                    if pay_to_email and not merchant_code else {}),
+                "hosted_checkout": {"enabled": True},
             },
             timeout=10,
         )
         resp.raise_for_status()
         checkout    = resp.json()
         checkout_id = checkout.get("id")
-        link_pago   = f"https://pay.sumup.com/b2c/checkout/{checkout_id}"
+        hosted_url  = checkout.get("hosted_checkout_url", "")
+        link_pago   = hosted_url or f"https://pay.sumup.com/b2c/checkout/{checkout_id}"
 
         with db_session() as conn:
             conn.execute("""
