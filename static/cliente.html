@@ -377,11 +377,11 @@ body {
   justify-content: center;
   box-shadow: 0 8px 32px rgba(99,102,241,0.35);
 }
-#totalCobrarTarjeta {
+#clienteTotalTarjeta, .tarjeta-monto {
   font-size: clamp(28px, 5.5vw, 62px);
   font-weight: 900;
   letter-spacing: -2px;
-  color: var(--negocio-color);
+  color: #22c55e;
 }
 
 /* ── Slides publicidad ────────────────────────────────────── */
@@ -523,10 +523,11 @@ body {
 
 <!-- ═══ ESTADO 4: COBRAR TARJETA (SumUp QR) ══════════════════ -->
 <div id="estadoCobrarTarjeta" class="estado">
-  <div class="tarjeta-titulo">Pago con tarjeta</div>
-  <div id="totalCobrarTarjeta">$0</div>
-  <div id="qrWrapper"><div id="qrCanvas"></div></div>
-  <div class="tarjeta-instruccion">Escanea el QR con tu teléfono o usa el lector</div>
+  <div class="tarjeta-titulo">💳 Paga con tu teléfono</div>
+  <div id="clienteTotalTarjeta" class="tarjeta-monto">$0</div>
+  <div id="qrWrapper"><div id="clienteQRCanvas"></div></div>
+  <div class="tarjeta-instruccion">Escanea el código QR con tu cámara para pagar con tarjeta</div>
+  <div style="font-size:13px;color:#f59e0b">⏳ Esperando confirmación de pago...</div>
 </div>
 
 <script>
@@ -717,31 +718,32 @@ function mostrarEstadoGracias(total, vuelto) {
   }, 3000);
 }
 
-function mostrarEstadoCobrarTarjeta(total, linkPago) {
+function mostrarQRPago(linkPago, total) {
+  document.getElementById('clienteTotalTarjeta').textContent =
+    '$' + (Math.round(Number(total)) || 0).toLocaleString('es-CL');
+  const canvas = document.getElementById('clienteQRCanvas');
+  if (linkPago !== _linkPagoActual) {
+    _linkPagoActual = linkPago;
+    canvas.innerHTML = '';
+    if (linkPago) {
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(canvas, {
+          text:         linkPago,
+          width:        220,
+          height:       220,
+          colorDark:    '#000000',
+          colorLight:   '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M,
+        });
+      } else {
+        canvas.textContent = linkPago;
+        canvas.style.cssText = 'color:#000;font-size:10px;word-break:break-all;width:220px;padding:8px';
+      }
+    }
+  }
   _setEstado('cobrarTarjeta');
   if (carruselIdle)  carruselIdle.detener();
   if (carruselVenta) carruselVenta.detener();
-  document.getElementById('totalCobrarTarjeta').textContent = fmt(total);
-  if (linkPago === _linkPagoActual) return;
-  _linkPagoActual = linkPago;
-  const canvas = document.getElementById('qrCanvas');
-  canvas.innerHTML = '';
-  if (linkPago) {
-    if (typeof QRCode !== 'undefined') {
-      new QRCode(canvas, {
-        text:         linkPago,
-        width:        220,
-        height:       220,
-        colorDark:    '#000000',
-        colorLight:   '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M,
-      });
-    } else {
-      // Fallback si CDN no cargó
-      canvas.textContent = linkPago;
-      canvas.style.cssText = 'color:#000;font-size:10px;word-break:break-all;width:220px;padding:8px';
-    }
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -911,7 +913,7 @@ async function sincronizarPantalla() {
     if (!resp.ok) return;
     const data = await resp.json();
     if (data.estado === 'cobrar_tarjeta') {
-      mostrarEstadoCobrarTarjeta(data.total || 0, data.link_pago || '');
+      mostrarQRPago(data.link_pago || '', data.total || 0);
     } else if (data && data.activa) {
       _linkPagoActual = null;
       mostrarEstadoVenta();
