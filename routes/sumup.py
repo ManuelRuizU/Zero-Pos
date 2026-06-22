@@ -13,7 +13,8 @@ SUMUP_API_BASE = "https://api.sumup.com/v0.1"
 def _get_sumup_config(conn) -> dict:
     rows = conn.execute(
         """SELECT clave, valor FROM config
-           WHERE clave IN ('sumup_api_key', 'sumup_merchant_code', 'sumup_currency')"""
+           WHERE clave IN ('sumup_api_key', 'sumup_merchant_code',
+                           'sumup_currency', 'sumup_email')"""
     ).fetchall()
     return {r["clave"]: r["valor"] for r in rows}
 
@@ -237,8 +238,10 @@ def crear_link_pago():
     with db_session() as conn:
         cfg = _get_sumup_config(conn)
 
-    api_key  = cfg.get("sumup_api_key", "")
-    currency = cfg.get("sumup_currency", "CLP")
+    api_key       = cfg.get("sumup_api_key", "")
+    merchant_code = cfg.get("sumup_merchant_code", "")
+    pay_to_email  = cfg.get("sumup_email", "")
+    currency      = cfg.get("sumup_currency", "CLP")
 
     if not api_key:
         return jsonify({"error": "SumUp no configurado. Ve a Admin → Config → Pagos."}), 503
@@ -257,6 +260,10 @@ def crear_link_pago():
                 "amount": round(float(monto), 2),
                 "currency": currency,
                 "description": descripcion,
+                **({"merchant_code": merchant_code}
+                   if merchant_code else {}),
+                **({"pay_to_email": pay_to_email}
+                   if pay_to_email and not merchant_code else {}),
             },
             timeout=10,
         )

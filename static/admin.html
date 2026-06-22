@@ -521,6 +521,10 @@ input:checked + .slider:before{transform:translateX(20px);}
             <input type="text" id="cfg_sumup_merchant_code" placeholder="Tu código de comerciante SumUp">
           </div>
           <div class="form-group">
+            <label>Email cuenta SumUp</label>
+            <input type="email" id="cfg_sumup_email" placeholder="tu@email.com">
+          </div>
+          <div class="form-group">
             <label>Moneda</label>
             <input type="text" id="cfg_sumup_currency" value="CLP" readonly>
           </div>
@@ -1470,6 +1474,7 @@ async function cargarConfig() {
   set('cfg_khipu_secret',        cfgActual.khipu_secret ? '••••••••••••' : '');
   set('cfg_sumup_api_key',       cfgActual.sumup_api_key ? '••••••••••••' : '');
   set('cfg_sumup_merchant_code', cfgActual.sumup_merchant_code || '');
+  set('cfg_sumup_email',         cfgActual.sumup_email || '');
   set('cfg_sumup_currency',      cfgActual.sumup_currency || 'CLP');
   set('cfg_banco_titular',       cfgActual.banco_titular);
   set('cfg_rut_negocio_banco',   cfgActual.rut_negocio);
@@ -1530,7 +1535,7 @@ const SECCIONES = {
   negocio:   ['nombre_negocio','rut_negocio','moneda','iva_porcentaje','comuna_negocio','mensaje_ticket','nombre_terminal','whatsapp_plantilla'],
   impresora: ['impresora_tipo','impresora_ip','impresora_puerto','impresora_autocorte','impresora_corte_tipo'],
   khipu:     ['khipu_receiver_id','khipu_secret'],
-  sumup:     ['sumup_api_key','sumup_merchant_code','sumup_currency'],
+  sumup:     ['sumup_api_key','sumup_merchant_code','sumup_email','sumup_currency'],
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
   pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa','modulo_delivery','modo_mesas','turno_contar_denominaciones'],
   delivery:  ['delivery_tarifa_tipo','delivery_precio_fijo','delivery_precio_km1','delivery_precio_km3','delivery_precio_km5','delivery_precio_mas5','delivery_texto'],
