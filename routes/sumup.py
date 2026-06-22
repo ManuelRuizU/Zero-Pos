@@ -218,6 +218,44 @@ def webhook():
     return "OK", 200
 
 
+@sumup_bp.route("/confirmar_webhook", methods=["POST"])
+def confirmar_webhook():
+    """Cliente.html notifica pago exitoso del widget SumUp — sin autenticación."""
+    data        = request.get_json(silent=True) or {}
+    checkout_id = data.get("checkout_id")
+    status      = data.get("status", "")
+
+    if not checkout_id:
+        return jsonify({"error": "checkout_id requerido"}), 400
+
+    try:
+        with db_session() as conn:
+            conn.execute(
+                """UPDATE pagos_sumup
+                   SET estado=?, actualizado_en=CURRENT_TIMESTAMP
+                   WHERE checkout_id=?""",
+                (status.lower(), checkout_id),
+            )
+            if status == "PAID":
+                pago = conn.execute(
+                    "SELECT venta_id FROM pagos_sumup WHERE checkout_id=?",
+                    (checkout_id,)
+                ).fetchone()
+                if pago and pago["venta_id"]:
+                    conn.execute(
+                        """UPDATE ventas
+                           SET estado='completada', metodo_pago='tarjeta'
+                           WHERE id=? AND estado='pendiente'""",
+                        (pago["venta_id"],),
+                    )
+                    logger.info(f"Pago SumUp confirmado: venta #{pago['venta_id']}")
+    except Exception as e:
+        logger.error(f"Error confirmar_webhook SumUp: {e}")
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"ok": True})
+
+
 @sumup_bp.route("/crear_link_pago", methods=["POST"])
 def crear_link_pago():
     """Crea checkout SumUp y devuelve link de pago para QR en pantalla cliente."""

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="manifest" href="/static/manifest.json">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
+<script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js"></script>
 <meta name="theme-color" content="#0a0a14">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -350,38 +350,34 @@ body {
   padding: 10px 24px;
 }
 
-/* ── Estado Cobrar Tarjeta (SumUp QR) ────────────────────── */
+/* ── Estado Cobrar Tarjeta (SumUp Widget) ─────────────────── */
 #estadoCobrarTarjeta {
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 20px;
-  background: radial-gradient(ellipse at center, rgba(99,102,241,0.18) 0%, #0a0a14 70%);
+  gap: 16px;
+  padding: 24px;
+  background: #0a0a14;
 }
-.tarjeta-titulo {
-  font-size: clamp(20px, 3.5vw, 38px);
-  font-weight: 900;
-  letter-spacing: -0.5px;
-}
-.tarjeta-instruccion {
-  font-size: clamp(13px, 1.6vw, 18px);
-  color: rgba(255,255,255,0.55);
-}
-#qrWrapper {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 32px rgba(99,102,241,0.35);
-}
-#clienteTotalTarjeta, .tarjeta-monto {
+#clienteTotalTarjeta {
   font-size: clamp(28px, 5.5vw, 62px);
   font-weight: 900;
   letter-spacing: -2px;
   color: #22c55e;
+}
+#sumup-card {
+  width: 100%;
+  max-width: 420px;
+  min-height: 200px;
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+#sumupEstadoMsg {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
 }
 
 /* ── Slides publicidad ────────────────────────────────────── */
@@ -521,13 +517,12 @@ body {
   <div id="vueltoGracias"></div>
 </div>
 
-<!-- ═══ ESTADO 4: COBRAR TARJETA (SumUp QR) ══════════════════ -->
+<!-- ═══ ESTADO 4: COBRAR TARJETA (SumUp Widget) ═══════════════ -->
 <div id="estadoCobrarTarjeta" class="estado">
-  <div class="tarjeta-titulo">💳 Paga con tu teléfono</div>
-  <div id="clienteTotalTarjeta" class="tarjeta-monto">$0</div>
-  <div id="qrWrapper"><div id="clienteQRCanvas"></div></div>
-  <div class="tarjeta-instruccion">Escanea el código QR con tu cámara para pagar con tarjeta</div>
-  <div style="font-size:13px;color:#f59e0b">⏳ Esperando confirmación de pago...</div>
+  <div style="font-size:18px;font-weight:700;color:white;text-align:center">💳 Pago con tarjeta</div>
+  <div id="clienteTotalTarjeta">$0</div>
+  <div id="sumup-card"></div>
+  <div id="sumupEstadoMsg">Ingresa los datos de tu tarjeta</div>
 </div>
 
 <script>
@@ -682,7 +677,8 @@ let estadoActual = 'idle';
 let _pagadoTimer = null;
 let _negocioNombre = 'ZERO POS';
 let _slidesActuales = [];
-let _linkPagoActual = null;
+let _sumupCardWidget  = null;
+let _checkoutIdActual = null;
 
 function _setEstado(nombre) {
   document.querySelectorAll('.estado').forEach(el => el.classList.remove('activo'));
@@ -718,32 +714,71 @@ function mostrarEstadoGracias(total, vuelto) {
   }, 3000);
 }
 
-function mostrarQRPago(linkPago, total) {
+async function montarWidgetSumUp(checkoutId, total) {
   document.getElementById('clienteTotalTarjeta').textContent =
     '$' + (Math.round(Number(total)) || 0).toLocaleString('es-CL');
-  const canvas = document.getElementById('clienteQRCanvas');
-  if (linkPago !== _linkPagoActual) {
-    _linkPagoActual = linkPago;
-    canvas.innerHTML = '';
-    if (linkPago) {
-      if (typeof QRCode !== 'undefined') {
-        new QRCode(canvas, {
-          text:         linkPago,
-          width:        220,
-          height:       220,
-          colorDark:    '#000000',
-          colorLight:   '#ffffff',
-          correctLevel: QRCode.CorrectLevel.M,
-        });
-      } else {
-        canvas.textContent = linkPago;
-        canvas.style.cssText = 'color:#000;font-size:10px;word-break:break-all;width:220px;padding:8px';
-      }
-    }
+
+  // No remontar si ya está activo el mismo checkout
+  if (checkoutId === _checkoutIdActual && estadoActual === 'cobrarTarjeta') return;
+  _checkoutIdActual = checkoutId;
+
+  if (_sumupCardWidget) {
+    try { _sumupCardWidget.unmount(); } catch(e) {}
+    _sumupCardWidget = null;
   }
+  document.getElementById('sumup-card').innerHTML = '';
+  document.getElementById('sumupEstadoMsg').textContent = 'Ingresa los datos de tu tarjeta';
+
   _setEstado('cobrarTarjeta');
   if (carruselIdle)  carruselIdle.detener();
   if (carruselVenta) carruselVenta.detener();
+
+  if (typeof SumUpCard === 'undefined') {
+    document.getElementById('sumupEstadoMsg').textContent = 'Error: Widget SumUp no disponible';
+    return;
+  }
+
+  _sumupCardWidget = SumUpCard.mount({
+    id:          'sumup-card',
+    checkoutId:  checkoutId,
+    locale:      'es-CL',
+    country:     'CL',
+    showFooter:  true,
+    onLoad: function() {
+      document.getElementById('sumupEstadoMsg').textContent = 'Ingresa los datos de tu tarjeta';
+    },
+    onResponse: function(type, body) {
+      console.log('SumUp response:', type, body);
+      if (type === 'success') {
+        document.getElementById('sumupEstadoMsg').textContent = '✅ Pago procesado correctamente';
+        _notificarPagoExitoso(checkoutId);
+      } else if (type === 'error') {
+        document.getElementById('sumupEstadoMsg').textContent = '❌ Error en el pago. Intenta nuevamente.';
+      } else if (type === 'fail') {
+        document.getElementById('sumupEstadoMsg').textContent = '⚠️ Pago cancelado.';
+      }
+    },
+  });
+}
+
+async function _notificarPagoExitoso(checkoutId) {
+  try {
+    await fetch('/api/sumup/confirmar_webhook', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({checkout_id: checkoutId, status: 'PAID'}),
+    });
+    setTimeout(() => {
+      _checkoutIdActual = null;
+      _setEstado('idle');
+      if (_sumupCardWidget) {
+        try { _sumupCardWidget.unmount(); } catch(e) {}
+        _sumupCardWidget = null;
+      }
+    }, 3000);
+  } catch(e) {
+    console.error('Error notificando pago:', e);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -913,16 +948,16 @@ async function sincronizarPantalla() {
     if (!resp.ok) return;
     const data = await resp.json();
     if (data.estado === 'cobrar_tarjeta') {
-      mostrarQRPago(data.link_pago || '', data.total || 0);
+      montarWidgetSumUp(data.checkout_id, data.total || 0);
     } else if (data && data.activa) {
-      _linkPagoActual = null;
+      _checkoutIdActual = null;
       mostrarEstadoVenta();
       actualizarDatosVenta(data);
     } else if (data.estado === 'pagado') {
-      _linkPagoActual = null;
+      _checkoutIdActual = null;
       mostrarEstadoGracias(data.total || 0, data.vuelto || 0);
     } else {
-      _linkPagoActual = null;
+      _checkoutIdActual = null;
       mostrarEstadoIdle();
     }
   } catch(e) {
