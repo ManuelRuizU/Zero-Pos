@@ -4371,7 +4371,7 @@ async function cobrarConSumUp() {
             nombre_variante: i.nombre_variante || '',
             cantidad:        i.cantidad,
           })),
-          metodo_pago: 'tarjeta',
+          metodo_pago: 'tarjeta_pendiente',
           descuento:   itemsRapidosCarrito.length ? 0 : desc,
         }),
       });
@@ -4388,7 +4388,7 @@ async function cobrarConSumUp() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           items: itemsRapidosCarrito.map(i => ({nombre: i.nombre, precio_unit: i.precio_unit, cantidad: i.cantidad})),
-          metodo_pago: 'tarjeta',
+          metodo_pago: 'tarjeta_pendiente',
           descuento: desc,
         }),
       });
@@ -4442,9 +4442,23 @@ function _iniciarPollingCheckout(checkoutId, ventaId) {
     segundos += 3;
     if (segundos >= MAX_ESPERA) {
       clearInterval(_sumupPollingInterval); _sumupPollingInterval = null;
-      showToast('Tiempo de espera SumUp agotado — confirma manualmente', 'warning');
       const btn = document.getElementById('btnConfirmar');
       if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar pago'; }
+      // Cancelar venta pendiente — SumUp nunca confirmó el pago
+      if (ventaId) {
+        try {
+          await fetch(`/api/ventas/${ventaId}/anular`, {
+            method: 'POST', credentials: 'include',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({motivo: 'Timeout SumUp — pago no recibido'}),
+          });
+          showToast(`Tiempo agotado — Venta #${ventaId} cancelada`, 'warning');
+        } catch(e) {
+          showToast('Tiempo de espera SumUp agotado — confirma manualmente', 'warning');
+        }
+      } else {
+        showToast('Tiempo de espera SumUp agotado — confirma manualmente', 'warning');
+      }
       return;
     }
     try {

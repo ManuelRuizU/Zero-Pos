@@ -1,8 +1,9 @@
 import logging
+import threading
 import uuid
 import requests
 from flask import Blueprint, request, jsonify, session
-from database import db_session, ensure_column
+from database import db_session, ensure_column, registrar_movimiento_stock
 
 sumup_bp = Blueprint("sumup", __name__, url_prefix="/api/sumup")
 logger = logging.getLogger("zero_pos.sumup")
@@ -49,6 +50,76 @@ def _get_access_token(api_key: str) -> str:
     )
     resp.raise_for_status()
     return resp.json()["access_token"]
+
+
+def _confirmar_venta_pendiente(conn, venta_id: int) -> dict | None:
+    """Descuenta stock y marca la venta como completada si estaba pendiente.
+    Retorna datos del ticket, o None si la venta no era pendiente."""
+    venta = conn.execute(
+        "SELECT * FROM ventas WHERE id=? AND estado='pendiente'", (venta_id,)
+    ).fetchone()
+    if not venta:
+        return None
+    venta = dict(venta)
+
+    items = conn.execute(
+        """SELECT vi.*, p.modo_stock, p.nombre AS producto_nombre
+           FROM venta_items vi
+           JOIN productos p ON p.id = vi.producto_id
+           WHERE vi.venta_id=?""",
+        (venta_id,)
+    ).fetchall()
+    items_list = [dict(i) for i in items]
+
+    for it in items_list:
+        try:
+            if it.get("variante_id"):
+                registrar_movimiento_stock(conn, it["producto_id"], it["variante_id"],
+                                           "salida", it["cantidad"], "venta", 0, venta_id=venta_id)
+            elif it.get("modo_stock") != "sin_stock":
+                registrar_movimiento_stock(conn, it["producto_id"], None,
+                                           "salida", it["cantidad"], "venta", 0, venta_id=venta_id)
+        except Exception as e:
+            logger.warning(f"SumUp confirmar: no se pudo descontar stock venta #{venta_id}: {e}")
+
+    conn.execute(
+        "UPDATE ventas SET estado='completada', metodo_pago='tarjeta' WHERE id=?",
+        (venta_id,)
+    )
+
+    total = float(venta.get("total") or 0)
+    neto  = float(venta.get("neto") or 0)
+    return {
+        "venta_id":  venta_id,
+        "total":     total,
+        "neto":      neto,
+        "impuesto":  total - neto,
+        "items":     items_list,
+    }
+
+
+def _imprimir_ticket_sumup(ticket_data: dict) -> None:
+    """Imprime ticket en hilo daemon para una venta recién confirmada por SumUp."""
+    def _do():
+        try:
+            from routes.ventas import _imprimir_ticket_async
+            with db_session() as conn:
+                cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+                cfg = {r["clave"]: r["valor"] for r in cfg_rows}
+            config_imp = {
+                "tipo":   cfg.get("impresora_tipo", "red"),
+                "ip":     cfg.get("impresora_ip", "192.168.1.100"),
+                "puerto": cfg.get("impresora_puerto", "9100"),
+            }
+            _imprimir_ticket_async(
+                ticket_data["venta_id"], ticket_data["total"], "tarjeta",
+                ticket_data["items"], cfg, config_imp,
+                neto=ticket_data["neto"], impuesto=ticket_data["impuesto"],
+            )
+        except Exception as e:
+            logger.warning(f"No se pudo imprimir ticket SumUp venta #{ticket_data.get('venta_id')}: {e}")
+
+    threading.Thread(target=_do, daemon=True, name=f"ticket-sumup-{ticket_data.get('venta_id')}").start()
 
 
 @sumup_bp.route("/crear_checkout", methods=["POST"])
@@ -150,6 +221,7 @@ def estado_checkout(checkout_id):
         checkout = resp.json()
         estado   = checkout.get("status", "UNKNOWN")
 
+        ticket_data = None
         with db_session() as conn:
             conn.execute(
                 """UPDATE pagos_sumup
@@ -163,12 +235,14 @@ def estado_checkout(checkout_id):
                     (checkout_id,)
                 ).fetchone()
                 if pago and pago["venta_id"]:
-                    conn.execute(
-                        """UPDATE ventas SET estado='completada'
-                           WHERE id=? AND estado='pendiente'""",
-                        (pago["venta_id"],),
-                    )
-                    logger.info(f"Venta #{pago['venta_id']} completada via SumUp")
+                    ticket_data = _confirmar_venta_pendiente(conn, pago["venta_id"])
+                    if ticket_data:
+                        logger.info(f"Venta #{pago['venta_id']} completada + stock descontado via SumUp")
+                    else:
+                        logger.info(f"Venta #{pago['venta_id']} ya completada (no era pendiente)")
+
+        if ticket_data:
+            _imprimir_ticket_sumup(ticket_data)
 
         return jsonify({
             "ok": True,
@@ -190,6 +264,7 @@ def webhook():
     estado      = data.get("status", "")
 
     if checkout_id and estado:
+        ticket_data = None
         try:
             with db_session() as conn:
                 conn.execute(
@@ -204,16 +279,14 @@ def webhook():
                         (checkout_id,)
                     ).fetchone()
                     if pago and pago["venta_id"]:
-                        conn.execute(
-                            """UPDATE ventas SET estado='completada'
-                               WHERE id=? AND estado='pendiente'""",
-                            (pago["venta_id"],),
-                        )
-                        logger.info(
-                            f"Webhook SumUp: venta #{pago['venta_id']} completada"
-                        )
+                        ticket_data = _confirmar_venta_pendiente(conn, pago["venta_id"])
+                        if ticket_data:
+                            logger.info(f"Webhook SumUp: venta #{pago['venta_id']} completada + stock")
         except Exception as e:
             logger.error(f"Error webhook SumUp: {e}")
+
+        if ticket_data:
+            _imprimir_ticket_sumup(ticket_data)
 
     return "OK", 200
 
@@ -228,6 +301,7 @@ def confirmar_webhook():
     if not checkout_id:
         return jsonify({"error": "checkout_id requerido"}), 400
 
+    ticket_data = None
     try:
         with db_session() as conn:
             conn.execute(
@@ -242,16 +316,15 @@ def confirmar_webhook():
                     (checkout_id,)
                 ).fetchone()
                 if pago and pago["venta_id"]:
-                    conn.execute(
-                        """UPDATE ventas
-                           SET estado='completada', metodo_pago='tarjeta'
-                           WHERE id=? AND estado='pendiente'""",
-                        (pago["venta_id"],),
-                    )
-                    logger.info(f"Pago SumUp confirmado: venta #{pago['venta_id']}")
+                    ticket_data = _confirmar_venta_pendiente(conn, pago["venta_id"])
+                    if ticket_data:
+                        logger.info(f"confirmar_webhook SumUp: venta #{pago['venta_id']} completada")
     except Exception as e:
         logger.error(f"Error confirmar_webhook SumUp: {e}")
         return jsonify({"error": str(e)}), 500
+
+    if ticket_data:
+        _imprimir_ticket_sumup(ticket_data)
 
     return jsonify({"ok": True})
 

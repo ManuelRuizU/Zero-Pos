@@ -68,6 +68,11 @@ def crear_venta():
         return jsonify({"error": "Carrito vacío"}), 400
 
     metodo_pago = data.get("metodo_pago", "efectivo")
+    # 'tarjeta_pendiente' = reserva la venta sin descontar stock ni imprimir ticket
+    # Se usa cuando el pago SumUp aún no fue confirmado
+    es_pendiente = (metodo_pago == "tarjeta_pendiente")
+    if es_pendiente:
+        metodo_pago = "tarjeta"
     descuento_global = float(data.get("descuento", 0))
 
     # Verificar descuento máximo permitido por rol
@@ -196,10 +201,11 @@ def crear_venta():
         cur = conn.execute(
             """INSERT INTO ventas
                (turno_id, usuario_id, pedido_id, total, descuento, neto, impuesto,
-                metodo_pago, cliente_nombre, cliente_rut, notas)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                metodo_pago, estado, cliente_nombre, cliente_rut, notas)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (turno_id, uid, pedido_id, total, descuento_global, neto, impuesto,
-             metodo_pago, cliente_nombre, cliente_rut, notas)
+             metodo_pago, 'pendiente' if es_pendiente else 'completada',
+             cliente_nombre, cliente_rut, notas)
         )
         venta_id = cur.lastrowid
 
@@ -220,29 +226,29 @@ def crear_venta():
                  it["precio_unit"], it["descuento"], it["subtotal"],
                  it.get("lote_id"), it.get("modificadores_desc"))
             )
-            try:
-                if it.get("variante_id"):
-                    registrar_movimiento_stock(
-                        conn, it["producto_id"], it["variante_id"],
-                        "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
-                elif it.get("modo_stock") != "sin_stock":
-                    registrar_movimiento_stock(
-                        conn, it["producto_id"], None,
-                        "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
-            except ValueError as e:
-                conn.rollback()
-                return jsonify({"error": str(e)}), 409
-            if it.get("modo_stock") != "sin_stock":
-                _check_stock_alerta(conn, it["producto_id"])
-            # Descontar del lote si aplica
-            if it.get("lote_id"):
-                conn.execute(
-                    """UPDATE lotes
-                       SET cantidad_actual = MAX(0, cantidad_actual - ?),
-                           estado = CASE WHEN cantidad_actual - ? <= 0 THEN 'agotado' ELSE estado END
-                       WHERE id=?""",
-                    (it["cantidad"], it["cantidad"], it["lote_id"])
-                )
+            if not es_pendiente:
+                try:
+                    if it.get("variante_id"):
+                        registrar_movimiento_stock(
+                            conn, it["producto_id"], it["variante_id"],
+                            "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
+                    elif it.get("modo_stock") != "sin_stock":
+                        registrar_movimiento_stock(
+                            conn, it["producto_id"], None,
+                            "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
+                except ValueError as e:
+                    conn.rollback()
+                    return jsonify({"error": str(e)}), 409
+                if it.get("modo_stock") != "sin_stock":
+                    _check_stock_alerta(conn, it["producto_id"])
+                if it.get("lote_id"):
+                    conn.execute(
+                        """UPDATE lotes
+                           SET cantidad_actual = MAX(0, cantidad_actual - ?),
+                               estado = CASE WHEN cantidad_actual - ? <= 0 THEN 'agotado' ELSE estado END
+                           WHERE id=?""",
+                        (it["cantidad"], it["cantidad"], it["lote_id"])
+                    )
 
         items_para_ticket = items_validados
 
@@ -260,13 +266,15 @@ def crear_venta():
                   usuario_id=uid,
                   usuario_nombre=session.get('usuario_nombre'))
 
-    # La transacción ya está committed. Imprimir sin afectar la respuesta.
-    try:
-        _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                               config_negocio, config_imp, pedido_data, empleado,
-                               neto=neto, impuesto=impuesto)
-    except Exception as e:
-        logger.error(f"Error al imprimir ticket venta #{venta_id}: {e}")
+    # La transacción ya está committed.
+    # Ventas pendientes (SumUp sin confirmar) no imprimen ticket aún.
+    if not es_pendiente:
+        try:
+            _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
+                                   config_negocio, config_imp, pedido_data, empleado,
+                                   neto=neto, impuesto=impuesto)
+        except Exception as e:
+            logger.error(f"Error al imprimir ticket venta #{venta_id}: {e}")
 
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
@@ -423,26 +431,31 @@ def detalle_venta(vid):
 
 @ventas_bp.route("/<int:vid>/anular", methods=["POST"])
 def anular_venta(vid):
-    if not tiene_permiso(dict(session), "puede_anular_ventas"):
-        return jsonify({"error": "Sin permisos para anular ventas"}), 403
     uid = session.get("usuario_id")
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
     motivo = (request.get_json(silent=True) or {}).get('motivo', '')
 
     with db_session() as conn:
         venta = conn.execute(
-            "SELECT * FROM ventas WHERE id=? AND estado='completada'", (vid,)
+            "SELECT * FROM ventas WHERE id=? AND estado IN ('completada','pendiente')", (vid,)
         ).fetchone()
         if not venta:
             return jsonify({"error": "Venta no encontrada o ya anulada"}), 404
 
-        items = conn.execute(
-            "SELECT producto_id, variante_id, cantidad FROM venta_items WHERE venta_id=?", (vid,)
-        ).fetchall()
-        for it in items:
-            registrar_movimiento_stock(
-                conn, it["producto_id"], it["variante_id"],
-                "entrada", it["cantidad"], "anulacion", uid, venta_id=vid,
-                notas=f"Devolución por anulación venta #{vid}")
+        # Ventas completadas: requieren permiso y devuelven stock (dinero ya cobrado)
+        # Ventas pendientes: cualquier usuario autenticado puede cancelar (sin pago aún, sin stock descontado)
+        if dict(venta)["estado"] == "completada":
+            if not tiene_permiso(dict(session), "puede_anular_ventas"):
+                return jsonify({"error": "Sin permisos para anular ventas"}), 403
+            items = conn.execute(
+                "SELECT producto_id, variante_id, cantidad FROM venta_items WHERE venta_id=?", (vid,)
+            ).fetchall()
+            for it in items:
+                registrar_movimiento_stock(
+                    conn, it["producto_id"], it["variante_id"],
+                    "entrada", it["cantidad"], "anulacion", uid, venta_id=vid,
+                    notas=f"Devolución por anulación venta #{vid}")
 
         conn.execute(
             "UPDATE ventas SET estado='anulada' WHERE id=?", (vid,)
@@ -508,6 +521,9 @@ def venta_rapida():
         return jsonify({"error": "Carrito vacío"}), 400
 
     metodo_pago = data.get("metodo_pago", "efectivo")
+    es_pendiente_r = (metodo_pago == "tarjeta_pendiente")
+    if es_pendiente_r:
+        metodo_pago = "tarjeta"
     descuento_global = float(data.get("descuento", 0))
     guardar_productos = data.get("guardar_productos", False)
     pedido_id_rapida = data.get("pedido_id")
@@ -583,9 +599,11 @@ def venta_rapida():
 
         cur = conn.execute(
             """INSERT INTO ventas
-               (turno_id, usuario_id, pedido_id, total, descuento, neto, impuesto, metodo_pago)
-               VALUES (?,?,?,?,?,?,?,?)""",
-            (turno_id, uid, pedido_id_rapida, total, descuento_global, neto, impuesto, metodo_pago)
+               (turno_id, usuario_id, pedido_id, total, descuento, neto, impuesto,
+                metodo_pago, estado)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (turno_id, uid, pedido_id_rapida, total, descuento_global, neto, impuesto,
+             metodo_pago, 'pendiente' if es_pendiente_r else 'completada')
         )
         venta_id = cur.lastrowid
 
@@ -604,12 +622,13 @@ def venta_rapida():
                  it["precio_unit"], it["subtotal"])
             )
         items_para_ticket = items_validados
-        logger.info(f"Venta rápida #{venta_id} — total={total}")
+        logger.info(f"Venta rápida #{venta_id} — total={total}{' (pendiente)' if es_pendiente_r else ''}")
 
-    _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                           config_negocio, config_imp,
-                           empleado=session.get("usuario_nombre", ""),
-                           neto=neto, impuesto=impuesto)
+    if not es_pendiente_r:
+        _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
+                               config_negocio, config_imp,
+                               empleado=session.get("usuario_nombre", ""),
+                               neto=neto, impuesto=impuesto)
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
 
