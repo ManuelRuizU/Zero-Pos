@@ -241,6 +241,28 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Antes, abrir turno como admin redirigía a admin.html — esto fue eliminado
   porque causaba que al ir de admin.html a pos.html apareciera la pantalla de turno cerrado
 
+### Integración SumUp (routes/sumup.py)
+- Hosted Checkout API con `hosted_checkout.enabled=True`
+- Genera `hosted_checkout_url` real de SumUp (fallback a URL manual si no viene)
+- QR embebido en cliente.html via qrcode.js local (`/static/js/vendor/qrcode.min.js`)
+- Cliente escanea QR → paga con wallet/tarjeta desde su teléfono
+- Polling automático cada 3s en pos.html confirma estado via `/api/sumup/estado/<id>`
+- Venta se marca `completada` + `metodo_pago='tarjeta'` automáticamente al confirmar
+- Soporta Apple Pay, Google Pay, tarjeta — sin hardware físico requerido
+- Comisión 2.49% + IVA por transacción
+- qrcode.min.js en `/static/js/vendor/` — funciona sin internet (offline-first)
+- `sumup_api_key`, `sumup_merchant_code`, `sumup_email` configurables desde admin.html
+- `CLAVES_PERMITIDAS` en config.py incluye todas las claves SumUp
+- `confirmar_webhook`: endpoint sin auth para que cliente.html notifique pago exitoso
+- `estado_cliente`: endpoint sin auth para consultar estado de un checkout
+- Tabla `pagos_sumup`: `checkout_id`, `link_pago`, `estado`, `venta_id`
+
+### Seguridad git
+- `certs/` excluido de git (.gitignore) — certificados SSL del equipo
+- `*.db`, `*.db-wal`, `*.db-shm`, `*.db-bak` excluidos de git
+- `static/negocio/`, `static/productos_img/` excluidos — datos del cliente
+- Nunca subir archivos sensibles al repositorio
+
 ---
 
 ## Funcionalidades EN DESARROLLO (pueden modificarse)
@@ -250,6 +272,9 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Open Food Facts en leer-producto → routes/inventario.py
 - Foto de producto guardada desde escáner → routes/inventario.py
 - Pantalla cliente no limpia al vaciar carrito → pendiente
+- OAuth2 SumUp (flujo "Conectar con SumUp") → routes/sumup.py
+- Verificar polling pagos_sumup pendientes al reiniciar servidor → routes/sumup.py
+- Webhook SumUp para confirmación instantánea (actualmente usa polling) → routes/sumup.py
 
 ---
 
