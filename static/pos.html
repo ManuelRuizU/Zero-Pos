@@ -177,11 +177,14 @@ body {
 }
 .deptos::-webkit-scrollbar { display: none; }
 .depto-btn {
-  background: none; border: none; color: var(--text-dim);
-  border-radius: 6px; padding: 4px 10px; font-size: 12px;
-  cursor: pointer; white-space: nowrap; transition: all .15s; flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  white-space: nowrap; cursor: pointer; flex-shrink: 0;
+  border: 1px solid var(--border); color: var(--text-dim);
+  background: transparent; transition: all .15s;
 }
-.depto-btn.active { background: rgba(99,102,241,.15); color: var(--accent2); font-weight: 600; }
+.depto-btn i { font-size: 14px; }
+.depto-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
 
 /* Categories */
 .categorias {
@@ -207,8 +210,8 @@ body {
 .subcategorias-row.visible { display: flex; }
 .subcat-btn {
   background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
-  color: var(--text-dim); border-radius: 8px;
-  padding: 4px 12px; font-size: 12px; cursor: pointer;
+  color: var(--text-dim); border-radius: 16px;
+  padding: 5px 12px; font-size: 11px; cursor: pointer;
   white-space: nowrap; transition: all .15s; flex-shrink: 0;
 }
 .subcat-btn.active { background: rgba(99,102,241,.2); border-color: var(--accent); color: var(--accent2); }
@@ -466,17 +469,18 @@ body {
 
 /* ── Cart FAB (mobile only) ───────────────── */
 .fab-carrito {
-  position: fixed; bottom: 20px; right: 16px; z-index: 997;
-  background: var(--accent); color: #fff; border: none;
-  border-radius: 28px; height: 56px; min-width: 56px; padding: 0 20px;
-  font-size: 16px; font-weight: 700; cursor: pointer;
-  box-shadow: 0 4px 20px rgba(99,102,241,.5);
-  display: flex; align-items: center; gap: 8px;
+  position: fixed; bottom: 24px; right: 16px; z-index: 997;
+  background: #22c55e; color: #000; border: none;
+  border-radius: 100px; padding: 14px 20px;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(34,197,94,.4);
+  display: flex; align-items: center; gap: 10px;
   transition: transform .15s, box-shadow .15s, opacity .2s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
-.fab-carrito:active { transform: scale(.95); box-shadow: 0 2px 10px rgba(99,102,241,.4); }
+.fab-icon-wrap { position: relative; display: flex; align-items: center; }
+.fab-carrito:active { transform: scale(.95); }
 .fab-carrito.pulsing { animation: fabPulse .4s ease; }
 .fab-carrito.oculto { transform: scale(0); pointer-events: none; opacity: 0; }
 @keyframes fabPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
@@ -752,7 +756,7 @@ body {
   .carrito-panel {
     position: static;
     width: 340px; height: auto; max-height: none;
-    border-radius: 0; border-top: none;
+    border-radius: 0; border-top: 2px solid #22c55e;
     border-left: 1px solid var(--border);
     transform: none !important;
     background: rgba(10,10,15,.4);
@@ -915,7 +919,7 @@ body.cargando #overlayTurnoCerrado {
         placeholder="Buscar producto o código..." autocomplete="off"
         inputmode="search" oninput="filtrar()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();procesarCodigo(this.value);}">
-      <button class="btn-scan" id="btnCamara"><i class="ti ti-scan" style="font-size:18px"></i></button>
+      <button class="btn-scan" id="btnCamara"><i class="ti ti-barcode" style="font-size:18px"></i></button>
       <button id="btnVistaLista" onclick="_setVistaProductos('lista')" title="Vista lista"
         style="width:34px;height:34px;border-radius:8px;background:#1e1e2e;border:1px solid #2a2a3e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s">
         <i class="ti ti-list"></i>
@@ -926,7 +930,7 @@ body.cargando #overlayTurnoCerrado {
       </button>
     </div>
     <div class="deptos" id="deptos">
-      <button class="depto-btn active" data-depto="" onclick="selDepto(this,'')">Todos</button>
+      <button class="depto-btn active" data-depto="" onclick="selDepto(this,'')"><i class="ti ti-grid-dots"></i> Todos</button>
     </div>
     <div class="categorias" id="categorias">
       <button class="cat-btn active" data-id="" onclick="selCat(this,'')">Todos</button>
@@ -998,9 +1002,12 @@ body.cargando #overlayTurnoCerrado {
 
 <!-- Cart FAB (mobile) -->
 <button class="fab-carrito" id="fabCarrito" onclick="toggleCarritoMobile()">
-  🛒 <span class="fab-count" id="fabCount">0</span>
-  <span style="opacity:.6">·</span>
-  <span class="fab-total" id="fabTotal">$0</span>
+  <span class="fab-icon-wrap">
+    <i class="ti ti-shopping-cart" style="font-size:18px"></i>
+    <span class="fab-count" id="fabCount"
+      style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border-radius:50%;font-size:10px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-weight:700;border:2px solid #0f0f1a">0</span>
+  </span>
+  <span class="fab-total" id="fabTotal" style="font-size:15px;font-weight:600">$0</span>
 </button>
 
 <!-- Cart overlay (mobile) -->
@@ -2713,17 +2720,17 @@ let catDeptoMap = {};
 let deptoActual = '';
 
 const _DEPTO_META = {
-  'Alimentación':               { emoji: '🛒', label: 'Alimentos' },
-  'Bebidas con Alcohol':        { emoji: '🍺', label: 'Alcohol' },
-  'Belleza y Cuidado Personal': { emoji: '🧴', label: 'Cuidado' },
-  'Limpieza del Hogar':         { emoji: '🏠', label: 'Limpieza' },
-  'Mascotas':                   { emoji: '🐾', label: 'Mascotas' },
-  'Mundo Bebé':                 { emoji: '👶', label: 'Bebé' },
-  'Manualidades y Hogar':       { emoji: '🧵', label: 'Hogar' },
-  'Juguetes y Entretencion':    { emoji: '🎮', label: 'Juguetes' },
-  'Ferretería Básica':          { emoji: '🔧', label: 'Ferreter.' },
-  'Tabaco':                     { emoji: '🚬', label: 'Tabaco' },
-  'Otros':                      { emoji: '📦', label: 'Otros' },
+  'Alimentación':               { icon: 'ti-apple',         label: 'Alimentos' },
+  'Bebidas con Alcohol':        { icon: 'ti-bottle',        label: 'Alcohol' },
+  'Belleza y Cuidado Personal': { icon: 'ti-heart',         label: 'Cuidado' },
+  'Limpieza del Hogar':         { icon: 'ti-spray',         label: 'Limpieza' },
+  'Mascotas':                   { icon: 'ti-paw',           label: 'Mascotas' },
+  'Mundo Bebé':                 { icon: 'ti-baby-carriage', label: 'Bebé' },
+  'Manualidades y Hogar':       { icon: 'ti-home',          label: 'Hogar' },
+  'Juguetes y Entretencion':    { icon: 'ti-puzzle',        label: 'Juguetes' },
+  'Ferretería Básica':          { icon: 'ti-tools',         label: 'Ferreter.' },
+  'Tabaco':                     { icon: 'ti-smoking',       label: 'Tabaco' },
+  'Otros':                      { icon: 'ti-dots',          label: 'Otros' },
 };
 
 async function cargarCategorias() {
@@ -2743,12 +2750,12 @@ async function cargarCategorias() {
     const d = c.departamento || 'Alimentación';
     if (!seenDeptos.has(d)) {
       seenDeptos.add(d);
-      const meta = _DEPTO_META[d] || { emoji: '📦', label: d.substring(0, 8) };
+      const meta = _DEPTO_META[d] || { icon: 'ti-dots', label: d.substring(0, 8) };
       const db = document.createElement('button');
       db.className = 'depto-btn';
       db.dataset.depto = d;
       db.onclick = () => selDepto(db, d);
-      db.textContent = `${meta.emoji} ${meta.label}`;
+      db.innerHTML = `<i class="ti ${meta.icon}"></i> ${meta.label}`;
       deptos.appendChild(db);
     }
   });
