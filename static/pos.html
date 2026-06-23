@@ -2507,8 +2507,14 @@ async function verificarTurno(me) {
     overlay.style.display = 'flex';
     const usr = document.getElementById('overlayTurnoUsuario');
     if (usr && me) usr.textContent = me.nombre || me.username || '';
+    sessionStorage.removeItem('turno_id');
+    window._turnoId = null;
   } else {
     document.getElementById('overlayTurnoCerrado').style.display = 'none';
+    if (t.turno.id) {
+      sessionStorage.setItem('turno_id', String(t.turno.id));
+      window._turnoId = t.turno.id;
+    }
   }
   document.body.classList.remove('cargando');
 }
@@ -3004,6 +3010,8 @@ let _modifGrupos    = [];     // grupos cargados
 let _modifSelec     = {};     // {modificador_id: [opcion_id, ...]}
 
 async function agregarAlCarrito(prod) {
+  const turnoId = sessionStorage.getItem('turno_id') || window._turnoId;
+  if (!turnoId) { _mostrarErrorTurno('Debes abrir el turno antes de operar la caja'); return; }
   if (!prod.precio || prod.precio === 0) { abrirModalPrecio(prod); return; }
   if (prod.tiene_modificadores) {
     try {
@@ -3373,10 +3381,24 @@ function confirmarVentaConStockBajo() {
   _procesarCobro();
 }
 
+function _mostrarErrorTurno(mensaje) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = `
+    <div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:16px;padding:32px;text-align:center;max-width:320px;box-shadow:0 0 40px rgba(239,68,68,0.3)">
+      <div style="font-size:48px;margin-bottom:16px">🔒</div>
+      <div style="font-size:18px;font-weight:700;color:#ef4444;margin-bottom:8px">Turno no abierto</div>
+      <div style="font-size:14px;color:#94a3b8;margin-bottom:24px">${mensaje}</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="background:#ef4444;border:none;color:#fff;font-size:15px;font-weight:700;padding:12px 32px;border-radius:10px;cursor:pointer;width:100%">Entendido</button>
+    </div>`;
+  document.body.appendChild(modal);
+  setTimeout(() => modal.remove(), 5000);
+}
+
 function abrirCobro() {
   if (!carrito.length) return;
   const turnoActivo = sessionStorage.getItem('turno_id') || window._turnoId;
-  if (!turnoActivo) { showToast('Debes abrir el turno antes de cobrar', 'error'); return; }
+  if (!turnoActivo) { _mostrarErrorTurno('Debes abrir el turno antes de cobrar'); return; }
   const insuf = verificarStockCarrito();
   if (insuf.length) { _mostrarModalStockInsuficiente(insuf); return; }
   _procesarCobro();
