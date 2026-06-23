@@ -44,3 +44,6 @@ logs/
 static/productos_img/
 static/rootCA.pem
 static/negocio/publicidad/
+certs/
+*.db.bak
+zero_pos.db
