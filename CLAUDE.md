@@ -197,10 +197,12 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 
 ### Overlay turno cerrado (pos.html)
 - `#overlayTurnoCerrado` cubre toda la caja cuando no hay turno abierto
-- **`display:flex` por defecto** — NUNCA cambiar a `display:none` en el HTML
-  Si empieza como `none`, el cajero ve la caja durante el fetch de verificarTurno()
+- **`display:none` por defecto** en el HTML (evita flash al recargar con turno abierto)
+- `<body class="cargando">` inicia la página; CSS fuerza `display:flex; visibility:hidden`
+  en el overlay durante la carga — cubre la caja pero invisible, sin flash
+- `verificarTurno(me)` al terminar llama `document.body.classList.remove('cargando')`
+  → si hay turno: overlay queda en `display:none`; si no hay: overlay se muestra `display:flex`
 - z-index: 9999 (mayor que cualquier modal)
-- `verificarTurno(me)` lo oculta si hay turno abierto, lo muestra si no hay
 - `_confirmarTurno()` al abrir turno: oculta el overlay (todos los roles)
 - Al cerrar turno exitosamente → redirige a `login.html?modo=salida`
 - El botón "ABRIR EL TURNO" llama `_abrirModalTurno('abrir')` (con guión bajo)

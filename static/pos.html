@@ -808,9 +808,14 @@ body {
   pointer-events: none;
 }
 #feedbackEscaner.show { opacity: 1; }
+/* Durante carga inicial: overlay cubre la caja pero invisible (evita flash) */
+body.cargando #overlayTurnoCerrado {
+  display: flex !important;
+  visibility: hidden !important;
+}
 </style>
 </head>
-<body>
+<body class="cargando">
 
 <!-- Topbar — una sola fila limpia -->
 <div class="topbar">
@@ -1119,7 +1124,7 @@ body {
 
 <!-- ── Overlay turno cerrado ─────────────────────────────────── -->
 <div id="overlayTurnoCerrado" style="
-  display:flex;
+  display:none;
   position:fixed;
   top:0;left:0;right:0;bottom:0;
   width:100%;height:100%;
@@ -2505,6 +2510,7 @@ async function verificarTurno(me) {
   } else {
     document.getElementById('overlayTurnoCerrado').style.display = 'none';
   }
+  document.body.classList.remove('cargando');
 }
 
 async function _irAColacion() {
