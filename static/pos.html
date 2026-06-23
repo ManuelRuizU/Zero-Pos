@@ -161,11 +161,13 @@ body {
 }
 .search-input:focus { border-color: var(--accent); }
 .btn-scan {
-  background: var(--accent); border: none; color: #fff;
-  border-radius: 10px; padding: 9px 14px; cursor: pointer;
-  font-size: 18px; transition: filter .15s; flex-shrink: 0;
+  width: 36px; height: 36px; border-radius: 10px;
+  background: #1e1e2e; border: 1px solid #2a2a3e;
+  display: flex; align-items: center; justify-content: center;
+  color: #94a3b8; cursor: pointer; flex-shrink: 0;
+  transition: color .2s, border-color .2s;
 }
-.btn-scan:hover { filter: brightness(1.15); }
+.btn-scan:hover, .btn-scan:active { color: #22c55e; border-color: #22c55e; }
 
 /* Departments */
 .deptos {
@@ -247,29 +249,33 @@ body {
 #productosGrid.vista-lista .prod-card {
   display: flex !important; flex-direction: row !important;
   align-items: center !important; gap: 12px !important;
-  padding: 11px 14px !important; border-radius: 0 !important;
+  padding: 10px 8px !important; border-radius: 0 !important;
   background: transparent !important; border: none !important;
   border-bottom: 1px solid #1a1a28 !important;
   min-height: 54px !important; text-align: left !important;
 }
 #productosGrid.vista-lista .prod-emoji {
-  width: 40px !important; height: 40px !important;
+  width: 48px !important; height: 48px !important;
   font-size: 24px !important; flex-shrink: 0 !important;
-  line-height: 40px !important; text-align: center !important;
+  line-height: 48px !important; text-align: center !important;
 }
 #productosGrid.vista-lista .prod-nombre {
-  flex: 1 !important; font-size: 14px !important;
+  flex: 1 !important; min-width: 0 !important; font-size: 14px !important;
   white-space: nowrap !important; overflow: hidden !important;
   text-overflow: ellipsis !important;
   max-height: unset !important; display: block !important;
   -webkit-line-clamp: unset !important;
+  padding: 0 !important; margin: 0 !important;
 }
 #productosGrid.vista-lista .prod-precio {
   font-size: 14px !important; flex-shrink: 0 !important; margin-top: 0 !important;
 }
 #productosGrid.vista-lista .prod-stock-info { display: none !important; }
 #productosGrid.vista-lista .prod-variantes { display: none !important; }
-#productosGrid.vista-lista .variantes-badge-card { display: none !important; }
+#productosGrid.vista-lista .variantes-badge-card {
+  flex-shrink: 0 !important; margin-top: 0 !important;
+  font-size: 11px !important; white-space: nowrap !important;
+}
 /* Vista grid — override base para restaurar grid */
 #productosGrid.vista-grid {
   display: grid !important;
@@ -909,7 +915,7 @@ body.cargando #overlayTurnoCerrado {
         placeholder="Buscar producto o código..." autocomplete="off"
         inputmode="search" oninput="filtrar()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();procesarCodigo(this.value);}">
-      <button class="btn-scan" id="btnCamara">📷</button>
+      <button class="btn-scan" id="btnCamara"><i class="ti ti-scan" style="font-size:18px"></i></button>
       <button id="btnVistaLista" onclick="_setVistaProductos('lista')" title="Vista lista"
         style="width:34px;height:34px;border-radius:8px;background:#1e1e2e;border:1px solid #2a2a3e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s">
         <i class="ti ti-list"></i>
