@@ -4351,49 +4351,98 @@ async function cobrarConSumUp() {
   if (_sumupPollingInterval) { clearInterval(_sumupPollingInterval); _sumupPollingInterval = null; }
   const btn = document.getElementById('btnConfirmar');
   btn.disabled = true;
-  btn.textContent = 'Iniciando SumUp...';
+  btn.textContent = 'Creando venta...';
+
+  const desc = parseFloat(document.getElementById('descuentoInput').value) || 0;
+  const itemsNormales      = carrito.filter(i => !i._rapida && i.producto_id && !i._pedido_item);
+  const itemsRapidosCarrito = carrito.filter(i => i._rapida);
+
+  let ventaId = null;
   try {
+    // 1. Crear la venta PRIMERO para obtener venta_id
+    if (itemsNormales.length) {
+      const r = await fetch('/api/ventas', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          items: itemsNormales.map(i => ({
+            producto_id:     i.producto_id,
+            variante_id:     i.variante_id || null,
+            nombre_variante: i.nombre_variante || '',
+            cantidad:        i.cantidad,
+          })),
+          metodo_pago: 'tarjeta',
+          descuento:   itemsRapidosCarrito.length ? 0 : desc,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        showToast(d.error || 'Error al registrar venta', 'error');
+        btn.disabled = false; btn.textContent = '✓ Confirmar pago'; return;
+      }
+      ventaId = d.venta_id;
+    }
+    if (itemsRapidosCarrito.length) {
+      const r2 = await fetch('/api/ventas/rapida', {
+        method: 'POST', credentials: 'include',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          items: itemsRapidosCarrito.map(i => ({nombre: i.nombre, precio_unit: i.precio_unit, cantidad: i.cantidad})),
+          metodo_pago: 'tarjeta',
+          descuento: desc,
+        }),
+      });
+      const d2 = await r2.json();
+      if (!r2.ok) {
+        showToast(d2.error || 'Error en venta rápida', 'error');
+        btn.disabled = false; btn.textContent = '✓ Confirmar pago'; return;
+      }
+      ventaId = ventaId || d2.venta_id;
+    }
+
+    if (!ventaId) {
+      showToast('Carrito vacío', 'error'); btn.disabled = false; btn.textContent = '✓ Confirmar pago'; return;
+    }
+
+    // 2. Crear checkout SumUp con venta_id ya conocido
+    btn.textContent = 'Iniciando SumUp...';
     const resp = await fetch('/api/sumup/crear_link_pago', {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({monto: total, descripcion: `Venta ZERO POS #${Date.now()}`}),
+      body: JSON.stringify({monto: total, venta_id: ventaId, descripcion: `Venta ZERO POS #${ventaId}`}),
     });
     const data = await resp.json();
     if (!data.ok) {
       showToast(data.error || 'Error SumUp', 'error');
-      btn.disabled = false; btn.textContent = '✓ Confirmar pago';
-      return;
+      btn.disabled = false; btn.textContent = '✓ Confirmar pago'; return;
     }
-    // Mostrar QR en pantalla cliente
+
+    // 3. Mostrar QR en pantalla cliente
     try {
       await fetch('/api/ventas/pantalla-cliente/estado', {
         method: 'POST', credentials: 'include',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          estado:      'cobrar_tarjeta',
-          total,
-          checkout_id: data.checkout_id,
-          link_pago:   data.link_pago,
-        }),
+        body: JSON.stringify({estado: 'cobrar_tarjeta', total, checkout_id: data.checkout_id, link_pago: data.link_pago}),
       });
     } catch(e) { /* pantalla cliente opcional */ }
     btn.textContent = '⏳ Esperando pago...';
     showToast('💳 El cliente puede escanear el QR o usar el lector Air', 'info');
-    _iniciarPollingCheckout(data.checkout_id);
+    _iniciarPollingCheckout(data.checkout_id, ventaId);
+
   } catch(e) {
     showToast('Error de conexión', 'error');
     btn.disabled = false; btn.textContent = '✓ Confirmar pago';
   }
 }
 
-function _iniciarPollingCheckout(checkoutId) {
+function _iniciarPollingCheckout(checkoutId, ventaId) {
   const MAX_ESPERA = 120;
   let segundos = 0;
   _sumupPollingInterval = setInterval(async () => {
     segundos += 3;
     if (segundos >= MAX_ESPERA) {
       clearInterval(_sumupPollingInterval); _sumupPollingInterval = null;
-      showToast('Tiempo de espera SumUp agotado', 'error');
+      showToast('Tiempo de espera SumUp agotado — confirma manualmente', 'warning');
       const btn = document.getElementById('btnConfirmar');
       if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar pago'; }
       return;
@@ -4403,9 +4452,20 @@ function _iniciarPollingCheckout(checkoutId) {
       const estado = await r.json();
       if (estado.pagado) {
         clearInterval(_sumupPollingInterval); _sumupPollingInterval = null;
-        showToast('✅ Pago aprobado con SumUp', 'success');
-        metodoPago = 'tarjeta';
-        await confirmarPago();
+        showToast(`✅ Pago aprobado con SumUp — Venta #${ventaId}`, 'success');
+        try {
+          pushPantallaCliente({estado: 'pagado', metodo_pago: 'tarjeta', monto_recibido: total, vuelto: 0});
+          _pantallaLock = true;
+          if (_pantallaTimer) clearTimeout(_pantallaTimer);
+          _pantallaTimer = setTimeout(() => { _pantallaLock = false; _pushPantallaIdle(); }, 10000);
+        } catch(e) {}
+        cerrarCobro();
+        if (document.getElementById('carrito').classList.contains('open')) toggleCarritoMobile();
+        limpiarCarrito();
+        const _di = document.getElementById('descuentoInput'); if (_di) _di.value = '';
+        const _dv = document.getElementById('descuentoInputVisible'); if (_dv) _dv.value = '';
+        const _dr = document.getElementById('descuentoInputRow'); if (_dr) _dr.style.display = 'none';
+        setTimeout(() => cargarProductos(), 500);
       }
     } catch(e) { /* ignorar errores transitorios de red */ }
   }, 3000);
