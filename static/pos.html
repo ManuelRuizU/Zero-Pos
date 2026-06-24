@@ -238,52 +238,6 @@ body {
 .prod-card.sin-stock { opacity: .45; cursor: not-allowed; filter: grayscale(30%); pointer-events: none; }
 @keyframes prodFlash { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 3px #22c55e;} }
 .prod-card.flash { animation: prodFlash 0.2s ease; }
-
-/* ── Vista lista (CSS toggle) ──────────────────────────────── */
-#productosGrid.vista-lista {
-  display: flex !important; flex-direction: column !important;
-  gap: 0 !important; padding: 0 0 90px !important;
-}
-#productosGrid.vista-lista .prod-card {
-  display: flex !important; flex-direction: row !important;
-  align-items: center !important; gap: 12px !important;
-  padding: 11px 14px !important; border-radius: 0 !important;
-  background: transparent !important; border: none !important;
-  border-bottom: 1px solid #1a1a28 !important;
-  min-height: 54px !important; text-align: left !important;
-}
-#productosGrid.vista-lista .prod-emoji {
-  width: 40px !important; height: 40px !important;
-  font-size: 24px !important; flex-shrink: 0 !important;
-  line-height: 40px !important; text-align: center !important;
-}
-#productosGrid.vista-lista .prod-nombre {
-  flex: 1 !important; font-size: 14px !important;
-  white-space: nowrap !important; overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  max-height: unset !important; display: block !important;
-  -webkit-line-clamp: unset !important;
-}
-#productosGrid.vista-lista .prod-precio {
-  font-size: 14px !important; flex-shrink: 0 !important; margin-top: 0 !important;
-}
-#productosGrid.vista-lista .prod-stock-info { display: none !important; }
-#productosGrid.vista-lista .prod-variantes { display: none !important; }
-#productosGrid.vista-lista .variantes-badge-card { display: none !important; }
-/* Vista grid — override base para restaurar grid */
-#productosGrid.vista-grid {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
-}
-/* Badge variantes en card */
-.variantes-badge-card {
-  display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11px; color: #f59e0b;
-  background: rgba(245,158,11,0.12);
-  padding: 3px 8px; border-radius: 5px;
-  border: 1px solid rgba(245,158,11,0.25);
-  font-weight: 500; margin-top: 4px;
-}
 .prod-emoji {
   font-size: 38px; line-height: 1;
   flex-shrink: 0;
@@ -374,7 +328,7 @@ body {
   height: 75vh; max-height: 75vh;
   background: #111118;
   border-radius: 20px 20px 0 0;
-  border-top: 2px solid #22c55e;
+  border-top: 1px solid var(--border);
   transform: translateY(100%);
   transition: transform .35s cubic-bezier(.4,0,.2,1);
   z-index: 200; display: flex; flex-direction: column;
@@ -385,7 +339,7 @@ body {
   display: flex; align-items: center; justify-content: center;
   padding: 10px; cursor: pointer; flex-shrink: 0;
 }
-.handle-bar { width: 36px; height: 4px; background: #22c55e; opacity: 0.5; border-radius: 2px; cursor: grab; }
+.handle-bar { width: 40px; height: 4px; background: var(--border); border-radius: 2px; }
 
 .carrito-header {
   padding: 0 16px 12px;
@@ -910,14 +864,6 @@ body.cargando #overlayTurnoCerrado {
         inputmode="search" oninput="filtrar()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();procesarCodigo(this.value);}">
       <button class="btn-scan" id="btnCamara">📷</button>
-      <button id="btnVistaLista" onclick="_setVistaProductos('lista')" title="Vista lista"
-        style="width:34px;height:34px;border-radius:8px;background:#1e1e2e;border:1px solid #2a2a3e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s">
-        <i class="ti ti-list"></i>
-      </button>
-      <button id="btnVistaGrid" onclick="_setVistaProductos('grid')" title="Vista grid"
-        style="width:34px;height:34px;border-radius:8px;background:#1e1e2e;border:1px solid #2a2a3e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s">
-        <i class="ti ti-layout-grid"></i>
-      </button>
     </div>
     <div class="deptos" id="deptos">
       <button class="depto-btn active" data-depto="" onclick="selDepto(this,'')">Todos</button>
@@ -926,6 +872,9 @@ body.cargando #overlayTurnoCerrado {
       <button class="cat-btn active" data-id="" onclick="selCat(this,'')">Todos</button>
     </div>
     <div class="subcategorias-row" id="subcatRow"></div>
+    <div style="display:flex;align-items:center;justify-content:flex-end;padding:4px 12px 0;gap:4px">
+      <button id="btnVista" class="btn-vista-toggle" onclick="toggleVista()" title="Cambiar vista" style="background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;color:var(--text-dim);font-size:18px;transition:color .15s" onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-dim)'">⊞</button>
+    </div>
     <div class="productos-grid" id="productosGrid"></div>
   </div>
 
@@ -2441,7 +2390,6 @@ async function init() {
   if (btnCola) btnCola.style.display = deliveryActivo ? '' : 'none';
 
   _initVista();
-  _setVistaProductos(localStorage.getItem('zero_vista_productos') || 'grid');
   await cargarCategorias();
   await cargarProductos();
 
@@ -2559,14 +2507,8 @@ async function verificarTurno(me) {
     overlay.style.display = 'flex';
     const usr = document.getElementById('overlayTurnoUsuario');
     if (usr && me) usr.textContent = me.nombre || me.username || '';
-    sessionStorage.removeItem('turno_id');
-    window._turnoId = null;
   } else {
     document.getElementById('overlayTurnoCerrado').style.display = 'none';
-    if (t.turno.id) {
-      sessionStorage.setItem('turno_id', String(t.turno.id));
-      window._turnoId = t.turno.id;
-    }
   }
   document.body.classList.remove('cargando');
 }
@@ -2928,15 +2870,24 @@ function _renderPaginaGrid(grid, pagina) {
 
     let innerContent;
 
-    if (p.tiene_variantes) {
-      const varCount = (p._variantes && p._variantes.length) ? p._variantes.length : 0;
-      const badgeLabel = varCount
-        ? `<i class="ti ti-versions" style="font-size:12px"></i> ${varCount} variante${varCount !== 1 ? 's' : ''}`
-        : `<i class="ti ti-versions" style="font-size:12px"></i> variantes`;
+    if (p.tiene_variantes && p._variantes && p._variantes.length) {
+      const pillsHTML = p._variantes.map(v => {
+        const agotado = v.stock <= 0;
+        const nombreV = escH(v.nombre);
+        const clickAttr = agotado ? '' : `onclick="event.stopPropagation();agregarVarianteById(${p.id},${v.id})"`;
+        return `<button class="variante-pill${agotado ? ' disabled' : ''}" ${clickAttr}>
+          ${nombreV}<span class="vprecio">${fmt(v.precio)}</span>
+        </button>`;
+      }).join('');
       innerContent = `
         <span class="prod-emoji">${emoji}</span>
         <span class="prod-nombre">${nombreSafe}</span>
-        <div class="variantes-badge-card">${badgeLabel}</div>`;
+        <div class="prod-variantes">${pillsHTML}</div>`;
+    } else if (p.tiene_variantes) {
+      innerContent = `
+        <span class="prod-emoji">${emoji}</span>
+        <span class="prod-nombre">${nombreSafe}</span>
+        <span class="prod-stock-info" style="color:var(--accent2);font-size:12px;">Toca para ver opciones ▼</span>`;
       div.onclick = () => abrirVariantes(p);
     } else if (modoStock === 'sin_stock') {
       innerContent = `
@@ -3053,8 +3004,6 @@ let _modifGrupos    = [];     // grupos cargados
 let _modifSelec     = {};     // {modificador_id: [opcion_id, ...]}
 
 async function agregarAlCarrito(prod) {
-  const turnoId = sessionStorage.getItem('turno_id') || window._turnoId;
-  if (!turnoId) { _mostrarErrorTurno('Debes abrir el turno antes de operar la caja'); return; }
   if (!prod.precio || prod.precio === 0) { abrirModalPrecio(prod); return; }
   if (prod.tiene_modificadores) {
     try {
@@ -3424,24 +3373,10 @@ function confirmarVentaConStockBajo() {
   _procesarCobro();
 }
 
-function _mostrarErrorTurno(mensaje) {
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;';
-  modal.innerHTML = `
-    <div style="background:#1a0a0a;border:2px solid #ef4444;border-radius:16px;padding:32px;text-align:center;max-width:320px;box-shadow:0 0 40px rgba(239,68,68,0.3)">
-      <div style="font-size:48px;margin-bottom:16px">🔒</div>
-      <div style="font-size:18px;font-weight:700;color:#ef4444;margin-bottom:8px">Turno no abierto</div>
-      <div style="font-size:14px;color:#94a3b8;margin-bottom:24px">${mensaje}</div>
-      <button onclick="this.closest('[style*=fixed]').remove()" style="background:#ef4444;border:none;color:#fff;font-size:15px;font-weight:700;padding:12px 32px;border-radius:10px;cursor:pointer;width:100%">Entendido</button>
-    </div>`;
-  document.body.appendChild(modal);
-  setTimeout(() => modal.remove(), 5000);
-}
-
 function abrirCobro() {
   if (!carrito.length) return;
   const turnoActivo = sessionStorage.getItem('turno_id') || window._turnoId;
-  if (!turnoActivo) { _mostrarErrorTurno('Debes abrir el turno antes de cobrar'); return; }
+  if (!turnoActivo) { showToast('Debes abrir el turno antes de cobrar', 'error'); return; }
   const insuf = verificarStockCarrito();
   if (insuf.length) { _mostrarModalStockInsuficiente(insuf); return; }
   _procesarCobro();
@@ -4394,114 +4329,51 @@ async function cobrarConSumUp() {
   if (_sumupPollingInterval) { clearInterval(_sumupPollingInterval); _sumupPollingInterval = null; }
   const btn = document.getElementById('btnConfirmar');
   btn.disabled = true;
-  btn.textContent = 'Creando venta...';
-
-  const desc = parseFloat(document.getElementById('descuentoInput').value) || 0;
-  const itemsNormales      = carrito.filter(i => !i._rapida && i.producto_id && !i._pedido_item);
-  const itemsRapidosCarrito = carrito.filter(i => i._rapida);
-
-  let ventaId = null;
+  btn.textContent = 'Iniciando SumUp...';
   try {
-    // 1. Crear la venta PRIMERO para obtener venta_id
-    if (itemsNormales.length) {
-      const r = await fetch('/api/ventas', {
-        method: 'POST', credentials: 'include',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          items: itemsNormales.map(i => ({
-            producto_id:     i.producto_id,
-            variante_id:     i.variante_id || null,
-            nombre_variante: i.nombre_variante || '',
-            cantidad:        i.cantidad,
-          })),
-          metodo_pago: 'tarjeta_pendiente',
-          descuento:   itemsRapidosCarrito.length ? 0 : desc,
-        }),
-      });
-      const d = await r.json();
-      if (!r.ok) {
-        showToast(d.error || 'Error al registrar venta', 'error');
-        btn.disabled = false; btn.textContent = '✓ Confirmar pago'; return;
-      }
-      ventaId = d.venta_id;
-    }
-    if (itemsRapidosCarrito.length) {
-      const r2 = await fetch('/api/ventas/rapida', {
-        method: 'POST', credentials: 'include',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          items: itemsRapidosCarrito.map(i => ({nombre: i.nombre, precio_unit: i.precio_unit, cantidad: i.cantidad})),
-          metodo_pago: 'tarjeta_pendiente',
-          descuento: desc,
-        }),
-      });
-      const d2 = await r2.json();
-      if (!r2.ok) {
-        showToast(d2.error || 'Error en venta rápida', 'error');
-        btn.disabled = false; btn.textContent = '✓ Confirmar pago'; return;
-      }
-      ventaId = ventaId || d2.venta_id;
-    }
-
-    if (!ventaId) {
-      showToast('Carrito vacío', 'error'); btn.disabled = false; btn.textContent = '✓ Confirmar pago'; return;
-    }
-
-    // 2. Crear checkout SumUp con venta_id ya conocido
-    btn.textContent = 'Iniciando SumUp...';
     const resp = await fetch('/api/sumup/crear_link_pago', {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({monto: total, venta_id: ventaId, descripcion: `Venta ZERO POS #${ventaId}`}),
+      body: JSON.stringify({monto: total, descripcion: `Venta ZERO POS #${Date.now()}`}),
     });
     const data = await resp.json();
     if (!data.ok) {
       showToast(data.error || 'Error SumUp', 'error');
-      btn.disabled = false; btn.textContent = '✓ Confirmar pago'; return;
+      btn.disabled = false; btn.textContent = '✓ Confirmar pago';
+      return;
     }
-
-    // 3. Mostrar QR en pantalla cliente
+    // Mostrar QR en pantalla cliente
     try {
       await fetch('/api/ventas/pantalla-cliente/estado', {
         method: 'POST', credentials: 'include',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({estado: 'cobrar_tarjeta', total, checkout_id: data.checkout_id, link_pago: data.link_pago}),
+        body: JSON.stringify({
+          estado:      'cobrar_tarjeta',
+          total,
+          checkout_id: data.checkout_id,
+          link_pago:   data.link_pago,
+        }),
       });
     } catch(e) { /* pantalla cliente opcional */ }
     btn.textContent = '⏳ Esperando pago...';
     showToast('💳 El cliente puede escanear el QR o usar el lector Air', 'info');
-    _iniciarPollingCheckout(data.checkout_id, ventaId);
-
+    _iniciarPollingCheckout(data.checkout_id);
   } catch(e) {
     showToast('Error de conexión', 'error');
     btn.disabled = false; btn.textContent = '✓ Confirmar pago';
   }
 }
 
-function _iniciarPollingCheckout(checkoutId, ventaId) {
+function _iniciarPollingCheckout(checkoutId) {
   const MAX_ESPERA = 120;
   let segundos = 0;
   _sumupPollingInterval = setInterval(async () => {
     segundos += 3;
     if (segundos >= MAX_ESPERA) {
       clearInterval(_sumupPollingInterval); _sumupPollingInterval = null;
+      showToast('Tiempo de espera SumUp agotado', 'error');
       const btn = document.getElementById('btnConfirmar');
       if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmar pago'; }
-      // Cancelar venta pendiente — SumUp nunca confirmó el pago
-      if (ventaId) {
-        try {
-          await fetch(`/api/ventas/${ventaId}/anular`, {
-            method: 'POST', credentials: 'include',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({motivo: 'Timeout SumUp — pago no recibido'}),
-          });
-          showToast(`Tiempo agotado — Venta #${ventaId} cancelada`, 'warning');
-        } catch(e) {
-          showToast('Tiempo de espera SumUp agotado — confirma manualmente', 'warning');
-        }
-      } else {
-        showToast('Tiempo de espera SumUp agotado — confirma manualmente', 'warning');
-      }
       return;
     }
     try {
@@ -4509,20 +4381,9 @@ function _iniciarPollingCheckout(checkoutId, ventaId) {
       const estado = await r.json();
       if (estado.pagado) {
         clearInterval(_sumupPollingInterval); _sumupPollingInterval = null;
-        showToast(`✅ Pago aprobado con SumUp — Venta #${ventaId}`, 'success');
-        try {
-          pushPantallaCliente({estado: 'pagado', metodo_pago: 'tarjeta', monto_recibido: total, vuelto: 0});
-          _pantallaLock = true;
-          if (_pantallaTimer) clearTimeout(_pantallaTimer);
-          _pantallaTimer = setTimeout(() => { _pantallaLock = false; _pushPantallaIdle(); }, 10000);
-        } catch(e) {}
-        cerrarCobro();
-        if (document.getElementById('carrito').classList.contains('open')) toggleCarritoMobile();
-        limpiarCarrito();
-        const _di = document.getElementById('descuentoInput'); if (_di) _di.value = '';
-        const _dv = document.getElementById('descuentoInputVisible'); if (_dv) _dv.value = '';
-        const _dr = document.getElementById('descuentoInputRow'); if (_dr) _dr.style.display = 'none';
-        setTimeout(() => cargarProductos(), 500);
+        showToast('✅ Pago aprobado con SumUp', 'success');
+        metodoPago = 'tarjeta';
+        await confirmarPago();
       }
     } catch(e) { /* ignorar errores transitorios de red */ }
   }, 3000);
@@ -5705,29 +5566,6 @@ async function _actualizarBadgeImpresora() {
 }
 
 // ── Vista grid/lista ─────────────────────────────────────────────
-function _setVistaProductos(vista) {
-  localStorage.setItem('zero_vista_productos', vista);
-  const grid = document.getElementById('productosGrid');
-  const btnLista = document.getElementById('btnVistaLista');
-  const btnGrid  = document.getElementById('btnVistaGrid');
-  if (vista === 'lista') {
-    grid.classList.add('vista-lista');
-    grid.classList.remove('vista-grid');
-    if (btnLista) { btnLista.style.background='#22c55e22'; btnLista.style.borderColor='#22c55e'; btnLista.style.color='#22c55e'; }
-    if (btnGrid)  { btnGrid.style.background='#1e1e2e';   btnGrid.style.borderColor='#2a2a3e';  btnGrid.style.color='#94a3b8'; }
-  } else {
-    grid.classList.remove('vista-lista');
-    grid.classList.add('vista-grid');
-    if (btnGrid)  { btnGrid.style.background='#22c55e22'; btnGrid.style.borderColor='#22c55e'; btnGrid.style.color='#22c55e'; }
-    if (btnLista) { btnLista.style.background='#1e1e2e';  btnLista.style.borderColor='#2a2a3e'; btnLista.style.color='#94a3b8'; }
-  }
-  // Si estábamos en modo-lista (renderiza .prod-fila), re-renderizar en grid
-  if (modoVista === 'lista') {
-    modoVista = 'grid';
-    filtrar();
-  }
-}
-
 function toggleVista() {
   modoVista = modoVista === 'grid' ? 'lista' : 'grid';
   localStorage.setItem('modo_vista', modoVista);
