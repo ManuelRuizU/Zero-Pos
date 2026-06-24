@@ -808,10 +808,18 @@ body {
   pointer-events: none;
 }
 #feedbackEscaner.show { opacity: 1; }
-/* Durante carga inicial: overlay cubre la caja pero invisible (evita flash) */
+/* Durante carga inicial: ocultar contenido hasta confirmar turno */
+body.cargando .layout,
+body.cargando .topbar {
+  visibility: hidden;
+}
+/* Overlay ocupa toda la pantalla con fondo sólido, pero sin mostrar el texto
+   "turno cerrado" hasta que verificarTurno() confirme que realmente está cerrado */
 body.cargando #overlayTurnoCerrado {
   display: flex !important;
-  visibility: hidden !important;
+}
+body.cargando #overlayTurnoCerrado > * {
+  visibility: hidden;
 }
 </style>
 </head>

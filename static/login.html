@@ -639,6 +639,19 @@ async function _mostrarPantallaPost(data) {
       const pact = res.jornada_pactada ?? 45;
       horasSemana = `Esta semana: ${hrs} hrs trabajadas de ${pact} hrs pactadas`;
     } catch(e) {}
+
+    // Si turno cerrado → ir directo a pos.html (el overlay turno-cerrado lo cubre allá)
+    if (rol !== 'cocina') {
+      let turnoAbierto = false;
+      try {
+        const tRes = await fetch('/api/auth/turno/actual', {credentials:'include'}).then(r => r.json());
+        turnoAbierto = !!tRes.turno;
+      } catch(e) {}
+      if (!turnoAbierto) {
+        window.location.href = 'pos.html';
+        return;
+      }
+    }
   }
 
   const idPantalla = {
@@ -658,7 +671,7 @@ async function _mostrarPantallaPost(data) {
     document.getElementById('entradaNombre').textContent     = nombre;
     document.getElementById('entradaHora').textContent       = hora;
     document.getElementById('entradaHorasSemana').textContent = horasSemana;
-    setTimeout(() => location.href = rol === 'cocina' ? 'cocina.html' : 'pos.html', 4000);
+    setTimeout(() => location.href = rol === 'cocina' ? 'cocina.html' : 'pos.html', 3000);
   } else if (modo === 'salida') {
     document.getElementById('salidaNombre').textContent  = nombre;
     document.getElementById('salidaHora').textContent    = hora;
