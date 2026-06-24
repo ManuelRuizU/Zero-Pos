@@ -198,7 +198,8 @@ body {
   padding: 6px 14px; font-size: 13px; cursor: pointer;
   white-space: nowrap; transition: all .15s; flex-shrink: 0;
 }
-.cat-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cat-btn.active { background: var(--accent); border-color: var(--accent); color: #04140a; font-weight: 700; }
+.cat-btn i { font-size: 14px; }
 
 /* Subcategories */
 .subcategorias-row {
@@ -1120,6 +1121,37 @@ body.cargando #overlayTurnoCerrado {
 }
 .btn-cobrar:hover { filter:brightness(1.08);transform:translateY(-1px); }
 .btn-cobrar:disabled { opacity:.4;cursor:not-allowed;transform:none;filter:none; }
+
+/* ── Chip (categoría/depto unificado) ───────────────────────── */
+.chip {
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-chip);padding:8px 15px;
+  font-size:13px;font-weight:500;color:var(--text-dim);
+  white-space:nowrap;cursor:pointer;transition:all .15s;
+  flex-shrink:0;
+}
+.chip:hover { color:var(--text); }
+.chip.active { background:var(--accent);border-color:var(--accent);color:#04140a;font-weight:700; }
+.chip i { font-size:14px; }
+
+/* ── Product card pcat ──────────────────────────────────────── */
+.product-card .pcat {
+  font-size:10px;font-weight:600;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.6px;margin-top:-6px;
+}
+
+/* ── FAB "Cobrar →" label ───────────────────────────────────── */
+.fab-cobrar {
+  font-size:14px;font-weight:800;color:#04140a;
+  letter-spacing:-0.2px;
+}
+@media(max-width:380px){.fab-cobrar{display:none;}}
+
+/* ── Search bar con ícono ────────────────────────────────────── */
+.search-bar-icon {
+  font-size:17px;color:var(--text-dim);flex-shrink:0;display:flex;align-items:center;
+}
 </style>
 </head>
 <body class="cargando">
@@ -1155,7 +1187,7 @@ body.cargando #overlayTurnoCerrado {
     🖨️<span id="impresoraBadge" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
   </button>
   <!-- Botón escanear -->
-  <button class="scan-btn" onclick="Escaner.abrir()" title="Escanear código">
+  <button class="scan-btn" id="btnCamara" onclick="Escaner.abrir()" title="Escanear código">
     <i class="ti ti-barcode"></i><span class="scan-label">Escanear</span>
   </button>
   <!-- Toggle vista lista/grid -->
@@ -1204,25 +1236,17 @@ body.cargando #overlayTurnoCerrado {
   <!-- Panel productos -->
   <div class="productos-panel">
     <div class="search-bar">
+      <i class="ti ti-search search-bar-icon"></i>
       <input class="search-input" type="text" id="searchInput"
         placeholder="Buscar producto o código..." autocomplete="off"
         inputmode="search" oninput="filtrar()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();procesarCodigo(this.value);}">
-      <button class="btn-scan" id="btnCamara"><i class="ti ti-barcode" style="font-size:18px"></i></button>
-      <button id="btnVistaLista" onclick="_setVistaProductos('lista')" title="Vista lista"
-        style="width:34px;height:34px;border-radius:8px;background:#1e1e2e;border:1px solid #2a2a3e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s">
-        <i class="ti ti-list"></i>
-      </button>
-      <button id="btnVistaGrid" onclick="_setVistaProductos('grid')" title="Vista grid"
-        style="width:34px;height:34px;border-radius:8px;background:#1e1e2e;border:1px solid #2a2a3e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s">
-        <i class="ti ti-layout-grid"></i>
-      </button>
     </div>
     <div class="deptos" id="deptos">
-      <button class="depto-btn active" data-depto="" onclick="selDepto(this,'')"><i class="ti ti-grid-dots"></i> Todos</button>
+      <button class="depto-btn chip active" data-depto="" onclick="selDepto(this,'')"><i class="ti ti-grid-dots"></i> Todos</button>
     </div>
     <div class="categorias" id="categorias">
-      <button class="cat-btn active" data-id="" onclick="selCat(this,'')">Todos</button>
+      <button class="cat-btn chip active" data-id="" onclick="selCat(this,'')"><i class="ti ti-grid-dots"></i> Todos</button>
     </div>
     <div class="subcategorias-row" id="subcatRow"></div>
     <div class="productos-grid" id="productosGrid"></div>
@@ -1297,6 +1321,7 @@ body.cargando #overlayTurnoCerrado {
       style="position:absolute;top:-7px;right:-9px;background:#ef4444;color:#fff;border-radius:50%;font-size:10px;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-weight:700;border:2px solid #0f0f1a">0</span>
   </span>
   <span class="fab-total" id="fabTotal">$0</span>
+  <span class="fab-cobrar">Cobrar →</span>
 </button>
 
 <!-- Cart overlay (mobile) -->
@@ -1633,25 +1658,25 @@ body.cargando #overlayTurnoCerrado {
 <div id="navbarOverlay" class="navbar-overlay" onclick="cerrarNavbar()"></div>
 <div id="navbarDrawer" class="navbar-drawer">
   <div class="navbar-header">
-    <div style="font-size:22px;font-weight:900;letter-spacing:-1px"><span style="color:#fff">ZERO</span><span style="color:#6366f1">POS</span></div>
+    <div style="font-size:22px;font-weight:900;letter-spacing:-1px"><span style="color:#fff">ZERO</span><span style="color:var(--accent)">POS</span></div>
     <button class="btn-cerrar-navbar" onclick="cerrarNavbar()">✕</button>
   </div>
   <div id="menuCajeroNombre" style="font-size:13px;color:var(--text-dim);padding:8px 18px 4px"></div>
   <div style="flex:1;padding:8px 0;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
     <a href="admin.html" class="nav-item" id="navAdmin">
-      <span class="nav-icon-box" style="background:#1a2744"><i class="ti ti-chart-bar nav-icono" style="color:#60a5fa"></i></span>
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-chart-bar nav-icono" style="color:var(--text-dim)"></i></span>
       <span class="nav-texto">Reportes y Admin</span>
     </a>
     <a href="inventario.html" class="nav-item" id="navInventario">
-      <span class="nav-icon-box" style="background:#1a2a1a"><i class="ti ti-package nav-icono" style="color:#4ade80"></i></span>
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-package nav-icono" style="color:var(--text-dim)"></i></span>
       <span class="nav-texto">Inventario</span>
     </a>
     <a id="linkPedidosDrawer" href="pedidos.html" class="nav-item" data-navid="navPedidos">
-      <span class="nav-icon-box" style="background:#2a1a10"><i class="ti ti-motorbike nav-icono" style="color:#fb923c"></i></span>
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-motorbike nav-icono" style="color:var(--text-dim)"></i></span>
       <span class="nav-texto">Pedidos</span>
     </a>
     <a id="navCredito" href="credit.html" class="nav-item">
-      <span class="nav-icon-box" style="background:#2a1a10"><i class="ti ti-credit-card nav-icono" style="color:#fb923c"></i></span>
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-credit-card nav-icono" style="color:var(--text-dim)"></i></span>
       <div class="nav-texto">
         <div>ZERO CREDIT</div>
         <div style="font-size:11px;color:#6b7280">Clientes y fiados</div>
@@ -1659,28 +1684,28 @@ body.cargando #overlayTurnoCerrado {
       <span id="badgeCreditoNav" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:2px 8px;font-size:12px;font-weight:700"></span>
     </a>
     <div onclick="abrirHistorial();cerrarNavbar()" class="nav-item">
-      <span class="nav-icon-box" style="background:#1e1e2e"><i class="ti ti-history nav-icono" style="color:#94a3b8"></i></span>
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-history nav-icono" style="color:var(--text-dim)"></i></span>
       <span class="nav-texto">Historial de ventas</span>
     </div>
     <div style="height:1px;background:var(--border);margin:0 8px"></div>
     <div onclick="window.open('/static/cliente.html','pantalla-cliente');cerrarNavbar()" class="nav-item">
-      <span class="nav-icon-box" style="background:#1a1a2e"><i class="ti ti-device-desktop nav-icono" style="color:#818cf8"></i></span>
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-device-desktop nav-icono" style="color:var(--text-dim)"></i></span>
       <span class="nav-texto">Pantalla cliente</span>
     </div>
     <div id="btnImpresora" onclick="mostrarAlertaImpresora()" class="nav-item">
-      <span class="nav-icon-box" style="background:#1a2a1a"><i class="ti ti-printer nav-icono" style="color:#4ade80"></i></span>
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-printer nav-icono" style="color:var(--text-dim)"></i></span>
       <span class="nav-texto">Impresora</span>
       <span id="impDot" style="width:8px;height:8px;border-radius:50%;background:#6b7280;margin-left:auto;flex-shrink:0"></span>
     </div>
     <div onclick="abrirVentaRapida();cerrarNavbar()" class="nav-item">
-      <span class="nav-icon-box" style="background:#1e2a1e"><i class="ti ti-bolt nav-icono" style="color:#facc15"></i></span>
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-bolt nav-icono" style="color:var(--text-dim)"></i></span>
       <span class="nav-texto">Venta rápida</span>
     </div>
   </div>
   <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px">
     <div id="menuVersion" style="font-size:11px;color:#2d3748;margin-bottom:4px">ZERO POS</div>
     <button onclick="cerrarNavbar();_abrirModalTurno('cerrar')" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#94a3b8;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:12px">
-      <span class="nav-icon-box" style="background:#1e1e3a"><i class="ti ti-lock nav-icono" style="color:#94a3b8;font-size:18px"></i></span> Cerrar turno
+      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-lock nav-icono" style="color:var(--text-dim);font-size:18px"></i></span> Cerrar turno
     </button>
     <button onclick="cerrarNavbar();_irAColacion()" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#f59e0b;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:12px">
       <div style="width:28px;height:28px;background:#2a1f0a;border-radius:7px;display:flex;align-items:center;justify-content:center">
@@ -2086,6 +2111,7 @@ let modoVista = localStorage.getItem('modo_vista') || 'grid';
 let categoriaActual = '';
 let subcatActual = '';
 let catIconoMap = {};
+let catNombreMap = {};
 const ICONOS_CATEGORIA = {
   'Bebidas':           '🥤',
   'Lácteos':           '🥛',
@@ -3054,16 +3080,46 @@ let deptoActual = '';
 const _DEPTO_META = {
   'Alimentación':               { icon: 'ti-apple',         label: 'Alimentos' },
   'Bebidas con Alcohol':        { icon: 'ti-bottle',        label: 'Alcohol' },
-  'Belleza y Cuidado Personal': { icon: 'ti-heart',         label: 'Cuidado' },
+  'Belleza y Cuidado Personal': { icon: 'ti-droplet',       label: 'Higiene' },
   'Limpieza del Hogar':         { icon: 'ti-spray',         label: 'Limpieza' },
   'Mascotas':                   { icon: 'ti-paw',           label: 'Mascotas' },
   'Mundo Bebé':                 { icon: 'ti-baby-carriage', label: 'Bebé' },
   'Manualidades y Hogar':       { icon: 'ti-home',          label: 'Hogar' },
   'Juguetes y Entretencion':    { icon: 'ti-puzzle',        label: 'Juguetes' },
   'Ferretería Básica':          { icon: 'ti-tools',         label: 'Ferreter.' },
-  'Tabaco':                     { icon: 'ti-smoking',       label: 'Tabaco' },
-  'Otros':                      { icon: 'ti-dots',          label: 'Otros' },
+  'Tabaco':                     { icon: 'ti-flame',         label: 'Tabaco' },
+  'Otros':                      { icon: 'ti-package',       label: 'Otros' },
 };
+
+const _CAT_CHIP_ICON = {
+  'bebidas': 'ti-bottle',
+  'lácteos': 'ti-egg', 'lacteos': 'ti-egg',
+  'huevos': 'ti-egg',
+  'pan': 'ti-bread', 'panadería': 'ti-bread', 'panaderia': 'ti-bread',
+  'cereales': 'ti-bowl',
+  'condimentos': 'ti-salt',
+  'snacks': 'ti-cookie',
+  'carnes': 'ti-meat', 'fiambres': 'ti-meat',
+  'frutas': 'ti-apple', 'verduras': 'ti-apple',
+  'limpieza': 'ti-spray',
+  'higiene': 'ti-droplet',
+  'mascotas': 'ti-paw',
+  'congelados': 'ti-snowflake',
+  'alimentos': 'ti-apple',
+  'bebé': 'ti-baby-carriage', 'bebe': 'ti-baby-carriage',
+  'hogar': 'ti-home',
+  'ferretería': 'ti-tools', 'ferreteria': 'ti-tools',
+  'juguetes': 'ti-puzzle',
+  'tabaco': 'ti-flame',
+};
+
+function _getCatChipIcon(nombre) {
+  const n = (nombre || '').toLowerCase();
+  for (const key in _CAT_CHIP_ICON) {
+    if (n.includes(key)) return _CAT_CHIP_ICON[key];
+  }
+  return 'ti-package';
+}
 
 async function cargarCategorias() {
   const data = await fetch('/api/productos/categorias', {credentials:'include'}).then(r => r.json()).catch(() => []);
@@ -3073,18 +3129,20 @@ async function cargarCategorias() {
   data.forEach(c => {
     catIconoMap[c.id] = c.icono || '📦';
     catDeptoMap[c.id] = c.departamento || 'Alimentación';
+    catNombreMap[c.id] = c.nombre;
+    const tiIcon = _getCatChipIcon(c.nombre);
     const btn = document.createElement('button');
-    btn.className = 'cat-btn';
+    btn.className = 'cat-btn chip';
     btn.dataset.id = c.id;
-    btn.textContent = (c.icono || '') + ' ' + c.nombre;
+    btn.innerHTML = `<i class="ti ${tiIcon}"></i> ${escH(c.nombre)}`;
     btn.onclick = () => selCat(btn, c.id);
     div.appendChild(btn);
     const d = c.departamento || 'Alimentación';
     if (!seenDeptos.has(d)) {
       seenDeptos.add(d);
-      const meta = _DEPTO_META[d] || { icon: 'ti-dots', label: d.substring(0, 8) };
+      const meta = _DEPTO_META[d] || { icon: 'ti-package', label: d.substring(0, 8) };
       const db = document.createElement('button');
-      db.className = 'depto-btn';
+      db.className = 'depto-btn chip';
       db.dataset.depto = d;
       db.onclick = () => selDepto(db, d);
       db.innerHTML = `<i class="ti ${meta.icon}"></i> ${meta.label}`;
@@ -3294,6 +3352,9 @@ function _renderPaginaGrid(grid, pagina) {
       ? `<img loading="lazy" src="${escH(p.imagen_url)}" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<i class=\\"ti ${tiIcon}\\">')" >`
       : `<i class="ti ${tiIcon}"></i>`;
     const nombreSafe = escH(p.nombre);
+    const dept = catDeptoMap[p.categoria_id];
+    const catLabel = catNombreMap[p.categoria_id] || (_DEPTO_META[dept] && _DEPTO_META[dept].label) || '';
+    const pcatHtml = catLabel ? `<div class="pcat">${escH(catLabel)}</div>` : '';
 
     let innerContent;
 
@@ -3305,6 +3366,7 @@ function _renderPaginaGrid(grid, pagina) {
       const badgeCount = varCount || '';
       innerContent = `
         <div class="picon">${piconHtml}</div>
+        ${pcatHtml}
         <div class="pname">${nombreSafe}</div>
         <div class="pmeta">
           <div class="pprice">desde ${fmt(precioMin)}</div>
@@ -3314,6 +3376,7 @@ function _renderPaginaGrid(grid, pagina) {
     } else if (modoStock === 'sin_stock') {
       innerContent = `
         <div class="picon">${piconHtml}</div>
+        ${pcatHtml}
         <div class="pname">${nombreSafe}</div>
         <div class="pmeta"><div class="pprice">${fmt(p.precio)}</div></div>`;
       div.onclick = () => agregarAlCarrito(p);
@@ -3325,6 +3388,7 @@ function _renderPaginaGrid(grid, pagina) {
         : `<div class="pstock-low">Disponibles: ${p.stock}</div>`;
       innerContent = `
         <div class="picon">${piconHtml}</div>
+        ${pcatHtml}
         <div class="pname">${nombreSafe}</div>
         <div class="pmeta"><div class="pprice">${fmt(p.precio)}</div>${stockEl}</div>`;
       if (!agotado) div.onclick = () => agregarAlCarrito(p);
@@ -3335,6 +3399,7 @@ function _renderPaginaGrid(grid, pagina) {
         : '';
       innerContent = `
         <div class="picon">${piconHtml}</div>
+        ${pcatHtml}
         <div class="pname">${nombreSafe}</div>
         <div class="pmeta"><div class="pprice">${fmt(p.precio)}</div>${stockEl}</div>`;
       if (!sinStock) div.onclick = () => agregarAlCarrito(p);
