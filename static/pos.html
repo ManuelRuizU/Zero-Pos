@@ -177,14 +177,11 @@ body {
 }
 .deptos::-webkit-scrollbar { display: none; }
 .depto-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
-  white-space: nowrap; cursor: pointer; flex-shrink: 0;
-  border: 1px solid var(--border); color: var(--text-dim);
-  background: transparent; transition: all .15s;
+  background: none; border: none; color: var(--text-dim);
+  border-radius: 6px; padding: 4px 10px; font-size: 12px;
+  cursor: pointer; white-space: nowrap; transition: all .15s; flex-shrink: 0;
 }
-.depto-btn i { font-size: 14px; }
-.depto-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+.depto-btn.active { background: rgba(99,102,241,.15); color: var(--accent2); font-weight: 600; }
 
 /* Categories */
 .categorias {
@@ -198,8 +195,7 @@ body {
   padding: 6px 14px; font-size: 13px; cursor: pointer;
   white-space: nowrap; transition: all .15s; flex-shrink: 0;
 }
-.cat-btn.active { background: var(--accent); border-color: var(--accent); color: #04140a; font-weight: 700; }
-.cat-btn i { font-size: 14px; }
+.cat-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
 /* Subcategories */
 .subcategorias-row {
@@ -211,8 +207,8 @@ body {
 .subcategorias-row.visible { display: flex; }
 .subcat-btn {
   background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06);
-  color: var(--text-dim); border-radius: 16px;
-  padding: 5px 12px; font-size: 11px; cursor: pointer;
+  color: var(--text-dim); border-radius: 8px;
+  padding: 4px 12px; font-size: 12px; cursor: pointer;
   white-space: nowrap; transition: all .15s; flex-shrink: 0;
 }
 .subcat-btn.active { background: rgba(99,102,241,.2); border-color: var(--accent); color: var(--accent2); }
@@ -470,18 +466,17 @@ body {
 
 /* ── Cart FAB (mobile only) ───────────────── */
 .fab-carrito {
-  position: fixed; bottom: 24px; right: 16px; z-index: 997;
-  background: #22c55e; color: #000; border: none;
-  border-radius: 100px; padding: 14px 20px;
-  font-size: 15px; font-weight: 600; cursor: pointer;
-  box-shadow: 0 4px 20px rgba(34,197,94,.4);
-  display: flex; align-items: center; gap: 10px;
+  position: fixed; bottom: 20px; right: 16px; z-index: 997;
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 28px; height: 56px; min-width: 56px; padding: 0 20px;
+  font-size: 16px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 20px rgba(99,102,241,.5);
+  display: flex; align-items: center; gap: 8px;
   transition: transform .15s, box-shadow .15s, opacity .2s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
-.fab-icon-wrap { position: relative; display: flex; align-items: center; }
-.fab-carrito:active { transform: scale(.95); }
+.fab-carrito:active { transform: scale(.95); box-shadow: 0 2px 10px rgba(99,102,241,.4); }
 .fab-carrito.pulsing { animation: fabPulse .4s ease; }
 .fab-carrito.oculto { transform: scale(0); pointer-events: none; opacity: 0; }
 @keyframes fabPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
@@ -757,7 +752,7 @@ body {
   .carrito-panel {
     position: static;
     width: 340px; height: auto; max-height: none;
-    border-radius: 0; border-top: 2px solid #22c55e;
+    border-radius: 0; border-top: none;
     border-left: 1px solid var(--border);
     transform: none !important;
     background: rgba(10,10,15,.4);
@@ -870,383 +865,71 @@ body.cargando #overlayTurnoCerrado {
   display: flex !important;
   visibility: hidden !important;
 }
-
-/* ══════════════════════════════════════════════════════
-   AURORA v2 — Tokens CSS y componentes de diseño
-   ══════════════════════════════════════════════════════ */
-:root {
-  --bg:#0f0f1a;
-  --surface:#13132a;
-  --surface-2:#1a1a2e;
-  --border:#1e1e32;
-  --text:#e2e8f0;
-  --text-dim:#94a3b8;
-  --text-muted:#4b5563;
-  --accent:#22c55e;
-  --accent2:#4ade80;
-  --accent-dim:rgba(34,197,94,0.12);
-  --accent-border:rgba(34,197,94,0.3);
-  --amber:#f59e0b;
-  --danger:#ef4444;
-  --success:#22c55e;
-  --radius-card:16px;
-  --radius-chip:20px;
-  --radius-modal:20px 20px 0 0;
-}
-
-/* ── Sidebar 60px (desktop) ─────────────────────────────────── */
-.sidebar {
-  width:60px;flex-shrink:0;background:#0c0c16;
-  border-right:1px solid var(--border);
-  display:none;flex-direction:column;align-items:center;
-  padding:14px 0;
-}
-@media(min-width:768px){.sidebar{display:flex;}}
-.sidebar .s-logo {
-  width:38px;height:38px;border-radius:11px;background:var(--accent);
-  color:#04140a;display:flex;align-items:center;justify-content:center;
-  font-size:19px;margin-bottom:20px;flex-shrink:0;
-}
-.sidebar .s-nav { display:flex;flex-direction:column;gap:6px;flex:1; }
-.s-nav-icon {
-  width:42px;height:42px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:21px;color:var(--text-dim);cursor:pointer;transition:all .15s;
-  text-decoration:none;
-}
-.s-nav-icon:hover { background:rgba(255,255,255,0.05);color:var(--text); }
-.s-nav-icon.active { background:var(--accent-dim);color:var(--accent); }
-.sidebar .s-user { display:flex;flex-direction:column;align-items:center;gap:10px; }
-.s-avatar {
-  width:34px;height:34px;border-radius:50%;background:var(--surface-2);
-  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
-  font-size:13px;font-weight:700;color:var(--text);
-}
-
-/* ── Topbar Aurora ──────────────────────────────────────────── */
-.topbar .brand { font-size:17px;font-weight:800;letter-spacing:-0.4px;white-space:nowrap; }
-.topbar .brand span { color:var(--accent); }
-.turno-badge {
-  display:flex;align-items:center;gap:7px;background:var(--accent-dim);
-  border-radius:999px;padding:6px 13px;font-size:12px;color:var(--accent);
-  font-weight:600;white-space:nowrap;flex-shrink:0;
-}
-@keyframes pulse {
-  0%,100%{opacity:1;transform:scale(1)}
-  50%{opacity:.55;transform:scale(.85)}
-}
-.pulse-dot {
-  width:7px;height:7px;border-radius:50%;background:var(--accent);
-  display:inline-block;animation:pulse 1.8s ease-in-out infinite;
-}
-.scan-btn {
-  display:flex;align-items:center;gap:8px;background:var(--accent-dim);
-  border:1px solid var(--accent-border);border-radius:12px;color:var(--accent);
-  padding:10px 16px;font-size:13.5px;font-weight:700;cursor:pointer;
-  flex-shrink:0;white-space:nowrap;
-}
-.scan-btn:hover { filter:brightness(1.08); }
-.view-toggle { display:flex;background:var(--surface);border-radius:12px;padding:4px;gap:2px;flex-shrink:0; }
-.view-toggle .vt {
-  width:38px;height:34px;border-radius:9px;display:flex;align-items:center;
-  justify-content:center;color:var(--text-dim);cursor:pointer;font-size:18px;
-  background:none;border:none;transition:all .15s;
-}
-.view-toggle .vt.active { background:var(--accent-dim);color:var(--accent); }
-.topbar-user-btn {
-  display:flex;align-items:center;gap:8px;background:var(--surface);
-  border-radius:999px;padding:5px 14px 5px 6px;cursor:pointer;
-  flex-shrink:0;border:none;
-}
-.topbar-user-btn .u-initial {
-  width:28px;height:28px;border-radius:50%;background:var(--accent);
-  color:#04140a;display:flex;align-items:center;justify-content:center;
-  font-size:13px;font-weight:700;
-}
-.topbar-user-btn .u-name {
-  font-size:13px;font-weight:600;color:var(--text);
-  max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-
-/* ── Product cards Aurora ───────────────────────────────────── */
-.product-card {
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius-card);padding:20px;
-  display:flex;flex-direction:column;align-items:center;gap:12px;
-  cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease;
-  text-align:center;user-select:none;-webkit-tap-highlight-color:transparent;
-  position:relative;min-height:150px;
-}
-.product-card:hover { transform:scale(1.02);box-shadow:0 10px 28px -10px rgba(34,197,94,0.3);border-color:var(--accent-border); }
-.product-card:active { transform:scale(0.97); }
-.product-card.sin-stock { opacity:.45;cursor:not-allowed;pointer-events:none; }
-@keyframes prodFlashA { 0%,100%{box-shadow:none;}50%{box-shadow:0 0 0 3px var(--accent);} }
-.product-card.flash { animation:prodFlashA 0.2s ease; }
-.product-card .picon {
-  font-size:40px;color:var(--accent);height:48px;
-  display:flex;align-items:center;justify-content:center;
-}
-.product-card .picon img { width:56px;height:56px;object-fit:cover;border-radius:10px; }
-.product-card .pname {
-  font-size:13px;font-weight:600;color:var(--text);text-align:center;
-  line-height:1.3;width:100%;overflow:hidden;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
-}
-.product-card .pmeta { display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:auto; }
-.product-card .pprice { font-size:16px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums; }
-.product-card .badge-var {
-  display:inline-flex;align-items:center;gap:5px;
-  background:rgba(245,158,11,0.12);color:var(--amber);
-  border-radius:8px;padding:3px 9px;font-size:11px;font-weight:700;
-}
-.product-card .pstock-low { font-size:11px;font-weight:600;color:var(--amber); }
-.product-card .pstock-out { font-size:11px;font-weight:700;color:var(--danger); }
-
-/* ── Variant bottom sheet Aurora ────────────────────────────── */
-.sheet-bg { position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1090;display:none; }
-.sheet-bg.active { display:block; }
-.variant-sheet {
-  position:fixed;left:0;right:0;bottom:0;z-index:1091;
-  background:var(--surface);border-top:1px solid var(--border);
-  border-radius:var(--radius-modal);display:flex;flex-direction:column;
-  box-shadow:0 -20px 60px rgba(0,0,0,0.5);
-  transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
-  max-height:80vh;
-}
-.variant-sheet.open { transform:translateY(0); }
-@media(min-width:600px){
-  .variant-sheet { left:50%;transform:translate(-50%,100%);width:480px;right:auto; }
-  .variant-sheet.open { transform:translate(-50%,0); }
-}
-.sheet-handle {
-  width:36px;height:4px;border-radius:99px;background:rgba(255,255,255,0.18);
-  margin:14px auto 4px;cursor:grab;flex-shrink:0;
-}
-.sheet-head {
-  display:flex;align-items:center;gap:13px;padding:14px 22px 16px;
-  border-bottom:1px solid var(--border);flex-shrink:0;
-}
-.sheet-head .sicon {
-  width:46px;height:46px;border-radius:12px;background:var(--surface-2);
-  display:flex;align-items:center;justify-content:center;
-  font-size:25px;color:var(--accent);flex-shrink:0;
-}
-.sheet-head .stitle { flex:1; }
-.sheet-head .stitle .h { font-size:16px;font-weight:700; }
-.sheet-head .stitle .s { font-size:12.5px;color:var(--text-dim);margin-top:1px; }
-.sheet-close {
-  width:32px;height:32px;border-radius:9px;background:var(--surface-2);
-  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
-  color:var(--text-dim);cursor:pointer;font-size:17px;flex-shrink:0;
-}
-.sheet-list { flex:1;overflow-y:auto; }
-.sheet-vrow {
-  display:flex;align-items:center;gap:13px;padding:14px 22px;
-  border-bottom:1px solid var(--border);cursor:pointer;
-  border-left:3px solid transparent;transition:background .15s;
-}
-.sheet-vrow:hover { background:rgba(255,255,255,0.02); }
-.sheet-vrow.selected { background:rgba(34,197,94,0.08);border-left-color:var(--accent); }
-.sheet-vrow .vradio { font-size:21px;color:var(--text-muted); }
-.sheet-vrow.selected .vradio { color:var(--accent); }
-.sheet-vrow .vinfo { flex:1;min-width:0; }
-.sheet-vrow .vtop { display:flex;align-items:center;gap:8px; }
-.sheet-vrow .vname { font-size:14px;font-weight:600; }
-.sheet-vrow .vdesc { font-size:11.5px;color:var(--text-dim);margin-top:2px; }
-.sheet-vrow .vdesc.low { color:var(--amber); }
-.sheet-vrow .vprice { font-size:14.5px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums; }
-.badge-top-v {
-  font-size:9px;font-weight:800;background:rgba(245,158,11,0.15);
-  color:var(--amber);border-radius:5px;padding:2px 7px;letter-spacing:.5px;
-}
-.sheet-foot {
-  display:flex;align-items:center;gap:13px;padding:16px 22px;
-  border-top:1px solid var(--border);background:#0c0c16;flex-shrink:0;
-}
-.sheet-stepper {
-  display:inline-flex;align-items:center;gap:4px;
-  background:var(--surface-2);border-radius:10px;padding:4px;flex-shrink:0;
-}
-.sheet-stepper .sbtn {
-  width:36px;height:36px;border-radius:7px;border:none;background:transparent;
-  color:var(--text-dim);cursor:pointer;display:flex;align-items:center;
-  justify-content:center;font-size:18px;transition:background .15s;
-}
-.sheet-stepper .sbtn:hover { background:rgba(255,255,255,0.06); }
-.sheet-stepper .sbtn.plus { color:var(--accent); }
-.sheet-stepper .qty { min-width:28px;text-align:center;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums; }
-.sheet-add-btn {
-  flex:1;border:none;cursor:pointer;background:var(--accent);color:#04140a;
-  font:700 15px system-ui,sans-serif;border-radius:12px;padding:14px 18px;
-  display:flex;align-items:center;justify-content:space-between;
-  gap:8px;transition:filter .15s;
-}
-.sheet-add-btn:hover { filter:brightness(1.08); }
-.sheet-add-btn:disabled { opacity:.4;cursor:not-allowed; }
-
-/* Hamburger: visible solo en móvil */
-.topbar-ham{
-  width:38px;height:38px;border-radius:11px;background:none;border:none;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;color:var(--text-dim);font-size:22px;
-  -webkit-tap-highlight-color:transparent;
-}
-.topbar-ham:hover{background:rgba(255,255,255,0.05);}
-@media(min-width:768px){.topbar-ham{display:none;}}
-/* Ocultar texto "Escanear" en pantallas pequeñas */
-@media(max-width:600px){.scan-btn .scan-label{display:none;}}
-
-/* ── FAB carrito Aurora ─────────────────────────────────────── */
-.fab-carrito {
-  background:var(--accent)!important;border-radius:100px!important;
-  padding:13px 18px!important;gap:11px!important;
-  box-shadow:0 14px 30px -8px rgba(34,197,94,0.5)!important;
-}
-.fab-carrito .fab-icon-wrap { color:#04140a;font-size:23px; }
-.fab-carrito .fab-count {
-  background:var(--danger)!important;top:-7px!important;right:-9px!important;
-  width:17px!important;height:17px!important;
-}
-.fab-carrito .fab-total { font-size:16px!important;font-weight:800!important;color:#04140a!important; }
-
-/* ── Cart panel Aurora ──────────────────────────────────────── */
-@media(min-width:768px){
-  .carrito-panel {
-    width:300px!important;background:#0c0c16!important;
-  }
-}
-.btn-cobrar {
-  background:var(--accent);color:#04140a;
-  border-radius:12px;box-shadow:0 4px 20px rgba(34,197,94,.3);
-}
-.btn-cobrar:hover { filter:brightness(1.08);transform:translateY(-1px); }
-.btn-cobrar:disabled { opacity:.4;cursor:not-allowed;transform:none;filter:none; }
-
-/* ── Chip (categoría/depto unificado) ───────────────────────── */
-.chip {
-  display:inline-flex;align-items:center;gap:6px;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--radius-chip);padding:8px 15px;
-  font-size:13px;font-weight:500;color:var(--text-dim);
-  white-space:nowrap;cursor:pointer;transition:all .15s;
-  flex-shrink:0;
-}
-.chip:hover { color:var(--text); }
-.chip.active { background:var(--accent);border-color:var(--accent);color:#04140a;font-weight:700; }
-.chip i { font-size:14px; }
-
-/* ── Product card pcat ──────────────────────────────────────── */
-.product-card .pcat {
-  font-size:10px;font-weight:600;color:var(--text-muted);
-  text-transform:uppercase;letter-spacing:.6px;margin-top:-6px;
-}
-
-/* ── FAB "Cobrar →" label ───────────────────────────────────── */
-.fab-cobrar {
-  font-size:14px;font-weight:800;color:#04140a;
-  letter-spacing:-0.2px;
-}
-@media(max-width:380px){.fab-cobrar{display:none;}}
-
-/* ── Search bar con ícono ────────────────────────────────────── */
-.search-bar-icon {
-  font-size:17px;color:var(--text-dim);flex-shrink:0;display:flex;align-items:center;
-}
 </style>
 </head>
 <body class="cargando">
 
-<!-- Topbar Aurora v2 -->
-<header class="topbar" id="topbar">
-  <!-- Hamburger — solo visible en móvil -->
-  <button onclick="abrirNavbar()" title="Menú" class="topbar-ham">
-    <i class="ti ti-menu-2"></i>
+<!-- Topbar — una sola fila limpia -->
+<div class="topbar">
+  <button class="btn-top" onclick="abrirNavbar()" title="Menú" style="width:34px;height:34px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" onmouseenter="this.style.background='#13132a'" onmouseleave="this.style.background='none'">
+    <i class="ti ti-menu-2" style="color:#818cf8;font-size:22px"></i>
   </button>
-  <!-- Marca -->
-  <div class="brand">ZERO<span>POS</span></div>
-  <!-- Badge turno dinámico -->
-  <div class="turno-badge" id="turnoBadge" style="display:none">
-    <span class="pulse-dot"></span>
-    <span id="turnoBadgeText">Turno abierto</span>
-  </div>
-  <div class="topbar-spacer"></div>
-  <!-- Dashboard (admin) -->
+  <div class="topbar-logo">ZERO<span>POS</span></div>
   <button id="btnDashboard" onclick="location.href='admin.html'" title="Dashboard" class="btn-top" style="display:none;width:34px;height:34px;background:#1a2744;border:none;border-radius:8px;cursor:pointer;align-items:center;justify-content:center">
     <i class="ti ti-layout-dashboard" style="color:#60a5fa;font-size:18px"></i>
   </button>
-  <!-- Cola de espera -->
+  <div class="topbar-spacer"></div>
+  <!-- Cola de espera (visible solo cuando hay pedidos) -->
   <button class="btn-top" id="btnColaEspera" onclick="toggleColaEspera()" title="Cola de espera" style="display:none;position:relative">
     🔔<span id="colaCount" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:none;align-items:center;justify-content:center;font-weight:700"></span>
   </button>
-  <!-- Fiados vencidos -->
+  <!-- Fiados vencidos (visible solo cuando hay pendientes) -->
   <button class="btn-top" id="btnCreditBadge" onclick="location.href='credit.html'" title="ZERO CREDIT — fiados vencidos" style="display:none;position:relative">
     📒<span id="creditBadge" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
   </button>
-  <!-- Cola impresión -->
+  <!-- Cola impresión (visible solo cuando hay tickets pendientes) -->
   <button class="btn-top" id="btnImpresoraBadge" onclick="abrirModalImpresoraCola()" title="Tickets sin imprimir" style="display:none;position:relative">
     🖨️<span id="impresoraBadge" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
   </button>
-  <!-- Botón escanear -->
-  <button class="scan-btn" id="btnCamara" onclick="Escaner.abrir()" title="Escanear código">
-    <i class="ti ti-barcode"></i><span class="scan-label">Escanear</span>
-  </button>
-  <!-- Toggle vista lista/grid -->
-  <div class="view-toggle">
-    <button class="vt" id="btnVistaLista" onclick="_setVistaProductos('lista')" title="Vista lista">
-      <i class="ti ti-list"></i>
-    </button>
-    <button class="vt active" id="btnVistaGrid" onclick="_setVistaProductos('grid')" title="Vista grid">
-      <i class="ti ti-layout-grid"></i>
-    </button>
-  </div>
-  <!-- Usuario -->
+  <!-- Usuario dropdown -->
   <div style="position:relative">
-    <button class="topbar-user-btn" id="btnUserMenu" onclick="toggleUserMenu()">
-      <div class="u-initial" id="userInitial">?</div>
-      <span class="u-name" id="cajeroNombre"></span>
+    <button class="btn-top" id="btnUserMenu" onclick="toggleUserMenu()">
+      👤 <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle"></span>
     </button>
     <div id="userMenuDropdown" class="user-dropdown">
       <button onclick="window.location.href='login.html'">🔄 Cambiar usuario</button>
       <button id="btnCerrarSesionDropdown" class="danger" onclick="cerrarSesion()" style="display:none">🚪 Cerrar sesión</button>
     </div>
   </div>
-  <!-- Voz — oculto, JS lo muestra -->
+  <!-- Voz — oculto, el JS lo muestra si está activado -->
   <button class="btn-voz" id="btnVoz" onclick="toggleVoz()" title="Consulta por voz" style="display:none">🎤 <span class="voz-kw-label">ZERO</span></button>
-</header>
+</div>
 <div class="voz-escuche" id="vozEscuche"></div>
 
 <div class="layout">
 
-  <!-- Sidebar izquierdo (solo desktop) -->
-  <aside class="sidebar" id="sidebarNav">
-    <div class="s-logo"><i class="ti ti-bolt"></i></div>
-    <nav class="s-nav">
-      <a href="/static/pos.html" class="s-nav-icon active" title="Caja"><i class="ti ti-shopping-cart"></i></a>
-      <a href="/static/inventario.html" class="s-nav-icon" title="Inventario"><i class="ti ti-package"></i></a>
-      <a href="/static/admin.html" class="s-nav-icon" title="Reportes"><i class="ti ti-chart-bar"></i></a>
-      <a href="/static/admin.html" class="s-nav-icon" title="Equipo"><i class="ti ti-users"></i></a>
-      <a href="/static/admin.html" class="s-nav-icon" title="Configuración"><i class="ti ti-settings"></i></a>
-    </nav>
-    <div class="s-user">
-      <div class="s-avatar" id="sidebarAvatar">?</div>
-      <div class="s-nav-icon" title="Cerrar sesión" onclick="cerrarSesion()" id="sidebarLogout" style="display:none"><i class="ti ti-logout"></i></div>
-    </div>
-  </aside>
-
   <!-- Panel productos -->
   <div class="productos-panel">
     <div class="search-bar">
-      <i class="ti ti-search search-bar-icon"></i>
       <input class="search-input" type="text" id="searchInput"
         placeholder="Buscar producto o código..." autocomplete="off"
         inputmode="search" oninput="filtrar()"
         onkeydown="if(event.key==='Enter'){event.preventDefault();procesarCodigo(this.value);}">
+      <button class="btn-scan" id="btnCamara"><i class="ti ti-scan" style="font-size:18px"></i></button>
+      <button id="btnVistaLista" onclick="_setVistaProductos('lista')" title="Vista lista"
+        style="width:34px;height:34px;border-radius:8px;background:#1e1e2e;border:1px solid #2a2a3e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s">
+        <i class="ti ti-list"></i>
+      </button>
+      <button id="btnVistaGrid" onclick="_setVistaProductos('grid')" title="Vista grid"
+        style="width:34px;height:34px;border-radius:8px;background:#1e1e2e;border:1px solid #2a2a3e;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:16px;cursor:pointer;flex-shrink:0;transition:all .15s">
+        <i class="ti ti-layout-grid"></i>
+      </button>
     </div>
     <div class="deptos" id="deptos">
-      <button class="depto-btn chip active" data-depto="" onclick="selDepto(this,'')"><i class="ti ti-grid-dots"></i> Todos</button>
+      <button class="depto-btn active" data-depto="" onclick="selDepto(this,'')">Todos</button>
     </div>
     <div class="categorias" id="categorias">
-      <button class="cat-btn chip active" data-id="" onclick="selCat(this,'')"><i class="ti ti-grid-dots"></i> Todos</button>
+      <button class="cat-btn active" data-id="" onclick="selCat(this,'')">Todos</button>
     </div>
     <div class="subcategorias-row" id="subcatRow"></div>
     <div class="productos-grid" id="productosGrid"></div>
@@ -1313,15 +996,11 @@ body.cargando #overlayTurnoCerrado {
   </div>
 </div>
 
-<!-- Cart FAB (mobile) Aurora v2 -->
+<!-- Cart FAB (mobile) -->
 <button class="fab-carrito" id="fabCarrito" onclick="toggleCarritoMobile()">
-  <span class="fab-icon-wrap">
-    <i class="ti ti-shopping-cart"></i>
-    <span class="fab-count" id="fabCount"
-      style="position:absolute;top:-7px;right:-9px;background:#ef4444;color:#fff;border-radius:50%;font-size:10px;width:17px;height:17px;display:flex;align-items:center;justify-content:center;font-weight:700;border:2px solid #0f0f1a">0</span>
-  </span>
+  🛒 <span class="fab-count" id="fabCount">0</span>
+  <span style="opacity:.6">·</span>
   <span class="fab-total" id="fabTotal">$0</span>
-  <span class="fab-cobrar">Cobrar →</span>
 </button>
 
 <!-- Cart overlay (mobile) -->
@@ -1658,25 +1337,25 @@ body.cargando #overlayTurnoCerrado {
 <div id="navbarOverlay" class="navbar-overlay" onclick="cerrarNavbar()"></div>
 <div id="navbarDrawer" class="navbar-drawer">
   <div class="navbar-header">
-    <div style="font-size:22px;font-weight:900;letter-spacing:-1px"><span style="color:#fff">ZERO</span><span style="color:var(--accent)">POS</span></div>
+    <div style="font-size:22px;font-weight:900;letter-spacing:-1px"><span style="color:#fff">ZERO</span><span style="color:#6366f1">POS</span></div>
     <button class="btn-cerrar-navbar" onclick="cerrarNavbar()">✕</button>
   </div>
   <div id="menuCajeroNombre" style="font-size:13px;color:var(--text-dim);padding:8px 18px 4px"></div>
   <div style="flex:1;padding:8px 0;overflow-y:auto;display:flex;flex-direction:column;gap:6px">
     <a href="admin.html" class="nav-item" id="navAdmin">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-chart-bar nav-icono" style="color:var(--text-dim)"></i></span>
+      <span class="nav-icon-box" style="background:#1a2744"><i class="ti ti-chart-bar nav-icono" style="color:#60a5fa"></i></span>
       <span class="nav-texto">Reportes y Admin</span>
     </a>
     <a href="inventario.html" class="nav-item" id="navInventario">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-package nav-icono" style="color:var(--text-dim)"></i></span>
+      <span class="nav-icon-box" style="background:#1a2a1a"><i class="ti ti-package nav-icono" style="color:#4ade80"></i></span>
       <span class="nav-texto">Inventario</span>
     </a>
     <a id="linkPedidosDrawer" href="pedidos.html" class="nav-item" data-navid="navPedidos">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-motorbike nav-icono" style="color:var(--text-dim)"></i></span>
+      <span class="nav-icon-box" style="background:#2a1a10"><i class="ti ti-motorbike nav-icono" style="color:#fb923c"></i></span>
       <span class="nav-texto">Pedidos</span>
     </a>
     <a id="navCredito" href="credit.html" class="nav-item">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-credit-card nav-icono" style="color:var(--text-dim)"></i></span>
+      <span class="nav-icon-box" style="background:#2a1a10"><i class="ti ti-credit-card nav-icono" style="color:#fb923c"></i></span>
       <div class="nav-texto">
         <div>ZERO CREDIT</div>
         <div style="font-size:11px;color:#6b7280">Clientes y fiados</div>
@@ -1684,28 +1363,28 @@ body.cargando #overlayTurnoCerrado {
       <span id="badgeCreditoNav" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:2px 8px;font-size:12px;font-weight:700"></span>
     </a>
     <div onclick="abrirHistorial();cerrarNavbar()" class="nav-item">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-history nav-icono" style="color:var(--text-dim)"></i></span>
+      <span class="nav-icon-box" style="background:#1e1e2e"><i class="ti ti-history nav-icono" style="color:#94a3b8"></i></span>
       <span class="nav-texto">Historial de ventas</span>
     </div>
     <div style="height:1px;background:var(--border);margin:0 8px"></div>
     <div onclick="window.open('/static/cliente.html','pantalla-cliente');cerrarNavbar()" class="nav-item">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-device-desktop nav-icono" style="color:var(--text-dim)"></i></span>
+      <span class="nav-icon-box" style="background:#1a1a2e"><i class="ti ti-device-desktop nav-icono" style="color:#818cf8"></i></span>
       <span class="nav-texto">Pantalla cliente</span>
     </div>
     <div id="btnImpresora" onclick="mostrarAlertaImpresora()" class="nav-item">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-printer nav-icono" style="color:var(--text-dim)"></i></span>
+      <span class="nav-icon-box" style="background:#1a2a1a"><i class="ti ti-printer nav-icono" style="color:#4ade80"></i></span>
       <span class="nav-texto">Impresora</span>
       <span id="impDot" style="width:8px;height:8px;border-radius:50%;background:#6b7280;margin-left:auto;flex-shrink:0"></span>
     </div>
     <div onclick="abrirVentaRapida();cerrarNavbar()" class="nav-item">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-bolt nav-icono" style="color:var(--text-dim)"></i></span>
+      <span class="nav-icon-box" style="background:#1e2a1e"><i class="ti ti-bolt nav-icono" style="color:#facc15"></i></span>
       <span class="nav-texto">Venta rápida</span>
     </div>
   </div>
   <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px">
     <div id="menuVersion" style="font-size:11px;color:#2d3748;margin-bottom:4px">ZERO POS</div>
     <button onclick="cerrarNavbar();_abrirModalTurno('cerrar')" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#94a3b8;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:12px">
-      <span class="nav-icon-box" style="background:var(--surface-2)"><i class="ti ti-lock nav-icono" style="color:var(--text-dim);font-size:18px"></i></span> Cerrar turno
+      <span class="nav-icon-box" style="background:#1e1e3a"><i class="ti ti-lock nav-icono" style="color:#94a3b8;font-size:18px"></i></span> Cerrar turno
     </button>
     <button onclick="cerrarNavbar();_irAColacion()" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#f59e0b;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:12px">
       <div style="width:28px;height:28px;background:#2a1f0a;border-radius:7px;display:flex;align-items:center;justify-content:center">
@@ -1930,30 +1609,12 @@ body.cargando #overlayTurnoCerrado {
   </div>
 </div>
 
-<!-- Overlay de fondo para el bottom sheet de variantes -->
-<div class="sheet-bg" id="sheetBg" onclick="cerrarVariantes()"></div>
-<!-- Bottom sheet de variantes Aurora v2 -->
-<div class="variant-sheet" id="modalVariantes">
-  <div class="sheet-handle"></div>
-  <div class="sheet-head">
-    <div class="sicon" id="variantesIcono"><i class="ti ti-package"></i></div>
-    <div class="stitle">
-      <div class="h" id="variantesTitulo"></div>
-      <div class="s" id="variantesSubtitulo">Elige una presentación</div>
-    </div>
-    <div class="sheet-close" onclick="cerrarVariantes()"><i class="ti ti-x"></i></div>
-  </div>
-  <div class="sheet-list" id="variantesGrid"></div>
-  <div class="sheet-foot">
-    <div class="sheet-stepper">
-      <button class="sbtn" onclick="_sheetQtyChange(-1)"><i class="ti ti-minus"></i></button>
-      <span class="qty" id="sheetQty">1</span>
-      <button class="sbtn plus" onclick="_sheetQtyChange(1)"><i class="ti ti-plus"></i></button>
-    </div>
-    <button class="sheet-add-btn" id="sheetAddBtn" onclick="_confirmarSheet()" disabled>
-      <span id="sheetAddLabel">Selecciona una opción</span>
-      <span id="sheetAddPrice"></span>
-    </button>
+<div class="modal-overlay" id="modalVariantes">
+  <div class="modal-variantes">
+    <div class="modal-title" id="variantesTitulo" style="font-size:17px;font-weight:700;margin-bottom:4px;"></div>
+    <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Elige una presentación</div>
+    <div class="variantes-grid" id="variantesGrid"></div>
+    <button class="btn-cancelar" style="width:100%;margin-top:4px;" onclick="cerrarVariantes()">Cancelar</button>
   </div>
 </div>
 
@@ -2111,7 +1772,6 @@ let modoVista = localStorage.getItem('modo_vista') || 'grid';
 let categoriaActual = '';
 let subcatActual = '';
 let catIconoMap = {};
-let catNombreMap = {};
 const ICONOS_CATEGORIA = {
   'Bebidas':           '🥤',
   'Lácteos':           '🥛',
@@ -2758,13 +2418,7 @@ async function init() {
   if (!me || me.error) { location.href = 'login.html'; return; }
   _meId  = me.id;
   _meRol = me.rol || 'cajero';
-  const _meNombre = me.nombre || me.username || '';
-  document.getElementById('cajeroNombre').textContent = _meNombre;
-  const _initial = (_meNombre[0] || '?').toUpperCase();
-  const _uiEl = document.getElementById('userInitial');
-  if (_uiEl) _uiEl.textContent = _initial;
-  const _saEl = document.getElementById('sidebarAvatar');
-  if (_saEl) _saEl.textContent = _initial;
+  document.getElementById('cajeroNombre').textContent = `👤 ${me.nombre}`;
   _permisosPOS = me.permisos || {};
   _aplicarPermisosPOS(me);
 
@@ -2877,8 +2531,6 @@ function _aplicarPermisosPOS(me) {
     document.getElementById('btnCerrarSesionMenu')?.style.setProperty('display', '');
     document.getElementById('btnCerrarSesionDropdown')?.style.setProperty('display', '');
     document.getElementById('btnDashboard')?.style.setProperty('display', '');
-    const sbLogout = document.getElementById('sidebarLogout');
-    if (sbLogout) sbLogout.style.display = 'flex';
   }
   // Ocultar botón Admin si no puede ver reportes y no es admin
   if (me.rol !== 'admin' && !p.puede_ver_reportes) {
@@ -2906,20 +2558,6 @@ function _aplicarPermisosPOS(me) {
 let _turnoModo = 'abrir'; // 'abrir' | 'cerrar'
 let _turnoRequerirConteo = false;
 
-function _actualizarTurnoBadge(turnoAbierto, me) {
-  const badge = document.getElementById('turnoBadge');
-  const badgeText = document.getElementById('turnoBadgeText');
-  if (!badge) return;
-  if (turnoAbierto) {
-    badge.style.display = 'flex';
-    const terminal = (cfgApp && cfgApp.nombre_terminal) ? cfgApp.nombre_terminal : 'Caja';
-    const usuario = me ? (me.nombre || me.username || '') : '';
-    badgeText.textContent = `Turno abierto · ${terminal}${usuario ? ' · ' + usuario : ''}`;
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
 async function verificarTurno(me) {
   const t = await fetch('/api/auth/turno/actual', {credentials:'include'}).then(r => r.json());
   if (!t.turno) {
@@ -2929,14 +2567,12 @@ async function verificarTurno(me) {
     if (usr && me) usr.textContent = me.nombre || me.username || '';
     sessionStorage.removeItem('turno_id');
     window._turnoId = null;
-    _actualizarTurnoBadge(false, me);
   } else {
     document.getElementById('overlayTurnoCerrado').style.display = 'none';
     if (t.turno.id) {
       sessionStorage.setItem('turno_id', String(t.turno.id));
       window._turnoId = t.turno.id;
     }
-    _actualizarTurnoBadge(true, me);
   }
   document.body.classList.remove('cargando');
 }
@@ -3048,7 +2684,6 @@ async function _confirmarTurno() {
       document.getElementById('modalTurno').style.display = 'none';
       document.getElementById('overlayTurnoCerrado').style.display = 'none';
       document.getElementById('overlayColacion').style.display = 'none';
-      _actualizarTurnoBadge(true, {nombre: document.getElementById('cajeroNombre')?.textContent || ''});
       showToast('Turno abierto — ¡Listo para vender!', 'success');
     } else {
       const d = await r.json();
@@ -3078,48 +2713,18 @@ let catDeptoMap = {};
 let deptoActual = '';
 
 const _DEPTO_META = {
-  'Alimentación':               { icon: 'ti-apple',         label: 'Alimentos' },
-  'Bebidas con Alcohol':        { icon: 'ti-bottle',        label: 'Alcohol' },
-  'Belleza y Cuidado Personal': { icon: 'ti-droplet',       label: 'Higiene' },
-  'Limpieza del Hogar':         { icon: 'ti-spray',         label: 'Limpieza' },
-  'Mascotas':                   { icon: 'ti-paw',           label: 'Mascotas' },
-  'Mundo Bebé':                 { icon: 'ti-baby-carriage', label: 'Bebé' },
-  'Manualidades y Hogar':       { icon: 'ti-home',          label: 'Hogar' },
-  'Juguetes y Entretencion':    { icon: 'ti-puzzle',        label: 'Juguetes' },
-  'Ferretería Básica':          { icon: 'ti-tools',         label: 'Ferreter.' },
-  'Tabaco':                     { icon: 'ti-flame',         label: 'Tabaco' },
-  'Otros':                      { icon: 'ti-package',       label: 'Otros' },
+  'Alimentación':               { emoji: '🛒', label: 'Alimentos' },
+  'Bebidas con Alcohol':        { emoji: '🍺', label: 'Alcohol' },
+  'Belleza y Cuidado Personal': { emoji: '🧴', label: 'Cuidado' },
+  'Limpieza del Hogar':         { emoji: '🏠', label: 'Limpieza' },
+  'Mascotas':                   { emoji: '🐾', label: 'Mascotas' },
+  'Mundo Bebé':                 { emoji: '👶', label: 'Bebé' },
+  'Manualidades y Hogar':       { emoji: '🧵', label: 'Hogar' },
+  'Juguetes y Entretencion':    { emoji: '🎮', label: 'Juguetes' },
+  'Ferretería Básica':          { emoji: '🔧', label: 'Ferreter.' },
+  'Tabaco':                     { emoji: '🚬', label: 'Tabaco' },
+  'Otros':                      { emoji: '📦', label: 'Otros' },
 };
-
-const _CAT_CHIP_ICON = {
-  'bebidas': 'ti-bottle',
-  'lácteos': 'ti-egg', 'lacteos': 'ti-egg',
-  'huevos': 'ti-egg',
-  'pan': 'ti-bread', 'panadería': 'ti-bread', 'panaderia': 'ti-bread',
-  'cereales': 'ti-bowl',
-  'condimentos': 'ti-salt',
-  'snacks': 'ti-cookie',
-  'carnes': 'ti-meat', 'fiambres': 'ti-meat',
-  'frutas': 'ti-apple', 'verduras': 'ti-apple',
-  'limpieza': 'ti-spray',
-  'higiene': 'ti-droplet',
-  'mascotas': 'ti-paw',
-  'congelados': 'ti-snowflake',
-  'alimentos': 'ti-apple',
-  'bebé': 'ti-baby-carriage', 'bebe': 'ti-baby-carriage',
-  'hogar': 'ti-home',
-  'ferretería': 'ti-tools', 'ferreteria': 'ti-tools',
-  'juguetes': 'ti-puzzle',
-  'tabaco': 'ti-flame',
-};
-
-function _getCatChipIcon(nombre) {
-  const n = (nombre || '').toLowerCase();
-  for (const key in _CAT_CHIP_ICON) {
-    if (n.includes(key)) return _CAT_CHIP_ICON[key];
-  }
-  return 'ti-package';
-}
 
 async function cargarCategorias() {
   const data = await fetch('/api/productos/categorias', {credentials:'include'}).then(r => r.json()).catch(() => []);
@@ -3129,23 +2734,21 @@ async function cargarCategorias() {
   data.forEach(c => {
     catIconoMap[c.id] = c.icono || '📦';
     catDeptoMap[c.id] = c.departamento || 'Alimentación';
-    catNombreMap[c.id] = c.nombre;
-    const tiIcon = _getCatChipIcon(c.nombre);
     const btn = document.createElement('button');
-    btn.className = 'cat-btn chip';
+    btn.className = 'cat-btn';
     btn.dataset.id = c.id;
-    btn.innerHTML = `<i class="ti ${tiIcon}"></i> ${escH(c.nombre)}`;
+    btn.textContent = (c.icono || '') + ' ' + c.nombre;
     btn.onclick = () => selCat(btn, c.id);
     div.appendChild(btn);
     const d = c.departamento || 'Alimentación';
     if (!seenDeptos.has(d)) {
       seenDeptos.add(d);
-      const meta = _DEPTO_META[d] || { icon: 'ti-package', label: d.substring(0, 8) };
+      const meta = _DEPTO_META[d] || { emoji: '📦', label: d.substring(0, 8) };
       const db = document.createElement('button');
-      db.className = 'depto-btn chip';
+      db.className = 'depto-btn';
       db.dataset.depto = d;
       db.onclick = () => selDepto(db, d);
-      db.innerHTML = `<i class="ti ${meta.icon}"></i> ${meta.label}`;
+      db.textContent = `${meta.emoji} ${meta.label}`;
       deptos.appendChild(db);
     }
   });
@@ -3311,29 +2914,6 @@ let _productosFiltrados = [];
 let _paginaProductos = 0;
 let _observerVScroll = null;
 
-function _getProdTiIcon(p) {
-  const dept = catDeptoMap[p.categoria_id];
-  const meta = dept && _DEPTO_META[dept];
-  if (meta) return meta.icon;
-  const n = (p.nombre || '').toLowerCase();
-  if (/agua|mineral/.test(n)) return 'ti-droplet';
-  if (/cerveza|schop|beer/.test(n)) return 'ti-beer';
-  if (/vino|espumante|champa/.test(n)) return 'ti-bottle';
-  if (/caf[eé]|espresso|latte/.test(n)) return 'ti-coffee';
-  if (/leche|yogur|queso|l[aá]cteo/.test(n)) return 'ti-glass-full';
-  if (/pan|hallulla|marraqueta|baguette/.test(n)) return 'ti-bread';
-  if (/manzana|pera|naranja|fruta|pl[aá]tano/.test(n)) return 'ti-apple';
-  if (/pizza|hamburguesa|hotdog/.test(n)) return 'ti-pizza';
-  if (/carne|vacuno|pollo|cerdo/.test(n)) return 'ti-meat';
-  if (/at[uú]n|sardina|salmón|salmon|pescado/.test(n)) return 'ti-fish';
-  if (/az[uú]car|chocolate|candy|dulce|caramelo/.test(n)) return 'ti-candy';
-  if (/detergente|jabón|jabon|limpieza|desinfectante/.test(n)) return 'ti-spray';
-  if (/aceite/.test(n)) return 'ti-droplets';
-  if (/arroz|fideos|pasta/.test(n)) return 'ti-bowl';
-  if (/shampoo|champu|cuidado|crema/.test(n)) return 'ti-heart';
-  return 'ti-package';
-}
-
 function _renderPaginaGrid(grid, pagina) {
   const inicio = pagina * PRODUCTOS_POR_PAGINA;
   const fin    = inicio + PRODUCTOS_POR_PAGINA;
@@ -3344,64 +2924,50 @@ function _renderPaginaGrid(grid, pagina) {
     const modoStock = p.modo_stock || 'normal';
     const sinStock = !p.tiene_variantes && modoStock !== 'sin_stock' && p.stock <= 0;
     const div = document.createElement('div');
-    div.className = 'product-card' + (sinStock ? ' sin-stock' : '');
+    div.className = 'prod-card' + (sinStock ? ' sin-stock' : '');
     div.setAttribute('data-producto-id', p.id);
 
-    const tiIcon = _getProdTiIcon(p);
-    const piconHtml = p.imagen_url
-      ? `<img loading="lazy" src="${escH(p.imagen_url)}" data-icon="${tiIcon}" onerror="this.style.display='none';var _i=document.createElement('i');_i.className='ti '+this.dataset.icon;this.parentNode.insertBefore(_i,this.nextSibling)">`
-      : `<i class="ti ${tiIcon}"></i>`;
+    const emoji = p.imagen_url
+      ? `<img loading="lazy" src="${escH(p.imagen_url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" style="width:60px;height:60px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 2px"><span style="display:none;font-size:36px;display:none">${getProductEmoji(p)}</span>`
+      : getProductEmoji(p);
     const nombreSafe = escH(p.nombre);
-    const dept = catDeptoMap[p.categoria_id];
-    const catLabel = catNombreMap[p.categoria_id] || (_DEPTO_META[dept] && _DEPTO_META[dept].label) || '';
-    const pcatHtml = catLabel ? `<div class="pcat">${escH(catLabel)}</div>` : '';
 
     let innerContent;
 
     if (p.tiene_variantes) {
       const varCount = (p._variantes && p._variantes.length) ? p._variantes.length : 0;
-      const precioMin = p._variantes && p._variantes.length
-        ? Math.min(...p._variantes.map(v => v.precio || 0))
-        : p.precio;
-      const badgeCount = varCount || '';
+      const badgeLabel = varCount
+        ? `<i class="ti ti-versions" style="font-size:12px"></i> ${varCount} variante${varCount !== 1 ? 's' : ''}`
+        : `<i class="ti ti-versions" style="font-size:12px"></i> variantes`;
       innerContent = `
-        <div class="picon">${piconHtml}</div>
-        ${pcatHtml}
-        <div class="pname">${nombreSafe}</div>
-        <div class="pmeta">
-          <div class="pprice">desde ${fmt(precioMin)}</div>
-          <div class="badge-var"><i class="ti ti-circle-dot" style="font-size:12px"></i> ${badgeCount ? badgeCount + ' variante' + (varCount!==1?'s':'') : 'variantes'}</div>
-        </div>`;
+        <span class="prod-emoji">${emoji}</span>
+        <span class="prod-nombre">${nombreSafe}</span>
+        <div class="variantes-badge-card">${badgeLabel}</div>`;
       div.onclick = () => abrirVariantes(p);
     } else if (modoStock === 'sin_stock') {
       innerContent = `
-        <div class="picon">${piconHtml}</div>
-        ${pcatHtml}
-        <div class="pname">${nombreSafe}</div>
-        <div class="pmeta"><div class="pprice">${fmt(p.precio)}</div></div>`;
+        <span class="prod-emoji">${emoji}</span>
+        <span class="prod-nombre">${nombreSafe}</span>
+        <span class="prod-precio">${fmt(p.precio)}</span>`;
       div.onclick = () => agregarAlCarrito(p);
     } else if (modoStock === 'produccion') {
       const agotado = p.stock <= 0;
+      const stockTxt = agotado ? 'AGOTADO' : `Disponibles hoy: ${p.stock}`;
       if (agotado) div.classList.add('sin-stock');
-      const stockEl = agotado
-        ? `<div class="pstock-out">Agotado</div>`
-        : `<div class="pstock-low">Disponibles: ${p.stock}</div>`;
       innerContent = `
-        <div class="picon">${piconHtml}</div>
-        ${pcatHtml}
-        <div class="pname">${nombreSafe}</div>
-        <div class="pmeta"><div class="pprice">${fmt(p.precio)}</div>${stockEl}</div>`;
+        <span class="prod-emoji">${emoji}</span>
+        <span class="prod-nombre">${nombreSafe}</span>
+        <span class="prod-stock-info${agotado ? '" style="color:var(--danger);font-weight:700' : ''}">${stockTxt}</span>
+        <span class="prod-precio">${fmt(p.precio)}</span>`;
       if (!agotado) div.onclick = () => agregarAlCarrito(p);
     } else {
       const bajo = p.stock > 0 && p.stock <= p.stock_minimo;
-      const stockEl = bajo
-        ? `<div class="pstock-low">Quedan ${p.stock}</div>`
-        : '';
+      const stockTxt = `Stock: ${p.stock}${bajo ? ' ⚠️' : ''}`;
       innerContent = `
-        <div class="picon">${piconHtml}</div>
-        ${pcatHtml}
-        <div class="pname">${nombreSafe}</div>
-        <div class="pmeta"><div class="pprice">${fmt(p.precio)}</div>${stockEl}</div>`;
+        <span class="prod-emoji">${emoji}</span>
+        <span class="prod-nombre">${nombreSafe}</span>
+        <span class="prod-stock-info${bajo ? ' bajo' : ''}">${stockTxt}</span>
+        <span class="prod-precio">${fmt(p.precio)}</span>`;
       if (!sinStock) div.onclick = () => agregarAlCarrito(p);
     }
 
@@ -3421,7 +2987,7 @@ function _renderPaginaGrid(grid, pagina) {
     }
     btn.textContent = `Ver más (${_productosFiltrados.length - fin} restantes)`;
     btn.onclick = () => { _paginaProductos++; _renderPaginaGrid(grid, _paginaProductos); };
-    const cards = grid.querySelectorAll('.product-card');
+    const cards = grid.querySelectorAll('.prod-card');
     if (cards.length > 0) {
       if (_observerVScroll) _observerVScroll.disconnect();
       _observerVScroll = new IntersectionObserver(entries => {
@@ -4971,119 +4537,49 @@ function _iniciarPollingCheckout(checkoutId, ventaId) {
 // ── Variantes (modal fallback) ───────────────────────────────
 let productoActual = null;
 
-let _sheetState = { variante: null, qty: 1, prod: null };
-
-function _sheetQtyChange(delta) {
-  _sheetState.qty = Math.max(1, _sheetState.qty + delta);
-  document.getElementById('sheetQty').textContent = _sheetState.qty;
-  _sheetUpdateAddBtn();
-}
-
-function _sheetSelectVariante(v, rowEl) {
-  _sheetState.variante = v;
-  document.querySelectorAll('.sheet-vrow').forEach(r => {
-    r.classList.remove('selected');
-    const radio = r.querySelector('.vradio');
-    if (radio) radio.className = 'ti ti-circle vradio';
-  });
-  rowEl.classList.add('selected');
-  const radio = rowEl.querySelector('.vradio');
-  if (radio) radio.className = 'ti ti-circle-check-filled vradio';
-  _sheetUpdateAddBtn();
-}
-
-function _sheetUpdateAddBtn() {
-  const btn = document.getElementById('sheetAddBtn');
-  const lbl = document.getElementById('sheetAddLabel');
-  const prc = document.getElementById('sheetAddPrice');
-  if (!_sheetState.variante) {
-    btn.disabled = true;
-    lbl.textContent = 'Selecciona una opción';
-    prc.textContent = '';
-    return;
-  }
-  btn.disabled = _sheetState.variante.stock <= 0;
-  const qty = _sheetState.qty;
-  lbl.textContent = `Agregar${qty > 1 ? ' ×' + qty : ''} · ${_sheetState.variante.nombre}`;
-  prc.textContent = fmt(_sheetState.variante.precio * qty);
-}
-
-function _confirmarSheet() {
-  if (!_sheetState.variante || !_sheetState.prod) return;
-  agregarAlCarritoConVariante(_sheetState.prod, _sheetState.variante, _sheetState.qty);
-  cerrarVariantes();
-}
-
 async function abrirVariantes(prod) {
   productoActual = prod;
-  _sheetState = { variante: null, qty: 1, prod };
   document.getElementById('variantesTitulo').textContent = prod.nombre;
-  document.getElementById('variantesSubtitulo').textContent = 'Elige una presentación';
-  const tiIcon = _getProdTiIcon(prod);
-  document.getElementById('variantesIcono').innerHTML = `<i class="ti ${tiIcon}"></i>`;
-  document.getElementById('variantesGrid').innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px 22px;">Cargando...</div>';
-  document.getElementById('sheetQty').textContent = '1';
-  _sheetUpdateAddBtn();
-  document.getElementById('modalVariantes').classList.add('open');
-  document.getElementById('sheetBg').classList.add('active');
+  document.getElementById('variantesGrid').innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Cargando...</div>';
+  document.getElementById('modalVariantes').classList.add('active');
 
   const variantes = prod._variantes && prod._variantes.length
     ? prod._variantes
     : await fetch(`/api/productos/${prod.id}/variantes`, {credentials:'include'})
         .then(r => r.json()).catch(() => []);
 
-  const list = document.getElementById('variantesGrid');
+  const grid = document.getElementById('variantesGrid');
   if (!variantes.length) {
-    list.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px 22px;">Sin variantes disponibles</div>';
+    grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Sin variantes disponibles</div>';
     return;
   }
-  document.getElementById('variantesSubtitulo').textContent = `${variantes.length} formato${variantes.length !== 1 ? 's' : ''} disponible${variantes.length !== 1 ? 's' : ''}`;
-  list.innerHTML = '';
-
-  const masVendidoIdx = variantes.reduce((bestIdx, v, i, arr) =>
-    (v.vendidos || 0) > (arr[bestIdx]?.vendidos || 0) ? i : bestIdx, 0);
-
-  variantes.forEach((v, i) => {
-    const row = document.createElement('div');
-    row.className = 'sheet-vrow';
-    const stockBajo = v.stock > 0 && v.stock < 5;
-    const sinStk = v.stock <= 0;
-    const badgeTop = (i === masVendidoIdx && v.vendidos > 0)
-      ? `<span class="badge-top-v">MÁS VENDIDO</span>`
-      : '';
-    const descEl = sinStk
-      ? `<div class="vdesc" style="color:var(--danger)">Sin stock</div>`
-      : stockBajo
-        ? `<div class="vdesc low">⚠ quedan ${v.stock}</div>`
-        : `<div class="vdesc">stock ${v.stock}</div>`;
-    row.innerHTML = `
-      <i class="ti ti-circle vradio"></i>
-      <div class="vinfo">
-        <div class="vtop"><span class="vname">${escH(v.nombre)}</span>${badgeTop}</div>
-        ${descEl}
-      </div>
-      <div class="vprice">${fmt(v.precio)}</div>`;
-    if (!sinStk) row.onclick = () => _sheetSelectVariante(v, row);
-    else row.style.opacity = '0.4';
-    list.appendChild(row);
+  grid.innerHTML = '';
+  variantes.forEach(v => {
+    const btn = document.createElement('div');
+    btn.className = 'variante-btn' + (v.stock <= 0 ? ' sin-stock' : '');
+    btn.innerHTML = `
+      <div class="variante-nombre">${v.nombre}</div>
+      <div class="variante-precio">${fmt(v.precio)}</div>
+      <div class="variante-stock">Stock: ${v.stock}</div>`;
+    if (v.stock > 0) {
+      btn.onclick = () => { agregarAlCarritoConVariante(prod, v); cerrarVariantes(); };
+    }
+    grid.appendChild(btn);
   });
 }
 
 function cerrarVariantes() {
-  document.getElementById('modalVariantes').classList.remove('open');
-  document.getElementById('sheetBg').classList.remove('active');
+  document.getElementById('modalVariantes').classList.remove('active');
   productoActual = null;
-  _sheetState = { variante: null, qty: 1, prod: null };
   cerrarPanelSinTeclado();
 }
 
-function agregarAlCarritoConVariante(prod, variante, qty) {
-  qty = qty || 1;
+function agregarAlCarritoConVariante(prod, variante) {
   const key = `${prod.id}_v${variante.id}`;
   const idx = carrito.findIndex(i => i._key === key);
   let _stockWarn = false;
   if (idx >= 0) {
-    carrito[idx].cantidad += qty;
+    carrito[idx].cantidad++;
     if (variante.stock > 0 && carrito[idx].cantidad > variante.stock) {
       _stockWarn = true;
       showToast(`⚠️ Stock insuficiente — quedan ${variante.stock} unidades`, 'warning');
@@ -5092,7 +4588,7 @@ function agregarAlCarritoConVariante(prod, variante, qty) {
     carrito.push({
       _key: key, producto_id: prod.id, variante_id: variante.id,
       nombre: `${prod.nombre} — ${variante.nombre}`, nombre_variante: variante.nombre,
-      precio_unit: variante.precio, cantidad: qty, stock: variante.stock,
+      precio_unit: variante.precio, cantidad: 1, stock: variante.stock,
     });
   }
   renderCarrito();
@@ -5309,18 +4805,14 @@ const Escaner = {
     if (!this.video) await this.init();
     document.getElementById('modalEscaner').style.display = 'flex';
     try {
-      try {
-        this.stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'environment',
-            width:  {ideal: 1280, max: 1920},
-            height: {ideal: 720,  max: 1080},
-            frameRate: {ideal: 30},
-          },
-        });
-      } catch(_facingErr) {
-        this.stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      }
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width:  {ideal: 1280, max: 1920},
+          height: {ideal: 720,  max: 1080},
+          frameRate: {ideal: 30},
+        },
+      });
       this.video.srcObject = this.stream;
       await this.video.play();
       this.video.addEventListener('loadedmetadata', () => {
@@ -6227,14 +5719,15 @@ function _setVistaProductos(vista) {
   if (vista === 'lista') {
     grid.classList.add('vista-lista');
     grid.classList.remove('vista-grid');
-    btnLista?.classList.add('active');
-    btnGrid?.classList.remove('active');
+    if (btnLista) { btnLista.style.background='#22c55e22'; btnLista.style.borderColor='#22c55e'; btnLista.style.color='#22c55e'; }
+    if (btnGrid)  { btnGrid.style.background='#1e1e2e';   btnGrid.style.borderColor='#2a2a3e';  btnGrid.style.color='#94a3b8'; }
   } else {
     grid.classList.remove('vista-lista');
     grid.classList.add('vista-grid');
-    btnGrid?.classList.add('active');
-    btnLista?.classList.remove('active');
+    if (btnGrid)  { btnGrid.style.background='#22c55e22'; btnGrid.style.borderColor='#22c55e'; btnGrid.style.color='#22c55e'; }
+    if (btnLista) { btnLista.style.background='#1e1e2e';  btnLista.style.borderColor='#2a2a3e'; btnLista.style.color='#94a3b8'; }
   }
+  // Si estábamos en modo-lista (renderiza .prod-fila), re-renderizar en grid
   if (modoVista === 'lista') {
     modoVista = 'grid';
     filtrar();
