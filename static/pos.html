@@ -3349,7 +3349,7 @@ function _renderPaginaGrid(grid, pagina) {
 
     const tiIcon = _getProdTiIcon(p);
     const piconHtml = p.imagen_url
-      ? `<img loading="lazy" src="${escH(p.imagen_url)}" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<i class=\\"ti ${tiIcon}\\">')" >`
+      ? `<img loading="lazy" src="${escH(p.imagen_url)}" data-icon="${tiIcon}" onerror="this.style.display='none';var _i=document.createElement('i');_i.className='ti '+this.dataset.icon;this.parentNode.insertBefore(_i,this.nextSibling)">`
       : `<i class="ti ${tiIcon}"></i>`;
     const nombreSafe = escH(p.nombre);
     const dept = catDeptoMap[p.categoria_id];
@@ -5309,14 +5309,18 @@ const Escaner = {
     if (!this.video) await this.init();
     document.getElementById('modalEscaner').style.display = 'flex';
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width:  {ideal: 1280, max: 1920},
-          height: {ideal: 720,  max: 1080},
-          frameRate: {ideal: 30},
-        },
-      });
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: 'environment',
+            width:  {ideal: 1280, max: 1920},
+            height: {ideal: 720,  max: 1080},
+            frameRate: {ideal: 30},
+          },
+        });
+      } catch(_facingErr) {
+        this.stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
       this.video.srcObject = this.stream;
       await this.video.play();
       this.video.addEventListener('loadedmetadata', () => {
