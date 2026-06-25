@@ -239,7 +239,7 @@ body {
 .prod-card:active { transform: scale(0.96); background: var(--surface-hover); }
 .prod-card:hover { background: var(--surface-hover); border-color: rgba(99,102,241,.4); }
 .prod-card.sin-stock { opacity: .45; cursor: not-allowed; filter: grayscale(30%); pointer-events: none; }
-@keyframes prodFlash { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 3px #22c55e;} }
+@keyframes prodFlash { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 3px var(--accent);} }
 .prod-card.flash { animation: prodFlash 0.2s ease; }
 .prod-emoji {
   font-size: 38px; line-height: 1;
@@ -263,7 +263,7 @@ body {
 .prod-stock-info.bajo { color: var(--warning); }
 .prod-precio {
   font-size: 20px; font-weight: 800;
-  color: #22c55e;            /* explicit green */
+  color: var(--accent);
   margin-top: auto;          /* push price to bottom */
   letter-spacing: -0.5px;
 }
@@ -320,7 +320,7 @@ body {
   /* prevent button reset issues */
   -webkit-appearance: none; appearance: none;
 }
-.variante-pill .vprecio { display: block; color: #22c55e; font-size: 11px; font-weight: 800; }
+.variante-pill .vprecio { display: block; color: var(--accent); font-size: 11px; font-weight: 800; }
 .variante-pill:active, .variante-pill:hover { background: rgba(99,102,241,.3); border-color: var(--accent); transform: scale(0.97); }
 .variante-pill.disabled { opacity: .35; cursor: not-allowed; pointer-events: none; }
 
