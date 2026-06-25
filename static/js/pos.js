@@ -1264,9 +1264,9 @@ function _renderPaginaGrid(grid, pagina) {
       const precioMin = (p._variantes && p._variantes.length)
         ? Math.min(...p._variantes.map(v => v.precio))
         : (p.precio || 0);
-      precioHTML = `<span class="prod-precio">desde $${fmt(precioMin)}</span>`;
+      precioHTML = `<span class="prod-precio">desde ${fmt(precioMin)}</span>`;
     } else {
-      precioHTML = `<span class="prod-precio">$${fmt(p.precio)}</span>`;
+      precioHTML = `<span class="prod-precio">${fmt(p.precio)}</span>`;
     }
 
     // Indicador de stock en footer
@@ -1289,7 +1289,6 @@ function _renderPaginaGrid(grid, pagina) {
     div.innerHTML = `
       <div class="prod-icon">${iconHTML}</div>
       <div class="prod-nombre">${escH(p.nombre)}</div>
-      <div class="prod-cat">${escH(p.categoria_nombre || '')}</div>
       <div class="prod-footer">${precioHTML}${stockHTML}</div>`;
 
     // Click handlers — lógica sin cambios
