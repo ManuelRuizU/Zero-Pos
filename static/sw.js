@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zeropos-v18';
+const CACHE_NAME = 'zeropos-v19';
 const URLS_TO_CACHE = [
   '/static/pos.html',
   '/static/admin.html',
@@ -10,12 +10,26 @@ const URLS_TO_CACHE = [
   '/static/meson.html',
   '/static/onboarding.html',
   '/static/js/vendor/qrcode.min.js',
+  /* CSS por página */
   '/static/css/pos.css',
-  '/static/js/pos.js',
   '/static/css/admin.css',
-  '/static/js/admin.js',
   '/static/css/inventario.css',
+  '/static/css/login.css',
+  '/static/css/cliente.css',
+  '/static/css/meson.css',
+  '/static/css/onboarding.css',
+  '/static/css/pedidos.css',
+  '/static/css/cocina.css',
+  /* JS por página */
+  '/static/js/pos.js',
+  '/static/js/admin.js',
   '/static/js/inventario.js',
+  '/static/js/login.js',
+  '/static/js/cliente.js',
+  '/static/js/meson.js',
+  '/static/js/onboarding.js',
+  '/static/js/pedidos.js',
+  '/static/js/cocina.js',
   '/static/manifest.json',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',

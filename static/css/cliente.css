@@ -1,0 +1,431 @@
+/* ═════════════════════════════════════════════════════════════
+   ZERO POS — cliente.css
+   Estilos de cliente.html
+   Depende de: zero-tokens.css, zero-base.css
+   ═════════════════════════════════════════════════════════════ */
+
+/* ── Reset + base ─────────────────────────────────────────── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --negocio-color: #6366f1;
+  --negocio-color2: #8b5cf6;
+}
+
+body {
+  background: #0a0a14;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Estados ──────────────────────────────────────────────── */
+.estado {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+.estado.activo { display: flex; }
+
+/* ── Estado Idle ──────────────────────────────────────────── */
+#estadoIdle {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+}
+#carruselPublicidad {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a14;
+}
+/* Logo overlay idle */
+.idle-logo-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#logoNegocioIdle {
+  height: 48px;
+  display: none;
+  border-radius: 8px;
+}
+#nombreNegocioIdle {
+  font-size: clamp(20px, 3vw, 32px);
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+/* Indicadores carrusel */
+#indicadoresCarrusel {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+.ind-dot {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.3);
+  transition: all 0.3s ease;
+}
+.ind-dot.activo {
+  width: 24px !important;
+  background: white !important;
+}
+/* Placeholder cuando no hay slides */
+#placeholderIdle {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  background: linear-gradient(135deg, #0a0a14 0%, #141428 100%);
+}
+.idle-logo-grande {
+  font-size: clamp(56px, 10vw, 96px);
+  font-weight: 900;
+  letter-spacing: -3px;
+}
+.idle-logo-grande span { color: var(--negocio-color); }
+.idle-tagline {
+  font-size: clamp(14px, 2vw, 20px);
+  color: rgba(255,255,255,0.4);
+  animation: pulseOpacity 3s ease-in-out infinite;
+}
+@keyframes pulseOpacity { 0%,100%{opacity:.4} 50%{opacity:.8} }
+
+/* ── Estado Venta ─────────────────────────────────────────── */
+#estadoVenta {
+  flex-direction: column;
+}
+
+/* Layout responsive — landscape vs portrait */
+.layout-cliente {
+  width: 100%;
+  height: 100%;
+}
+@media (orientation: landscape) {
+  .layout-cliente {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100vh;
+  }
+  .zona-producto { grid-column: 1; overflow-y: auto; }
+  .zona-publicidad { grid-column: 2; }
+}
+@media (orientation: portrait) {
+  .layout-cliente {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  .zona-producto {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .zona-publicidad {
+    flex: 0 0 32vh;
+  }
+}
+
+.zona-producto {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(12px, 2.5vw, 32px);
+  gap: clamp(8px, 1.5vw, 16px);
+  background: #0a0a14;
+}
+.zona-publicidad {
+  position: relative;
+  overflow: hidden;
+  background: #0d0d1a;
+}
+#carruselPublicidadVenta {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Nombre negocio arriba en venta */
+#nombreNegocioVenta {
+  font-size: clamp(12px, 1.4vw, 15px);
+  color: rgba(255,255,255,0.4);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+/* Card Liquid Glass */
+.glass-card {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: clamp(14px, 2.5vw, 22px);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.15),
+    0 8px 32px rgba(0,0,0,0.4);
+}
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Card último producto */
+#cardUltimoProducto {
+  padding: clamp(12px, 2vw, 22px);
+  flex-shrink: 0;
+}
+.up-label {
+  font-size: clamp(10px, 1.1vw, 12px);
+  color: rgba(255,255,255,0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  position: relative; z-index: 1;
+}
+.up-body {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 2vw, 16px);
+  position: relative; z-index: 1;
+}
+#imagenUltimoProducto {
+  width: clamp(48px, 7vw, 72px);
+  height: clamp(48px, 7vw, 72px);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(24px, 3.5vw, 36px);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+#imagenUltimoProducto img { width: 100%; height: 100%; object-fit: cover; }
+.up-info { flex: 1; min-width: 0; }
+#nombreUltimoProducto {
+  font-size: clamp(15px, 2.2vw, 26px);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#cantidadUltimoProducto {
+  font-size: clamp(12px, 1.3vw, 15px);
+  color: rgba(255,255,255,0.5);
+  margin-top: 3px;
+}
+#precioUltimoProducto {
+  font-size: clamp(18px, 2.8vw, 32px);
+  font-weight: 900;
+  color: var(--negocio-color);
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+
+/* Lista items */
+#listaItems {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow: hidden;
+}
+.item-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(6px, 1vw, 9px) clamp(10px, 1.5vw, 14px);
+  background: rgba(255,255,255,0.04);
+  border-radius: 8px;
+  font-size: clamp(11px, 1.3vw, 14px);
+  border: 1px solid rgba(255,255,255,0.06);
+  animation: fadeSlide 0.2s ease;
+}
+@keyframes fadeSlide { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+.item-fila-nombre {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgba(255,255,255,0.8);
+}
+.item-fila-precio {
+  color: white;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+/* Card total */
+#cardTotal {
+  padding: clamp(12px, 2vw, 22px);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.total-label {
+  font-size: clamp(14px, 2vw, 22px);
+  font-weight: 700;
+  color: rgba(255,255,255,0.6);
+  position: relative; z-index: 1;
+}
+#totalVenta {
+  font-size: clamp(28px, 5.5vw, 64px);
+  font-weight: 900;
+  letter-spacing: -2px;
+  color: white;
+  position: relative; z-index: 1;
+  transition: all 0.3s ease;
+}
+
+/* ── Estado Gracias ───────────────────────────────────────── */
+#estadoGracias {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 20px;
+  background: radial-gradient(ellipse at center, rgba(34,197,94,0.15) 0%, #0a0a14 70%);
+}
+.gracias-emoji {
+  font-size: clamp(64px, 12vw, 110px);
+  animation: bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  display: block;
+}
+@keyframes bounceIn {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.gracias-titulo {
+  font-size: clamp(26px, 5vw, 52px);
+  font-weight: 900;
+}
+#montoGracias {
+  font-size: clamp(18px, 3vw, 36px);
+  color: rgba(255,255,255,0.6);
+}
+#vueltoGracias {
+  font-size: clamp(22px, 4vw, 42px);
+  font-weight: 700;
+  color: #22c55e;
+  display: none;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 16px;
+  padding: 10px 24px;
+}
+
+/* ── Estado Cobrar Tarjeta (SumUp QR) ────────────────────── */
+#estadoCobrarTarjeta {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 20px;
+  padding: 24px;
+  background: #0a0a14;
+}
+#clienteTotalTarjeta {
+  font-size: clamp(28px, 5.5vw, 62px);
+  font-weight: 900;
+  letter-spacing: -2px;
+  color: #22c55e;
+}
+#clienteQRCanvas {
+  background: white;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+}
+
+/* ── Slides publicidad ────────────────────────────────────── */
+.slide-pub {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: clamp(16px, 3vw, 32px);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  background-size: cover;
+  background-position: center;
+}
+.slide-pub.visible { opacity: 1; }
+.slide-iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+  background: #0a0a14;
+}
+.slide-iframe.visible { opacity: 1; }
+.slide-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 50%, transparent 100%);
+}
+.slide-texto {
+  position: relative;
+  z-index: 1;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 14px;
+  padding: clamp(12px, 2vw, 20px) clamp(16px, 3vw, 28px);
+  text-align: center;
+  width: 100%;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.slide-titulo {
+  font-size: clamp(16px, 2.5vw, 28px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+.slide-subtitulo {
+  font-size: clamp(12px, 1.8vw, 18px);
+  color: rgba(255,255,255,0.8);
+  margin-top: 4px;
+}
+
+/* Ken Burns */
+@keyframes kenBurns {
+  0%   { transform: scale(1)    translateX(0); }
+  100% { transform: scale(1.08) translateX(-2%); }
+}
+@keyframes kenBurns2 {
+  0%   { transform: scale(1)    translateX(0); }
+  100% { transform: scale(1.07) translateX(2%) translateY(-1%); }
+}

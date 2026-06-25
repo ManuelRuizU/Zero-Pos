@@ -1,0 +1,32 @@
+/* ═════════════════════════════════════════════════════════════
+   ZERO POS — scanner.css
+   Estilos de scanner.html
+   Depende de: zero-tokens.css, zero-base.css
+   ═════════════════════════════════════════════════════════════ */
+
+:root{--bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--border:rgba(255,255,255,0.1);
+  --accent:#6366f1;--text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--danger:#ef4444;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;}
+.topbar{display:flex;align-items:center;padding:12px 20px;gap:12px;
+  background:rgba(10,10,15,0.9);border-bottom:1px solid var(--border);}
+.logo{font-weight:700;font-size:16px;} .logo span{color:var(--accent);}
+.back{background:none;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;margin-left:auto;}
+.scanner-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;}
+video{width:100%;max-width:400px;border-radius:16px;border:2px solid var(--accent);}
+.manual-row{display:flex;gap:10px;width:100%;max-width:400px;}
+.cod-input{flex:1;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 16px;color:var(--text);font-size:16px;outline:none;}
+.cod-input:focus{border-color:var(--accent);}
+.btn-buscar{background:var(--accent);border:none;color:#fff;
+  border-radius:10px;padding:12px 20px;cursor:pointer;font-size:14px;}
+.resultado{width:100%;max-width:400px;background:var(--surface);
+  border:1px solid var(--border);border-radius:14px;padding:20px;display:none;}
+.res-nombre{font-size:18px;font-weight:700;margin-bottom:6px;}
+.res-precio{font-size:28px;font-weight:800;color:var(--accent);}
+.res-stock{font-size:13px;color:var(--text-dim);margin:6px 0 16px;}
+.btn-agregar{width:100%;background:var(--success);border:none;color:#fff;
+  border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;}
+.msg{font-size:13px;color:var(--text-dim);text-align:center;}
