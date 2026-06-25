@@ -225,47 +225,80 @@ body {
   padding-bottom: 90px;
 }
 
-/* Product cards */
+/* Product cards — Aurora v2 */
 .prod-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px 10px 12px;
-  cursor: pointer; transition: all .18s;
-  display: flex; flex-direction: column; align-items: center;
-  text-align: center; gap: 6px;
-  user-select: none; -webkit-tap-highlight-color: transparent;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 16px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
   min-height: 140px;
-  position: relative; overflow: hidden;
+  user-select: none; -webkit-tap-highlight-color: transparent;
 }
-.prod-card:active { transform: scale(0.96); background: var(--surface-hover); }
-.prod-card:hover { background: var(--surface-hover); border-color: rgba(99,102,241,.4); }
-.prod-card.sin-stock { opacity: .45; cursor: not-allowed; filter: grayscale(30%); pointer-events: none; }
+.prod-card:active { background: var(--surface2); }
+.prod-card:hover  { background: var(--surface2); }
+.prod-card.sin-stock { opacity: .45; cursor: not-allowed; pointer-events: none; }
 @keyframes prodFlash { 0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 3px var(--accent);} }
 .prod-card.flash { animation: prodFlash 0.2s ease; }
-.prod-emoji {
-  font-size: 38px; line-height: 1;
-  flex-shrink: 0;
-  /* prevent emoji from inheriting display issues */
-  display: block;
+.prod-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--accent-dim);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: var(--accent);
+}
+.prod-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
 }
 .prod-nombre {
-  font-size: 13px; font-weight: 600; line-height: 1.35;
-  color: #f1f5f9;            /* explicit — never inherits wrong color */
-  width: 100%;
-  max-height: 2.7em;         /* 2 lines at 1.35 */
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.3;
+  max-height: 2.6em;
   overflow: hidden;
-  word-break: break-word;
-  /* line-clamp with wide compatibility */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
-.prod-stock-info { font-size: 11px; color: var(--text-dim); line-height: 1.2; }
-.prod-stock-info.bajo { color: var(--warning); }
+.prod-cat {
+  font-size: 11px;
+  color: var(--text2);
+  text-align: center;
+}
+.prod-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  margin-top: auto;
+}
 .prod-precio {
-  font-size: 20px; font-weight: 800;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--accent);
-  margin-top: auto;          /* push price to bottom */
-  letter-spacing: -0.5px;
+}
+.prod-stock-warn {
+  font-size: 11px;
+  color: var(--warn);
+  font-weight: 500;
+}
+.prod-sin-stock {
+  font-size: 11px;
+  color: var(--danger);
 }
 
 /* ── Modo lista ────────────────────────────────────────────── */

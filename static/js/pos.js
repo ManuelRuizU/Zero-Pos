@@ -244,6 +244,41 @@ function getProductEmoji(prod) {
   return catIco || '📦';
 }
 
+const _TABLER_CAT = {
+  'Bebidas':             'ti-bottle',
+  'Lácteos y Huevos':    'ti-egg',
+  'Pan y Panadería':     'ti-bread',
+  'Cereales':            'ti-bowl',
+  'Condimentos':         'ti-salt',
+  'Snacks':              'ti-cookie',
+  'Carnes y Fiambres':   'ti-meat',
+  'Frutas y Verduras':   'ti-apple',
+  'Limpieza':            'ti-spray',
+  'Higiene Personal':    'ti-droplet',
+  'Mascotas':            'ti-paw',
+  'Congelados':          'ti-snowflake',
+  'Otros':               'ti-package',
+};
+function getProductTablerIcon(prod) {
+  const cn = prod.categoria_nombre || '';
+  if (_TABLER_CAT[cn]) return _TABLER_CAT[cn];
+  const cnl = cn.toLowerCase();
+  if (/bebid|drink/.test(cnl))               return 'ti-bottle';
+  if (/l[aá]cteo|huevo|queso|leche/.test(cnl)) return 'ti-egg';
+  if (/pan|panad|baker/.test(cnl))            return 'ti-bread';
+  if (/cereal/.test(cnl))                     return 'ti-bowl';
+  if (/condiment|salsa|aceite/.test(cnl))     return 'ti-salt';
+  if (/snack|dulce|confite|galleta/.test(cnl)) return 'ti-cookie';
+  if (/carne|fiambre|embutido|pollo/.test(cnl)) return 'ti-meat';
+  if (/fruta|verdur|vegetal/.test(cnl))       return 'ti-apple';
+  if (/limp|aseo|clean/.test(cnl))            return 'ti-spray';
+  if (/higiene|personal|cuidado/.test(cnl))   return 'ti-droplet';
+  if (/mascota|animal|pet/.test(cnl))         return 'ti-paw';
+  if (/congelado|frozen/.test(cnl))           return 'ti-snowflake';
+  if (/otro/.test(cnl))                       return 'ti-package';
+  return 'ti-shopping-bag';
+}
+
 // ── Asistente de Voz ZERO ────────────────────────────────────
 let vozActiva = localStorage.getItem('voz_activa') === 'true';
 let vozKW = 'ZERO';
@@ -1211,60 +1246,61 @@ function _renderPaginaGrid(grid, pagina) {
     div.className = 'prod-card' + (sinStock ? ' sin-stock' : '');
     div.setAttribute('data-producto-id', p.id);
 
-    const emoji = p.imagen_url
-      ? `<img loading="lazy" src="${escH(p.imagen_url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" style="width:60px;height:60px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 2px"><span style="display:none;font-size:36px;display:none">${getProductEmoji(p)}</span>`
-      : getProductEmoji(p);
-    const nombreSafe = escH(p.nombre);
-
-    let innerContent;
-
-    if (p.tiene_variantes && p._variantes && p._variantes.length) {
-      const pillsHTML = p._variantes.map(v => {
-        const agotado = v.stock <= 0;
-        const nombreV = escH(v.nombre);
-        const clickAttr = agotado ? '' : `onclick="event.stopPropagation();agregarVarianteById(${p.id},${v.id})"`;
-        return `<button class="variante-pill${agotado ? ' disabled' : ''}" ${clickAttr}>
-          ${nombreV}<span class="vprecio">${fmt(v.precio)}</span>
-        </button>`;
-      }).join('');
-      innerContent = `
-        <span class="prod-emoji">${emoji}</span>
-        <span class="prod-nombre">${nombreSafe}</span>
-        <div class="prod-variantes">${pillsHTML}</div>`;
-    } else if (p.tiene_variantes) {
-      innerContent = `
-        <span class="prod-emoji">${emoji}</span>
-        <span class="prod-nombre">${nombreSafe}</span>
-        <span class="prod-stock-info" style="color:var(--accent2);font-size:12px;">Toca para ver opciones ▼</span>`;
-      div.onclick = () => abrirVariantes(p);
-    } else if (modoStock === 'sin_stock') {
-      innerContent = `
-        <span class="prod-emoji">${emoji}</span>
-        <span class="prod-nombre">${nombreSafe}</span>
-        <span class="prod-precio">${fmt(p.precio)}</span>`;
-      div.onclick = () => agregarAlCarrito(p);
-    } else if (modoStock === 'produccion') {
-      const agotado = p.stock <= 0;
-      const stockTxt = agotado ? 'AGOTADO' : `Disponibles hoy: ${p.stock}`;
-      if (agotado) div.classList.add('sin-stock');
-      innerContent = `
-        <span class="prod-emoji">${emoji}</span>
-        <span class="prod-nombre">${nombreSafe}</span>
-        <span class="prod-stock-info${agotado ? '" style="color:var(--danger);font-weight:700' : ''}">${stockTxt}</span>
-        <span class="prod-precio">${fmt(p.precio)}</span>`;
-      if (!agotado) div.onclick = () => agregarAlCarrito(p);
+    // Ícono: imagen si existe, sino Tabler por categoría
+    const tablerIcon = getProductTablerIcon(p);
+    let iconHTML;
+    if (p.imagen_url) {
+      iconHTML = `<img loading="lazy" src="${escH(p.imagen_url)}"` +
+        ` onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"` +
+        ` style="width:100%;height:100%;object-fit:cover;border-radius:12px;display:block">` +
+        `<i class="ti ${tablerIcon}" style="display:none;font-size:26px;color:var(--accent)"></i>`;
     } else {
-      const bajo = p.stock > 0 && p.stock <= p.stock_minimo;
-      const stockTxt = `Stock: ${p.stock}${bajo ? ' ⚠️' : ''}`;
-      innerContent = `
-        <span class="prod-emoji">${emoji}</span>
-        <span class="prod-nombre">${nombreSafe}</span>
-        <span class="prod-stock-info${bajo ? ' bajo' : ''}">${stockTxt}</span>
-        <span class="prod-precio">${fmt(p.precio)}</span>`;
-      if (!sinStock) div.onclick = () => agregarAlCarrito(p);
+      iconHTML = `<i class="ti ${tablerIcon}"></i>`;
     }
 
-    div.innerHTML = innerContent;
+    // Precio footer: variantes → "desde $X", normal → "$X"
+    let precioHTML;
+    if (p.tiene_variantes) {
+      const precioMin = (p._variantes && p._variantes.length)
+        ? Math.min(...p._variantes.map(v => v.precio))
+        : (p.precio || 0);
+      precioHTML = `<span class="prod-precio">desde $${fmt(precioMin)}</span>`;
+    } else {
+      precioHTML = `<span class="prod-precio">$${fmt(p.precio)}</span>`;
+    }
+
+    // Indicador de stock en footer
+    let stockHTML = '';
+    if (sinStock) {
+      stockHTML = `<span class="prod-sin-stock">Sin stock</span>`;
+    } else if (modoStock === 'produccion') {
+      const agotado = p.stock <= 0;
+      if (agotado) {
+        div.classList.add('sin-stock');
+        stockHTML = `<span class="prod-sin-stock">AGOTADO</span>`;
+      } else {
+        stockHTML = `<span class="prod-stock-warn">Disponibles: ${p.stock}</span>`;
+      }
+    } else if (modoStock === 'normal') {
+      const bajo = p.stock > 0 && p.stock <= p.stock_minimo;
+      if (bajo) stockHTML = `<span class="prod-stock-warn">Quedan ${p.stock}</span>`;
+    }
+
+    div.innerHTML = `
+      <div class="prod-icon">${iconHTML}</div>
+      <div class="prod-nombre">${escH(p.nombre)}</div>
+      <div class="prod-cat">${escH(p.categoria_nombre || '')}</div>
+      <div class="prod-footer">${precioHTML}${stockHTML}</div>`;
+
+    // Click handlers — lógica sin cambios
+    if (p.tiene_variantes) {
+      div.onclick = () => abrirVariantes(p);
+    } else if (modoStock === 'produccion') {
+      if (p.stock > 0) div.onclick = () => agregarAlCarrito(p);
+    } else if (!sinStock) {
+      div.onclick = () => agregarAlCarrito(p);
+    }
+
     grid.appendChild(div);
   });
 
