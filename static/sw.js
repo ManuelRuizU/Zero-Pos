@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zeropos-v16';
+const CACHE_NAME = 'zeropos-v17';
 const URLS_TO_CACHE = [
   '/static/pos.html',
   '/static/admin.html',
@@ -12,6 +12,8 @@ const URLS_TO_CACHE = [
   '/static/js/vendor/qrcode.min.js',
   '/static/css/pos.css',
   '/static/js/pos.js',
+  '/static/css/admin.css',
+  '/static/js/admin.js',
   '/static/manifest.json',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',
