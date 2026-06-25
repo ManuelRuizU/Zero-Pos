@@ -4,6 +4,21 @@
    Depende de: zero-tokens.css, zero-base.css, zero-components.css, zero-layout.css
 ═══════════════════════════════════════════════════════════════ */
 
+/* ── Tokens Aurora v2 — overrides para la caja ───────────────── */
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text2: #8b949e;
+  --accent: #22c55e;
+  --accent-dim: rgba(34,197,94,0.12);
+  --danger: #f85149;
+  --warn: #d29922;
+  --radius: 10px;
+}
+
 body {
   height: 100dvh;
   display: flex;
