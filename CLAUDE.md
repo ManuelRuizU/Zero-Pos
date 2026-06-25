@@ -1,6 +1,6 @@
 # CLAUDE.md — Contrato de Desarrollo ZERO POS
 # Lee este archivo COMPLETO antes de tocar cualquier código.
-# Última actualización: 2026-06-18
+# Última actualización: 2026-06-25
 
 ---
 
@@ -32,17 +32,48 @@ debe tener timeout corto y fallback local obligatorio.
 
 ---
 
-## Archivos JS globales — NUNCA duplicar funciones
+## Estructura de archivos frontend — UN archivo por página
+
+Cada página HTML tiene su propio CSS y JS externos. NUNCA escribir CSS o JS inline en HTML.
+
+### JS globales (compartidos, cargan antes que el JS de la página)
 
 | Archivo | Contenido | Regla |
 |---------|-----------|-------|
-| `static/js/zero-utils.js` | `fmt()`, helpers globales | Única declaración. Nunca redeclarar en HTML. |
-| `static/js/zero-config.js` | Configuración del sistema | Solo lectura desde HTML |
+| `static/js/zero-utils.js` | `fmt()`, helpers globales | Única declaración. Nunca redeclarar. |
+| `static/js/zero-config.js` | Configuración del sistema | Solo lectura |
 | `static/js/zero-temas.js` | Sistema de temas claro/oscuro | No mezclar con zero-tokens.css |
 
+### JS por página
+
+| Página | JS | CSS |
+|--------|-----|-----|
+| pos.html | `static/js/pos.js` | `static/css/pos.css` |
+| admin.html | `static/js/admin.js` | `static/css/admin.css` |
+| inventario.html | `static/js/inventario.js` | `static/css/inventario.css` |
+| login.html | `static/js/login.js` | `static/css/login.css` |
+| cliente.html | `static/js/cliente.js` | `static/css/cliente.css` |
+| meson.html | `static/js/meson.js` | `static/css/meson.css` |
+| pedidos.html | `static/js/pedidos.js` | `static/css/pedidos.css` |
+| onboarding.html | `static/js/onboarding.js` | `static/css/onboarding.css` |
+| credit.html | `static/js/credit.js` | `static/css/credit.css` |
+| cocina.html | `static/js/cocina.js` | `static/css/cocina.css` |
+| cobro-khipu.html | `static/js/cobro-khipu.js` | `static/css/cobro-khipu.css` |
+| multi.html | `static/js/multi.js` | `static/css/multi.css` |
+| scanner.html | `static/js/scanner.js` | `static/css/scanner.css` |
+
+**Orden de carga en cada página:**
+```html
+<script src="/static/js/zero-utils.js"></script>
+<script src="/static/js/zero-config.js"></script>   <!-- si aplica -->
+<script src="/static/js/zero-temas.js"></script>
+<script src="/static/js/[pagina].js"></script>
+```
+
 **REGLA CRÍTICA:** Si una función ya existe en zero-utils.js,
-NO declararla de nuevo en pos.html, inventario.html ni ningún otro HTML.
-Causa SyntaxError que rompe toda la ejecución del JS.
+NO declararla de nuevo en ningún .js ni .html de página.
+`fmt()` se declara SOLO en zero-utils.js como `window.fmt`.
+Causa SyntaxError silencioso que rompe toda la ejecución JS.
 
 ---
 
@@ -51,12 +82,15 @@ Causa SyntaxError que rompe toda la ejecución del JS.
 Todos los colores, tamaños y espaciados están en `static/css/zero-tokens.css`.
 - NUNCA usar colores hardcodeados (#fff, rgb(...)) en componentes nuevos
 - SIEMPRE usar var(--zero-...) 
-- Los 5 archivos CSS tienen responsabilidades separadas:
+- NUNCA escribir CSS inline en archivos HTML — usar el .css de la página
+- Los archivos CSS globales tienen responsabilidades separadas:
   - `zero-tokens.css` → variables
   - `zero-base.css` → reset y tipografía
   - `zero-components.css` → botones, cards, modales
   - `zero-layout.css` → grids y estructura
   - `zero-themes.css` → temas claro/oscuro
+- Los CSS de página (`pos.css`, `admin.css`, etc.) contienen estilos específicos
+  de cada pantalla y se cargan después de los globales
 
 ---
 
@@ -138,15 +172,21 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - El mux está en _run_mux() líneas ~144-230
 
 ### Service Worker (static/sw.js)
-- CACHE_NAME actual: 'zeropos-v4'
+- CACHE_NAME actual: `'zeropos-v19'`
+- **Ubicación:** `static/sw.js` — físicamente en /static/ pero Flask lo sirve
+  en la ruta `/sw.js` (raíz) via `@app.route("/sw.js")` en app.py.
+  **NO mover a static/js/** — el SW necesita scope `/` y se registra como `/sw.js`.
+  Header `Service-Worker-Allowed: /` permite controlar todas las rutas.
 - Las rutas /api/ NO se interceptan — el handler hace return sin respondWith
 - Las rutas externas (url.origin !== self.location.origin) tampoco se interceptan
 - Solo se cachean archivos /static/ con estrategia cache-first
-- Para forzar reinstalación del SW: bump CACHE_NAME a v5, v6, etc.
-- **LECCIÓN APRENDIDA:** cache-first significa que cambios en HTML/JS NO se ven
+- Para forzar reinstalación del SW: bump CACHE_NAME (v19 → v20, etc.)
+- **LECCIÓN APRENDIDA:** cache-first significa que cambios en HTML/JS/CSS NO se ven
   hasta que el SW renueve su caché. Ante bugs "el código viejo sigue corriendo"
   → hacer bump del CACHE_NAME es el primer paso de diagnóstico.
   self.skipWaiting() + clients.claim() activan el nuevo SW inmediatamente.
+- Al agregar nuevos archivos CSS o JS de página → agregarlos a URLS_TO_CACHE
+  y hacer bump del CACHE_NAME.
 
 ### Open Food Facts (routes/inventario.py)
 - _buscar_open_food_facts() funciona correctamente
@@ -198,10 +238,17 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 ### Overlay turno cerrado (pos.html)
 - `#overlayTurnoCerrado` cubre toda la caja cuando no hay turno abierto
 - **`display:none` por defecto** en el HTML (evita flash al recargar con turno abierto)
-- `<body class="cargando">` inicia la página; CSS fuerza `display:flex; visibility:hidden`
-  en el overlay durante la carga — cubre la caja pero invisible, sin flash
+- `<body class="cargando">` inicia la página; CSS en pos.css aplica:
+  - `.layout` y `.topbar` → `visibility:hidden` (oculta el contenido de la caja)
+  - `#overlayTurnoCerrado` → `display:flex` (overlay opaco cubre todo)
+  - `#overlayTurnoCerrado > *` → `visibility:hidden` (no muestra "turno cerrado"
+    hasta que verificarTurno() confirme que realmente está cerrado)
 - `verificarTurno(me)` al terminar llama `document.body.classList.remove('cargando')`
-  → si hay turno: overlay queda en `display:none`; si no hay: overlay se muestra `display:flex`
+  → si hay turno: `overlay.style.display='none'`, layout visible → caja aparece limpia
+  → si no hay: overlay visible con contenido "turno cerrado"
+- **LECCIÓN APRENDIDA:** `visibility:hidden` en el overlay (versión anterior) NO ocultaba
+  el contenido de la caja porque también volvía transparente el fondo del overlay.
+  La corrección fue ocultar `.layout` y `.topbar` directamente.
 - z-index: 9999 (mayor que cualquier modal)
 - `_confirmarTurno()` al abrir turno: oculta el overlay (todos los roles)
 - Al cerrar turno exitosamente → redirige a `login.html?modo=salida`
@@ -228,7 +275,7 @@ Modificarlas sin necesidad directa está PROHIBIDO.
              GET /api/auth/asistencia/resumen (horas semana, jornada pactada)
 - login.html muestra 4 botones de modo antes del teclado PIN
 - URL ?modo=salida preselecciona el modo automáticamente (usado por cerrar turno)
-- Pantallas post-login: pantallaEntrada (auto-redirect 4s) / pantallaSalida /
+- Pantallas post-login: pantallaEntrada (auto-redirect 3s, solo si turno abierto) / pantallaSalida /
   pantallaSalidaColacion / pantallaEntradaColacion
 - Auto-redirect de pantallaEntrada → SIEMPRE a pos.html (no a admin.html)
   Excepción: rol cocina → cocina.html
@@ -237,11 +284,15 @@ Modificarlas sin necesidad directa está PROHIBIDO.
   Verde ≤90% jornada | Amarillo >90% | Rojo ≥100%
 
 ### Flujo de navegación login → caja (LECCIÓN APRENDIDA)
-- Login (cualquier rol excepto cocina) → pos.html → overlay turno cerrado si no hay turno
+- Login con modo=entrada (cualquier rol excepto cocina):
+  - Si turno CERRADO → redirect directo a pos.html (sin pantalla bienvenida)
+  - Si turno ABIERTO → pantalla bienvenida 3s → pos.html
+- Cocina siempre va a cocina.html independiente del turno
 - Admin NO va a admin.html al hacer login — siempre pasa por pos.html primero
 - RAZÓN: el turno se abre desde pos.html, y admin también necesita abrir turno
-- Antes, abrir turno como admin redirigía a admin.html — esto fue eliminado
-  porque causaba que al ir de admin.html a pos.html apareciera la pantalla de turno cerrado
+- La verificación del turno se hace en `_mostrarPantallaPost()` en login.js
+  consultando `/api/auth/turno/actual` después del login exitoso
+- **NO** mostrar pantalla bienvenida si el turno está cerrado — genera confusión
 
 ### Integración SumUp (routes/sumup.py)
 - Hosted Checkout API con `hosted_checkout.enabled=True`
@@ -386,15 +437,19 @@ Estos paths NO deben commitarse nunca (datos de usuario o secretos):
 
 ### Auditoría pendiente (revisar antes de cada release)
 1. **cargarZXing** — verificar que `_cargarZXing()` sigue siendo método INTERNO
-   del objeto `Escaner` en pos.html e inventario.html (nunca debe ser función global)
-2. **fmt() redeclaraciones** — buscar `function fmt(` o `const fmt =` en archivos HTML;
-   la única declaración válida es en `static/js/zero-utils.js`
-3. **zero-utils.js globals** — ninguna función de zero-utils.js debe redeclararse inline
-   en ningún HTML — causa SyntaxError silencioso que rompe todo el JS del archivo
-4. **Threads daemon** — toda llamada a impresora debe estar en `threading.Thread(daemon=True)`,
+   del objeto `Escaner` en pos.js e inventario.js (nunca debe ser función global)
+2. **fmt() redeclaraciones** — buscar `function fmt(` o `const fmt =` en archivos .js y .html;
+   la única declaración válida es `window.fmt` en `static/js/zero-utils.js`
+3. **CSS/JS inline** — ningún HTML debe tener bloques `<style>` o `<script>` con contenido;
+   todo va en sus respectivos .css y .js de página
+4. **zero-utils.js globals** — ninguna función de zero-utils.js debe redeclararse en
+   ningún .js de página — causa SyntaxError silencioso
+5. **Threads daemon** — toda llamada a impresora debe estar en `threading.Thread(daemon=True)`,
    envuelta en try/except propio; nunca en el hilo principal de Flask
-5. **Colores hardcodeados** — grep `#[0-9a-fA-F]{3,6}` y `rgb(` en HTML/CSS nuevos;
+6. **Colores hardcodeados** — grep `#[0-9a-fA-F]{3,6}` y `rgb(` en CSS nuevos;
    todos los colores deben usar `var(--zero-...)` de zero-tokens.css
+7. **SW cache** — al agregar nuevo CSS/JS de página, agregarlo a URLS_TO_CACHE en sw.js
+   y hacer bump del CACHE_NAME
 
 ---
 
