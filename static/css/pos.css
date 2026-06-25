@@ -876,3 +876,68 @@ body.cargando #overlayTurnoCerrado > * {
 }
 .nav-icono { font-size:22px; }
 .nav-texto { flex:1; }
+
+/* ── Utilidades de estructura — extraídas de pos.html ────────── */
+
+/* Header row de modales y drawers */
+.modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+/* Botón cerrar ✕ dentro de modales */
+.modal-x {
+  background: none; border: none; color: var(--text-dim);
+  font-size: 20px; cursor: pointer; padding: 4px; line-height: 1;
+}
+/* Cuerpo scrollable de modal sin padding propio */
+.modal-body-scroll { overflow-y: auto; flex: 1; }
+/* Badge de notificación en esquina de botón topbar */
+.notif-badge {
+  position: absolute; top: 2px; right: 2px;
+  background: var(--danger); color: #fff;
+  border-radius: 50%; font-size: 10px;
+  width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; pointer-events: none;
+}
+/* Overlay full-screen centrado (turno cerrado, colación) */
+.overlay-centered {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: var(--bg);
+}
+/* Overlay full-screen de panel (buscar cliente, nuevo crédito) */
+.overlay-panel {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+}
+/* Header dentro de overlay-panel */
+.overlay-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex-shrink: 0;
+}
+/* Botones de acción del footer del navbar drawer */
+.nav-foot-btn {
+  width: 100%; padding: 10px;
+  background: #0f0f1a; border: 1px solid #1e1e2e;
+  border-radius: 8px; font-size: 14px; font-family: inherit;
+  cursor: pointer; font-weight: 600;
+  display: flex; align-items: center; gap: 12px;
+}
+/* Inputs de denominación en modal turno */
+.denom-input {
+  padding: 6px 8px; border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface); color: var(--text);
+  font-size: 14px; text-align: right;
+  width: 100%; box-sizing: border-box;
+}
+/* Labels de denominación en modal turno */
+.denom-label {
+  font-size: 14px; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}

@@ -33,15 +33,15 @@
   <div class="topbar-spacer"></div>
   <!-- Cola de espera (visible solo cuando hay pedidos) -->
   <button class="btn-top" id="btnColaEspera" onclick="toggleColaEspera()" title="Cola de espera" style="display:none;position:relative">
-    🔔<span id="colaCount" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:none;align-items:center;justify-content:center;font-weight:700"></span>
+    🔔<span id="colaCount" class="notif-badge" style="display:none"></span>
   </button>
   <!-- Fiados vencidos (visible solo cuando hay pendientes) -->
   <button class="btn-top" id="btnCreditBadge" onclick="location.href='credit.html'" title="ZERO CREDIT — fiados vencidos" style="display:none;position:relative">
-    📒<span id="creditBadge" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
+    📒<span id="creditBadge" class="notif-badge">0</span>
   </button>
   <!-- Cola impresión (visible solo cuando hay tickets pendientes) -->
   <button class="btn-top" id="btnImpresoraBadge" onclick="abrirModalImpresoraCola()" title="Tickets sin imprimir" style="display:none;position:relative">
-    🖨️<span id="impresoraBadge" style="position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;font-size:10px;width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-weight:700">0</span>
+    🖨️<span id="impresoraBadge" class="notif-badge">0</span>
   </button>
   <!-- Usuario dropdown -->
   <div style="position:relative">
@@ -289,8 +289,8 @@
 <div class="modal-overlay" id="modalDetalleVenta" onclick="if(event.target===this)this.style.display='none'" style="display:none;z-index:1300">
   <div class="modal" style="max-width:480px;width:100%;padding:0;overflow:hidden;max-height:90vh;display:flex;flex-direction:column">
     <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
-      <button onclick="document.getElementById('modalDetalleVenta').style.display='none';document.getElementById('drawerHistorial').style.display=''" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">←</button>
+    <div class="modal-head">
+      <button onclick="document.getElementById('modalDetalleVenta').style.display='none';document.getElementById('drawerHistorial').style.display=''" class="modal-x">←</button>
       <div id="dvNumero" style="font-size:14px;font-weight:600;color:var(--text-dim)"></div>
       <div style="display:flex;gap:8px">
         <button id="dvBtnAnular" onclick="_anularVentaDetalle()" style="background:#ef444420;border:1px solid #ef4444;color:#ef4444;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer">ANULAR</button>
@@ -299,11 +299,11 @@
     </div>
     <!-- Total grande -->
     <div style="text-align:center;padding:24px 16px 16px;border-bottom:1px solid var(--border)">
-      <div id="dvTotal" style="font-size:36px;font-weight:900;color:#22c55e;letter-spacing:-1px"></div>
+      <div id="dvTotal" style="font-size:36px;font-weight:900;color:var(--accent);letter-spacing:-1px"></div>
       <div style="font-size:12px;color:var(--text-dim);margin-top:2px">Total</div>
     </div>
     <!-- Contenido scrollable -->
-    <div style="overflow-y:auto;flex:1">
+    <div class="modal-body-scroll">
       <!-- Metadata -->
       <div id="dvMeta" style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;display:flex;flex-direction:column;gap:8px"></div>
       <!-- Items -->
@@ -327,18 +327,7 @@
 </div>
 
 <!-- ── Overlay turno cerrado ─────────────────────────────────── -->
-<div id="overlayTurnoCerrado" style="
-  display:none;
-  position:fixed;
-  top:0;left:0;right:0;bottom:0;
-  width:100%;height:100%;
-  background:var(--bg);
-  z-index:9999;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:24px;
-">
+<div id="overlayTurnoCerrado" class="overlay-centered" style="display:none;z-index:9999;gap:24px">
   <div style="font-size:28px;font-weight:700;letter-spacing:2px;color:var(--text)">
     ZERO<span style="color:#6366f1">POS</span>
   </div>
@@ -349,23 +338,14 @@
     <div style="font-size:20px;font-weight:600;color:var(--text);margin-bottom:8px">El turno está cerrado</div>
     <div style="font-size:14px;color:var(--text-dim)">Abre el turno para realizar ventas</div>
   </div>
-  <button onclick="_abrirModalTurno('abrir')" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer;letter-spacing:0.5px">
+  <button onclick="_abrirModalTurno('abrir')" style="background:var(--accent);border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer;letter-spacing:0.5px">
     ABRIR EL TURNO
   </button>
   <div id="overlayTurnoUsuario" style="font-size:13px;color:var(--text-dim)"></div>
 </div>
 
 <!-- ── Overlay colación ──────────────────────────────────────── -->
-<div id="overlayColacion" style="
-  display:none;
-  position:fixed;top:0;left:0;right:0;bottom:0;
-  background:var(--bg);
-  z-index:9000;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:16px;
-">
+<div id="overlayColacion" class="overlay-centered" style="display:none;z-index:9000;gap:16px">
   <div style="font-size:64px">☕</div>
   <div style="font-size:22px;font-weight:700;color:#f59e0b">En colación</div>
   <div id="overlayColacionNombre" style="font-size:18px;color:var(--text)"></div>
@@ -375,7 +355,7 @@
   <div style="font-size:13px;color:var(--text-dim);text-align:center;max-width:280px;margin-top:8px">
     Otro cajero puede abrir su turno mientras tanto
   </div>
-  <button onclick="_abrirModalTurno('abrir')" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer;margin-top:8px">
+  <button onclick="_abrirModalTurno('abrir')" style="background:var(--accent);border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer;margin-top:8px">
     ABRIR TURNO
   </button>
 </div>
@@ -383,9 +363,9 @@
 <!-- ── Modal apertura/cierre turno ──────────────────────────── -->
 <div class="modal-overlay" id="modalTurno" style="display:none;z-index:10000">
   <div class="modal" style="max-width:400px;width:100%;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+    <div class="modal-head">
       <div id="modalTurnoTitulo" style="font-size:15px;font-weight:700"></div>
-      <button onclick="document.getElementById('modalTurno').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
+      <button onclick="document.getElementById('modalTurno').style.display='none'" class="modal-x">✕</button>
     </div>
     <div style="overflow-y:auto;flex:1;padding:16px">
       <p id="modalTurnoDesc" style="font-size:13px;color:var(--text-dim);margin:0 0 16px"></p>
@@ -416,30 +396,30 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
           <!-- Billetes -->
           <div style="grid-column:1/-1;font-size:11px;color:var(--text-dim);font-weight:600;padding:4px 0 2px;border-bottom:1px solid var(--border)">BILLETES</div>
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$20.000</label>
-          <input type="number" min="0" value="0" data-denom="20000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$10.000</label>
-          <input type="number" min="0" value="0" data-denom="10000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$5.000</label>
-          <input type="number" min="0" value="0" data-denom="5000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$2.000</label>
-          <input type="number" min="0" value="0" data-denom="2000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$1.000</label>
-          <input type="number" min="0" value="0" data-denom="1000" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label class="denom-label">$20.000</label>
+          <input type="number" min="0" value="0" data-denom="20000" oninput="_calcTurnoTotal()" class="denom-input">
+          <label class="denom-label">$10.000</label>
+          <input type="number" min="0" value="0" data-denom="10000" oninput="_calcTurnoTotal()" class="denom-input">
+          <label class="denom-label">$5.000</label>
+          <input type="number" min="0" value="0" data-denom="5000" oninput="_calcTurnoTotal()" class="denom-input">
+          <label class="denom-label">$2.000</label>
+          <input type="number" min="0" value="0" data-denom="2000" oninput="_calcTurnoTotal()" class="denom-input">
+          <label class="denom-label">$1.000</label>
+          <input type="number" min="0" value="0" data-denom="1000" oninput="_calcTurnoTotal()" class="denom-input">
           <!-- Monedas -->
           <div style="grid-column:1/-1;font-size:11px;color:var(--text-dim);font-weight:600;padding:8px 0 2px;border-bottom:1px solid var(--border)">MONEDAS</div>
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$500</label>
-          <input type="number" min="0" value="0" data-denom="500" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$100</label>
-          <input type="number" min="0" value="0" data-denom="100" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$50</label>
-          <input type="number" min="0" value="0" data-denom="50" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
-          <label style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px">$10</label>
-          <input type="number" min="0" value="0" data-denom="10" oninput="_calcTurnoTotal()" style="padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:right;width:100%;box-sizing:border-box">
+          <label class="denom-label">$500</label>
+          <input type="number" min="0" value="0" data-denom="500" oninput="_calcTurnoTotal()" class="denom-input">
+          <label class="denom-label">$100</label>
+          <input type="number" min="0" value="0" data-denom="100" oninput="_calcTurnoTotal()" class="denom-input">
+          <label class="denom-label">$50</label>
+          <input type="number" min="0" value="0" data-denom="50" oninput="_calcTurnoTotal()" class="denom-input">
+          <label class="denom-label">$10</label>
+          <input type="number" min="0" value="0" data-denom="10" oninput="_calcTurnoTotal()" class="denom-input">
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:2px solid var(--border)">
           <span style="font-size:14px;font-weight:700">Total contado</span>
-          <span id="modalTurnoTotal" style="font-size:20px;font-weight:900;color:#22c55e">$0</span>
+          <span id="modalTurnoTotal" style="font-size:20px;font-weight:900;color:var(--accent)">$0</span>
         </div>
       </div>
     </div>
@@ -452,9 +432,9 @@
 <!-- ── Modal cola impresión ──────────────────────────────────── -->
 <div class="modal-overlay" id="modalImpresoraCola" onclick="if(event.target===this)this.style.display='none'" style="display:none">
   <div class="modal" style="max-width:420px;padding:0;overflow:hidden">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+    <div class="modal-head">
       <div style="font-size:14px;font-weight:700">🖨️ Cola de impresión</div>
-      <button onclick="document.getElementById('modalImpresoraCola').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px">✕</button>
+      <button onclick="document.getElementById('modalImpresoraCola').style.display='none'" class="modal-x">✕</button>
     </div>
     <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px">
       <button onclick="_colaReintentarTodos()" style="flex:1;padding:9px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">↺ Reintentar todos ahora</button>
@@ -513,16 +493,16 @@
   </div>
   <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px">
     <div id="menuVersion" style="font-size:11px;color:#2d3748;margin-bottom:4px">ZERO POS</div>
-    <button onclick="cerrarNavbar();_abrirModalTurno('cerrar')" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#94a3b8;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:12px">
+    <button onclick="cerrarNavbar();_abrirModalTurno('cerrar')" class="nav-foot-btn" style="color:#94a3b8">
       <span class="nav-icon-box" style="background:#1e1e3a"><i class="ti ti-lock nav-icono" style="color:#94a3b8;font-size:18px"></i></span> Cerrar turno
     </button>
-    <button onclick="cerrarNavbar();_irAColacion()" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #1e1e2e;color:#f59e0b;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:flex;align-items:center;gap:12px">
+    <button onclick="cerrarNavbar();_irAColacion()" class="nav-foot-btn" style="color:#f59e0b">
       <div style="width:28px;height:28px;background:#2a1f0a;border-radius:7px;display:flex;align-items:center;justify-content:center">
         <i class="ti ti-coffee" style="color:#f59e0b;font-size:15px"></i>
       </div>
       Ir a colación
     </button>
-    <button id="btnCerrarSesionMenu" onclick="cerrarSesion()" style="width:100%;padding:10px;background:#0f0f1a;border:1px solid #2d1515;color:#ef4444;border-radius:8px;font-size:14px;cursor:pointer;font-weight:600;display:none;align-items:center;gap:12px">
+    <button id="btnCerrarSesionMenu" onclick="cerrarSesion()" class="nav-foot-btn" style="display:none;color:#ef4444;border-color:#2d1515">
       <span class="nav-icon-box" style="background:#2d1515"><i class="ti ti-logout nav-icono" style="color:#ef4444;font-size:18px"></i></span> Cerrar sesión
     </button>
   </div>
@@ -607,8 +587,8 @@
 </div>
 
 <!-- Overlay: buscar cliente crédito -->
-<div id="modalBuscarCredito" style="display:none;position:fixed;inset:0;z-index:700;background:var(--bg);flex-direction:column">
-  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
+<div id="modalBuscarCredito" class="overlay-panel" style="display:none">
+  <div class="overlay-head">
     <button onclick="cerrarBuscarCredito()" style="background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:0 4px;line-height:1">←</button>
     <div style="font-weight:700;font-size:16px">Buscar cliente</div>
   </div>
@@ -621,8 +601,8 @@
 </div>
 
 <!-- Overlay: nuevo cliente crédito -->
-<div id="modalNuevoCredito" style="display:none;position:fixed;inset:0;z-index:700;background:var(--bg);flex-direction:column">
-  <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0">
+<div id="modalNuevoCredito" class="overlay-panel" style="display:none">
+  <div class="overlay-head">
     <button onclick="cerrarNuevoCredito()" style="background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:0 4px;line-height:1">←</button>
     <div style="font-weight:700;font-size:16px">Nuevo cliente ZERO CREDIT</div>
   </div>
