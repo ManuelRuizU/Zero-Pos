@@ -5,22 +5,28 @@
    ═════════════════════════════════════════════════════════════ */
 
 :root {
-  --bg:       #0f0f13;
+  --bg: #0d1117;
   --panel:    #17171f;
   --card:     #1e1e28;
   --card2:    #25252f;
-  --border:   #2e2e3a;
-  --accent:   #6366f1;
+  --border: #30363d;
+  --accent: #22c55e;
   --accent2:  #818cf8;
   --green:    #22c55e;
   --yellow:   #eab308;
   --red:      #ef4444;
   --blue:     #3b82f6;
   --gray:     #6b7280;
-  --text:     #f1f1f5;
+  --text: #e6edf3;
   --text-dim: #8b8b9e;
-  --radius:   10px;
+  --radius: 10px;
   --shadow:   0 2px 12px #0005;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --text2: #8b949e;
+  --accent-dim: rgba(34,197,94,0.12);
+  --danger: #f85149;
+  --warn: #d29922;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }

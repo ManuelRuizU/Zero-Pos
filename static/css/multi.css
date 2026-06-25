@@ -4,11 +4,18 @@
    Depende de: zero-tokens.css, zero-base.css
    ═════════════════════════════════════════════════════════════ */
 
-:root{
-  --bg:#0a0a0f;--surface:rgba(255,255,255,0.05);--surface2:rgba(255,255,255,0.08);
-  --border:rgba(255,255,255,0.1);--accent:#6366f1;--accent2:#818cf8;
-  --text:#f1f5f9;--text-dim:#94a3b8;--success:#22c55e;--danger:#ef4444;
-  --radius:14px;--blur:blur(20px);
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #21262d;
+  --border: #30363d;
+  --accent: #22c55e;--accent2:#818cf8;
+  --text: #e6edf3;--text-dim:#94a3b8;--success:#22c55e;
+  --danger: #f85149;
+  --radius: 10px;--blur:blur(20px);
+  --text2: #8b949e;
+  --accent-dim: rgba(34,197,94,0.12);
+  --warn: #d29922;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);
