@@ -1471,9 +1471,9 @@ function _toggleModifOpcion(gid, oid, esUnico, btn) {
   // refresh styles for this group
   document.querySelectorAll(`[data-gid="${gid}"]`).forEach(b => {
     const activo = _modifSelec[gid].includes(parseInt(b.dataset.oid));
-    b.style.background    = activo ? '#6366f1' : '#1e1e2e';
+    b.style.background    = activo ? '#22c55e' : '#1e1e2e';
     b.style.color         = activo ? '#fff'    : '#94a3b8';
-    b.style.borderColor   = activo ? '#6366f1' : '#2d2d44';
+    b.style.borderColor   = activo ? '#22c55e' : '#2d2d44';
   });
 }
 
@@ -1600,7 +1600,7 @@ function renderCarrito() {
       ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px">📦 ${item.lote_numero || 'L-'+item.lote_id}${item.vencimiento ? ' · ' + item.vencimiento.slice(5).replace('-','/') : ''}</div>`
       : '';
     const modifTag = item.modificadores_desc
-      ? `<div style="font-size:10px;color:#8b5cf6;margin-top:2px">└ ${item.modificadores_desc}</div>`
+      ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px">└ ${item.modificadores_desc}</div>`
       : '';
     const _stk = (item.modo_stock !== 'sin_stock' && item.stock != null) ? item.stock : Infinity;
     const _cantColor = item.cantidad > _stk ? '#ef4444' : item.cantidad === _stk ? '#facc15' : 'var(--text)';
@@ -1987,9 +1987,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (res.alerta) {
           alertaEl.innerHTML = `ℹ️ ${res.alerta}`;
-          alertaEl.style.background = 'rgba(99,102,241,.1)';
-          alertaEl.style.borderColor = 'rgba(99,102,241,.3)';
-          alertaEl.style.color = '#818cf8';
+          alertaEl.style.background = 'rgba(34,197,94,.08)';
+          alertaEl.style.borderColor = 'rgba(34,197,94,.3)';
+          alertaEl.style.color = '#22c55e';
           alertaEl.style.display = '';
         }
       } else {
@@ -2460,8 +2460,8 @@ function renderPasoCredito() {
         <div><div>Buscar cliente</div><div style="font-size:12px;font-weight:400;color:var(--text-dim)">Por nombre o teléfono</div></div>
       </button>
       <button onclick="flujoNuevoCliente()"
-        style="min-height:64px;background:rgba(99,102,241,.07);border:1px dashed var(--accent);border-radius:12px;color:var(--accent);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;padding:0 18px;width:100%;text-align:left;transition:.15s"
-        onmousedown="this.style.background='rgba(99,102,241,.15)'" onmouseup="this.style.background='rgba(99,102,241,.07)'" onmouseleave="this.style.background='rgba(99,102,241,.07)'">
+        style="min-height:64px;background:rgba(34,197,94,.07);border:1px dashed var(--accent);border-radius:12px;color:var(--accent);font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:14px;padding:0 18px;width:100%;text-align:left;transition:.15s"
+        onmousedown="this.style.background='rgba(34,197,94,.15)'" onmouseup="this.style.background='rgba(34,197,94,.07)'" onmouseleave="this.style.background='rgba(34,197,94,.07)'">
         <span style="font-size:26px;flex-shrink:0">➕</span>
         <div><div>Nuevo cliente</div><div style="font-size:12px;font-weight:400;color:var(--text-dim)">Registrar en ZERO CREDIT</div></div>
       </button>
@@ -3267,7 +3267,7 @@ const Escaner = {
     if (marco) marco.style.borderColor = '#22c55e';
     setTimeout(() => {
       if (fb) fb.classList.remove('show');
-      if (marco) marco.style.borderColor = '#6366f1';
+      if (marco) marco.style.borderColor = '#22c55e';
     }, 300);
   },
 
@@ -3529,7 +3529,7 @@ function agregarAlCarritoLocal(producto) {
 }
 
 function _renderProductosLista(lista, grid) {
-  const _COLORES_LISTA = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899'];
+  const _COLORES_LISTA = ['#0ea5e9','#14b8a6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899'];
   lista.forEach((p, idx) => {
     productoMap[p.id] = p;
     const modoStock = p.modo_stock || 'normal';
@@ -3818,7 +3818,7 @@ function _renderHistorial(ventas) {
   Object.keys(grupos).sort().reverse().forEach(fecha => {
     const dt = new Date(fecha + 'T12:00:00');
     const label = `${_DIAS[dt.getDay()]}, ${dt.getDate()} ${_MESES[dt.getMonth()]} ${dt.getFullYear()}`;
-    html += `<div style="padding:8px 16px;background:#0f0f1a;color:#6366f1;font-size:12px;font-weight:700;position:sticky;top:0;text-transform:capitalize;border-bottom:1px solid var(--border)">${label}</div>`;
+    html += `<div style="padding:8px 16px;background:#0f0f1a;color:var(--text-dim);font-size:12px;font-weight:700;position:sticky;top:0;text-transform:capitalize;border-bottom:1px solid var(--border)">${label}</div>`;
     grupos[fecha].forEach(v => {
       const estadoColor = v.estado === 'anulada' ? '#ef4444' : v.estado === 'completada' ? '#22c55e' : '#94a3b8';
       const hora = (v.creado_en || '').slice(11, 16);

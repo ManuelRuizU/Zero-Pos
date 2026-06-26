@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="manifest" href="/static/manifest.json">
-<meta name="theme-color" content="#6366f1">
+<meta name="theme-color" content="#22c55e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ZERO POS">
@@ -231,7 +231,7 @@
       <input class="form-field" id="delTel2" placeholder="Teléfono 2" type="tel" inputmode="numeric">
     </div>
     <input class="form-field" id="delEmail" type="email" placeholder="Email (opcional — para boleta)" style="margin-bottom:10px;">
-    <div id="delReceptorSugerencia" style="display:none;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;">
+    <div id="delReceptorSugerencia" style="display:none;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:12px;">
       <div id="delReceptorSugerenciaTexto" style="color:var(--accent2);margin-bottom:6px;"></div>
       <div style="display:flex;gap:8px;">
         <button onclick="aceptarDelReceptorSugerido()" style="flex:1;background:var(--accent);border:none;color:#fff;border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;font-family:inherit;">Sí</button>
@@ -355,7 +355,7 @@
 <!-- ── Overlay turno cerrado ─────────────────────────────────── -->
 <div id="overlayTurnoCerrado" class="overlay-centered" style="display:none;z-index:9999;gap:24px">
   <div style="font-size:28px;font-weight:700;letter-spacing:2px;color:var(--text)">
-    ZERO<span style="color:#6366f1">POS</span>
+    ZERO<span style="color:var(--accent)">POS</span>
   </div>
   <div style="width:100px;height:100px;border-radius:50%;border:3px solid var(--border);display:flex;align-items:center;justify-content:center;">
     <i class="ti ti-clock" style="font-size:52px;color:var(--text-dim)"></i>
@@ -450,7 +450,7 @@
       </div>
     </div>
     <div style="padding:14px 16px;border-top:1px solid var(--border)">
-      <button id="modalTurnoBtn" onclick="_confirmarTurno()" style="width:100%;padding:12px;border-radius:10px;border:none;background:#6366f1;color:white;font-size:15px;font-weight:700;cursor:pointer"></button>
+      <button id="modalTurnoBtn" onclick="_confirmarTurno()" style="width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer"></button>
     </div>
   </div>
 </div>
@@ -473,7 +473,7 @@
 <div id="navbarOverlay" class="navbar-overlay" onclick="cerrarNavbar()"></div>
 <div id="navbarDrawer" class="navbar-drawer">
   <div class="navbar-header">
-    <div style="font-size:22px;font-weight:900;letter-spacing:-1px"><span style="color:#fff">ZERO</span><span style="color:#6366f1">POS</span></div>
+    <div style="font-size:22px;font-weight:900;letter-spacing:-1px"><span style="color:#fff">ZERO</span><span style="color:var(--accent)">POS</span></div>
     <button class="btn-cerrar-navbar" onclick="cerrarNavbar()">✕</button>
   </div>
   <div id="menuCajeroNombre" style="font-size:13px;color:var(--text-dim);padding:8px 18px 4px"></div>
@@ -504,7 +504,7 @@
     </div>
     <div style="height:1px;background:var(--border);margin:0 8px"></div>
     <div onclick="window.open('/static/cliente.html','pantalla-cliente');cerrarNavbar()" class="nav-item">
-      <span class="nav-icon-box" style="background:#1a1a2e"><i class="ti ti-device-desktop nav-icono" style="color:#818cf8"></i></span>
+      <span class="nav-icon-box" style="background:#1e2530"><i class="ti ti-device-desktop nav-icono" style="color:#94a3b8"></i></span>
       <span class="nav-texto">Pantalla cliente</span>
     </div>
     <div id="btnImpresora" onclick="mostrarAlertaImpresora()" class="nav-item">
@@ -544,7 +544,7 @@
     <div id="modifGrupos"></div>
     <div style="display:flex;gap:10px;margin-top:20px">
       <button onclick="cerrarModalModificadores()" style="flex:1;padding:14px;background:#2d2d44;border:none;border-radius:12px;color:#94a3b8;font-size:14px;cursor:pointer">Cancelar</button>
-      <button id="btnConfirmarModif" onclick="confirmarModificadores()" style="flex:2;padding:14px;background:#6366f1;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Agregar al carrito</button>
+      <button id="btnConfirmarModif" onclick="confirmarModificadores()" style="flex:2;padding:14px;background:var(--accent);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer">Agregar al carrito</button>
     </div>
   </div>
 </div>
