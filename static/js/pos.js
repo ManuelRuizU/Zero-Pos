@@ -1740,7 +1740,8 @@ function toggleCarritoMobile() {
   if (isOpen) {
     cart.classList.remove('open');
     overlay.classList.remove('active');
-    fab?.classList.remove('oculto');
+    const _items = carrito.reduce((s, i) => s + i.cantidad, 0);
+    if (_items > 0) fab?.classList.remove('oculto');
     _blurActivo();
   } else {
     cart.classList.add('open');
