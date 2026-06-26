@@ -35,7 +35,7 @@ body{ height:100dvh; overflow:hidden; }
 .user-btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;
   padding:11px 8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);
   transition:all .15s;font-family:inherit;}
-.user-btn:hover,.user-btn.selected{background:rgba(99,102,241,.2);border-color:var(--accent);}
+.user-btn:hover,.user-btn.selected{background:rgba(34,197,94,.2);border-color:var(--accent);}
 .pin-row{display:flex;justify-content:center;gap:12px;margin:14px 0;}
 .pin-dot{width:15px;height:15px;border-radius:50%;border:2px solid var(--border);
   background:transparent;transition:all .2s;}
@@ -121,7 +121,7 @@ body{ height:100dvh; overflow:hidden; }
   justify-content:center;border-radius:12px;background:var(--surface);
   border:1px solid var(--border);padding:10px 8px;cursor:pointer;
   transition:transform .1s,background .1s;text-align:center;user-select:none;}
-.meson-card:active{transform:scale(.94);background:rgba(99,102,241,.2);}
+.meson-card:active{transform:scale(.94);background:rgba(34,197,94,.2);}
 .meson-card .mc-emoji{font-size:32px;margin-bottom:4px;line-height:1;}
 .meson-card .mc-nombre{font-size:12px;font-weight:600;line-height:1.3;
   color:var(--text);word-break:break-word;}
@@ -133,7 +133,7 @@ body{ height:100dvh; overflow:hidden; }
 #mesonCartFAB{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
   background:var(--accent);color:#fff;border:none;border-radius:50px;
   padding:14px 26px;font-size:15px;font-weight:700;
-  box-shadow:0 4px 20px rgba(99,102,241,.5);z-index:100;
+  box-shadow:0 4px 20px rgba(34,197,94,.5);z-index:100;
   cursor:pointer;display:none;white-space:nowrap;font-family:inherit;
   transition:transform .1s;}
 #mesonCartFAB:active{transform:translateX(-50%) scale(.97);}
@@ -226,7 +226,7 @@ body{ height:100dvh; overflow:hidden; }
 .pedido-nombre{font-size:14px;font-weight:600;}
 .pedido-total{font-size:12px;color:var(--text-dim);}
 .pedido-estado{font-size:12px;font-weight:700;padding:4px 9px;border-radius:20px;white-space:nowrap;}
-.estado-en_espera{background:rgba(99,102,241,.15);color:var(--accent2);}
+.estado-en_espera{background:rgba(34,197,94,.15);color:var(--accent2);}
 .estado-en_proceso{background:rgba(245,158,11,.15);color:var(--warning);}
 .estado-listo{background:rgba(34,197,94,.15);color:var(--success);}
 .pedidos-empty{text-align:center;color:var(--text-dim);font-size:14px;padding:40px;}

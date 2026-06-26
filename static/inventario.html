@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="manifest" href="/static/manifest.json">
-<meta name="theme-color" content="#6366f1">
+<meta name="theme-color" content="#22c55e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ZERO POS">
@@ -25,7 +25,7 @@
 
 <div class="topbar">
   <button class="btn-top" id="btnSidebarCat" onclick="abrirSidebarCat()" title="Categorías" style="font-size:18px;padding:6px 10px">☰</button>
-  <button onclick="window.location.href='/static/pos.html'" style="display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size:14px;cursor:pointer;padding:8px 14px;border-radius:8px;font-weight:600;transition:all .15s" onmouseenter="this.style.background='rgba(99,102,241,0.22)'" onmouseleave="this.style.background='rgba(99,102,241,0.12)'"><i class="ti ti-arrow-left" style="font-size:17px"></i> Volver a la Caja</button>
+  <button onclick="window.location.href='/static/pos.html'" style="display:flex;align-items:center;gap:6px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.4);color:#e2e8f0;font-size:14px;cursor:pointer;padding:8px 14px;border-radius:8px;font-weight:600;transition:all .15s" onmouseenter="this.style.background='rgba(34,197,94,0.22)'" onmouseleave="this.style.background='rgba(34,197,94,0.12)'"><i class="ti ti-arrow-left" style="font-size:17px"></i> Volver a la Caja</button>
   <div class="logo">ZERO<span>POS</span></div>
   <span style="font-size:13px;color:var(--text-dim);font-weight:600">Inventario</span>
   <div class="topbar-spacer"></div>
@@ -165,7 +165,7 @@
   </div>
 
   <!-- Sección financiera -->
-  <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px;margin-bottom:14px">
+  <div style="background:rgba(34,197,94,0.05);border:1px solid rgba(34,197,94,0.2);border-radius:12px;padding:14px;margin-bottom:14px">
     <div style="font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:12px">💰 Precios y márgenes</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div class="form-group" style="margin:0">
@@ -284,7 +284,7 @@
       <button type="button" class="modo-stock-btn" data-modo="sin_stock" onclick="selModoStock('sin_stock')">○ Sin stock</button>
     </div>
   </div>
-  <div id="modoProduccionOpts" style="display:none;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:12px;margin-top:4px">
+  <div id="modoProduccionOpts" style="display:none;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:12px;margin-top:4px">
     <div style="font-size:12px;color:var(--accent2);font-weight:600;margin-bottom:10px">🔄 Producción diaria</div>
     <div class="form-group" style="margin-bottom:10px">
       <label>Hora de reset diario</label>
@@ -301,7 +301,7 @@
   <div id="seccionModificadores" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
     <div style="font-size:13px;font-weight:700;color:var(--accent2);margin-bottom:10px">🎛️ Modificadores (toppings, salsas, puntos cocción...)</div>
     <div id="listaModificadoresAsignados" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
-    <div id="panelAgregarModif" style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px">
+    <div id="panelAgregarModif" style="background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:12px">
       <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px">Agregar grupo de modificadores:</div>
       <select id="selectModifDisponibles" style="width:100%;padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;margin-bottom:8px">
         <option value="">— Seleccionar grupo —</option>
@@ -470,7 +470,7 @@
 <div class="modal" style="max-width:660px">
   <div class="modal-title">📄 Revisión de factura <span id="facFuente" style="font-size:11px;font-weight:400;color:var(--text-dim)"></span></div>
 
-  <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:14px;margin-bottom:16px">
+  <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:14px;margin-bottom:16px">
     <div style="font-size:11px;color:var(--accent2);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">Proveedor</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="form-group" style="margin:0"><label>Nombre</label><input class="finput" id="facNombre" type="text" style="width:100%"></div>

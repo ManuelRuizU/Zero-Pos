@@ -11,7 +11,7 @@
   --card2:    #25252f;
   --border: #30363d;
   --accent: #22c55e;
-  --accent2:  #818cf8;
+  --accent2:  #94a3b8;
   --green:    #22c55e;
   --yellow:   #eab308;
   --red:      #ef4444;
@@ -149,7 +149,7 @@ body {
 .tipo-btn.active {
   border-color: var(--accent);
   color: var(--text);
-  background: #6366f115;
+  background: var(--accent)15;
 }
 
 /* ── Form fields ── */
@@ -182,7 +182,7 @@ select { cursor: pointer; }
   color: var(--green);
   display: none;
 }
-#clienteBadge.nuevo { background: #6366f115; border-color: #6366f144; color: var(--accent2); }
+#clienteBadge.nuevo { background: var(--accent)15; border-color: var(--accent)44; color: var(--accent2); }
 
 /* ── Products ── */
 #prodSearch {

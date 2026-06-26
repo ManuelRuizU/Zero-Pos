@@ -4,7 +4,7 @@
    ═════════════════════════════════════════════════════════════ */
 
 const _COLORES = [
-  '#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#0ea5e9'
+  '#22c55e','#22c55e','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#0ea5e9'
 ];
 let pin = '';
 let usuarioSeleccionado = null;
@@ -87,7 +87,7 @@ function mostrarPin(u) {
     const inicial = (u.nombre || '?')[0].toUpperCase();
     const color   = _avatarColor(u.nombre);
     avatar.textContent = inicial;
-    avatar.style.background = `linear-gradient(135deg, ${color}, #8b5cf6)`;
+    avatar.style.background = `linear-gradient(135deg, ${color}, #22c55e)`;
     document.getElementById('pinNombreUsuario').textContent = u.nombre;
     document.getElementById('pinSubtitulo').textContent = u.rol || 'Introduce tu PIN';
   } else {

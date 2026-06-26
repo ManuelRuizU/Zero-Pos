@@ -8,8 +8,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --negocio-color: #6366f1;
-  --negocio-color2: #8b5cf6;
+  --negocio-color: var(--accent);
+  --negocio-color2: var(--accent);
   --bg: #0d1117;
   --surface: #161b22;
   --surface2: #21262d;

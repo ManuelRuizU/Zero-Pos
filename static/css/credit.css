@@ -34,7 +34,7 @@ body { min-height: 100vh; }
       z-index: 10;
     }
     .logo { font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
-    .logo span { color: var(--accent, #6366f1); }
+    .logo span { color: var(--accent, var(--accent)); }
     .kpi-card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -109,12 +109,12 @@ body { min-height: 100vh; }
     .modal-btns { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
     .btn { padding:9px 18px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--text); cursor:pointer; font-size:14px; font-weight:600; transition:all .15s; }
     .btn:hover { background:var(--surface); }
-    .btn.primary { background:var(--accent,#6366f1); color:white; border-color:transparent; }
+    .btn.primary { background:var(--accent,var(--accent)); color:white; border-color:transparent; }
     .btn.primary:hover { opacity:0.9; }
     .btn.sm { padding:5px 12px; font-size:12px; }
     .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:#1e1e2e; border:1px solid var(--border); color:var(--text); padding:12px 22px; border-radius:12px; font-size:14px; font-weight:600; transition:transform .3s,opacity .3s; opacity:0; z-index:9999; white-space:nowrap; }
     .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
     .toast.ok { border-color:#22c55e; color:#22c55e; }
     .toast.error { border-color:#ef4444; color:#ef4444; }
-    .fab { position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%; background:var(--accent,#6366f1); color:white; border:none; font-size:24px; cursor:pointer; box-shadow:0 4px 20px rgba(0,0,0,0.4); z-index:100; display:flex; align-items:center; justify-content:center; transition:transform .15s; }
+    .fab { position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%; background:var(--accent,var(--accent)); color:white; border:none; font-size:24px; cursor:pointer; box-shadow:0 4px 20px rgba(0,0,0,0.4); z-index:100; display:flex; align-items:center; justify-content:center; transition:transform .15s; }
     .fab:hover { transform:scale(1.08); }

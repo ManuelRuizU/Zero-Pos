@@ -176,7 +176,7 @@ function _poblarSidebarCats() {
 }
 
 // ── Lista mobile-first de productos ───────────────────────────────────
-const _COLORES_PROD = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899'];
+const _COLORES_PROD = ['#22c55e','#22c55e','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899'];
 
 async function cargarProductos() {
   const q = document.getElementById('searchProd').value.trim();
@@ -204,7 +204,7 @@ async function cargarProductos() {
     return `<div class="prod-row ${bajoCls}" onclick="abrirDetalleProd(${p.id})">
       <div class="prod-row-img" style="background:${color}20;color:${color}">${imgHtml}</div>
       <div class="prod-row-info">
-        <div class="prod-row-nombre">${p.nombre}${p.marca_nombre?` <span style="font-size:11px;color:#818cf8">${p.marca_nombre}</span>`:''}</div>
+        <div class="prod-row-nombre">${p.nombre}${p.marca_nombre?` <span style="font-size:11px;color:#94a3b8">${p.marca_nombre}</span>`:''}</div>
         <div class="prod-row-meta">${stockInfo}</div>
       </div>
       <div class="prod-row-precio">${fmt(p.precio)}</div>
@@ -263,7 +263,7 @@ function abrirDetalleProd(id) {
       </div>
       ${p.sku?`<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">SKU: <span style="font-family:monospace;color:var(--text)">${p.sku}</span></div>`:''}
       ${p.categoria_nombre?`<div style="font-size:12px;color:var(--text-dim);margin-bottom:6px">Categoría: <span style="color:var(--text)">${p.categoria_nombre}</span></div>`:''}
-      ${p.marca_nombre?`<div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Marca: <span style="color:#818cf8;font-weight:600">${p.marca_nombre}</span></div>`:''}
+      ${p.marca_nombre?`<div style="font-size:12px;color:var(--text-dim);margin-bottom:16px">Marca: <span style="color:#94a3b8;font-weight:600">${p.marca_nombre}</span></div>`:''}
       <div style="margin-top:20px">
         <div style="display:flex;gap:10px;margin-bottom:8px">
           <button class="btn" style="flex:1;min-height:44px;font-size:13px" onclick="_cerrarDetalle();ajustarStock(${p.id},'${(p.nombre||'').replace(/'/g,"\\'")}',${p.stock})">📊 Stock</button>
@@ -320,8 +320,8 @@ function abrirEscanerVideo(onCodigo) {
   modal.innerHTML = `
     <div style="position:relative;width:100%;max-width:400px;padding:0 16px">
       <video id="videoScan" autoplay playsinline muted style="width:100%;border-radius:12px;display:block"></video>
-      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;aspect-ratio:2/1;border:3px solid #6366f1;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);pointer-events:none">
-        <div style="position:absolute;left:0;right:0;height:2px;background:#6366f1;animation:scanLine 1.5s ease-in-out infinite"></div>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70%;aspect-ratio:2/1;border:3px solid #22c55e;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,0.5);pointer-events:none">
+        <div style="position:absolute;left:0;right:0;height:2px;background:#22c55e;animation:scanLine 1.5s ease-in-out infinite"></div>
       </div>
       <p style="color:white;text-align:center;margin-top:16px;font-size:15px;opacity:.8">Apunta al código de barras</p>
       <button onclick="cerrarEscanerVideo()" style="position:absolute;top:4px;right:20px;background:rgba(0,0,0,0.6);color:white;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;line-height:36px;text-align:center">✕</button>
@@ -1416,9 +1416,9 @@ function _rpPaso3Form(c) {
         </button>` : '';
       const btnIcon = `
         <button onclick="estadoNuevoProd._usarFoto=false;renderPasoActual()"
-          style="flex:1;padding:10px;background:${sel===false?'rgba(99,102,241,.15)':'var(--surface)'};border:2px solid ${sel===false?'#6366f1':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
+          style="flex:1;padding:10px;background:${sel===false?'rgba(34,197,94,.15)':'var(--surface)'};border:2px solid ${sel===false?'#22c55e':'var(--border)'};border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px">
           <span style="font-size:42px;line-height:1">${catEmoji}</span>
-          <span style="font-size:11px;color:${sel===false?'#a5b4fc':'var(--text-dim)'}">🎨 Ícono auto</span>
+          <span style="font-size:11px;color:${sel===false?'#e2e8f0':'var(--text-dim)'}">🎨 Ícono auto</span>
         </button>`;
       return `
       <div style="margin-bottom:16px">
@@ -1520,7 +1520,7 @@ function _rpPaso4Guardar(c) {
     ? `<span style="display:inline-block;background:#0f2d1a;border:1px solid #22c55e;color:#86efac;border-radius:6px;padding:3px 10px;font-size:12px">🌐 Datos en línea</span>`
     : fuente === 'ocr_local'
     ? `<span style="display:inline-block;background:#2d1f0f;border:1px solid #f59e0b;color:#fcd34d;border-radius:6px;padding:3px 10px;font-size:12px">📷 Leído de foto</span>`
-    : `<span style="display:inline-block;background:#1a1a2e;border:1px solid #6366f1;color:#a5b4fc;border-radius:6px;padding:3px 10px;font-size:12px">✏️ Ingreso manual</span>`;
+    : `<span style="display:inline-block;background:#1a1a2e;border:1px solid #22c55e;color:#e2e8f0;border-radius:6px;padding:3px 10px;font-size:12px">✏️ Ingreso manual</span>`;
 
   const imgSrc = (() => {
     const sel = estadoNuevoProd._usarFoto;

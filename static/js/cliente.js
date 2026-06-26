@@ -73,8 +73,8 @@ class CarruselPublicidad {
           titulo:    s.titulo    || '',
           subtitulo: s.subtitulo || '',
           imagen_url: s.imagen_url || null,
-          color:  s.color  || '#6366f1',
-          color2: s.color2 || '#8b5cf6',
+          color:  s.color  || '#22c55e',
+          color2: s.color2 || '#22c55e',
           datos,
         }, '*');
       };
@@ -98,7 +98,7 @@ class CarruselPublicidad {
         el.style.animation = `kenBurns${idx % 2 === 0 ? '' : '2'} ${this.duracion}ms ease-out forwards`;
       }
     } else {
-      el.style.background = `linear-gradient(135deg, ${s.color || '#6366f1'}, ${s.color2 || '#8b5cf6'})`;
+      el.style.background = `linear-gradient(135deg, ${s.color || '#22c55e'}, ${s.color2 || '#22c55e'})`;
     }
 
     const overlay = document.createElement('div');

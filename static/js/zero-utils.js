@@ -65,7 +65,7 @@ async function fetchZero(url, options = {}) {
 /**
  * Genera un color determinista a partir de un string (para avatares).
  */
-const _PALETA_AVATARES = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#0ea5e9'];
+const _PALETA_AVATARES = ['#22c55e','#22c55e','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#0ea5e9'];
 function colorAvatar(nombre) {
   let h = 0;
   for (let i = 0; i < (nombre || '').length; i++) h = (h * 31 + nombre.charCodeAt(i)) & 0xFFFFFF;

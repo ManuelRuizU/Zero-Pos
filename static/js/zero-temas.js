@@ -9,7 +9,7 @@ const TEMAS = {
 };
 
 const COLORES_ZERO = {
-  zero:    { nombre: 'ZERO',    hex: '#6366f1' },
+  zero:    { nombre: 'ZERO',    hex: '#22c55e' },
   verde:   { nombre: 'Verde',   hex: '#22c55e' },
   azul:    { nombre: 'Azul',    hex: '#3b82f6' },
   rojo:    { nombre: 'Rojo',    hex: '#ef4444' },
@@ -21,7 +21,7 @@ function aplicarTema(tema, persistir = true) {
   document.documentElement.setAttribute('data-tema', tema);
   localStorage.setItem('zero-tema', tema);
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = tema === 'claro' ? '#f1f5f9' : '#6366f1';
+  if (meta) meta.content = tema === 'claro' ? '#f1f5f9' : '#22c55e';
   _actualizarBotonesTema(tema);
   if (persistir) {
     fetch('/api/config', {
@@ -95,13 +95,13 @@ function _actualizarCirculos(colorActivo) {
 
 /* ── Selector de color personalizado ────────────────────────────────── */
 
-let _colorTemporal = localStorage.getItem('zero-color-custom') || '#6366f1';
+let _colorTemporal = localStorage.getItem('zero-color-custom') || '#22c55e';
 let _colorOriginalState = null;
 
 function abrirSelectorColor() {
   document.getElementById('panelColor')?.remove();
 
-  _colorTemporal = localStorage.getItem('zero-color-custom') || '#6366f1';
+  _colorTemporal = localStorage.getItem('zero-color-custom') || '#22c55e';
   _colorOriginalState = {
     dataColor: document.documentElement.getAttribute('data-tema-color') || 'zero',
     inlineAccent: document.documentElement.style.getPropertyValue('--accent'),
@@ -140,9 +140,9 @@ function abrirSelectorColor() {
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
         ${[
-          ['#6366f1','ZERO'],['#22c55e','Verde'],['#3b82f6','Azul'],
+          ['#22c55e','ZERO'],['#22c55e','Verde'],['#3b82f6','Azul'],
           ['#ef4444','Rojo'],['#f97316','Naranja'],['#ec4899','Rosa'],
-          ['#8b5cf6','Violeta'],['#14b8a6','Teal'],['#f59e0b','Ámbar'],
+          ['#22c55e','Violeta'],['#14b8a6','Teal'],['#f59e0b','Ámbar'],
           ['#64748b','Gris'],
         ].map(([hex, nombre]) => `
           <button onclick="previsualizarColor('${hex}')" title="${nombre}" style="
@@ -157,7 +157,7 @@ function abrirSelectorColor() {
 
       <p style="color:var(--text-dim);font-size:12px;margin:0 0 8px">Código HEX</p>
       <div style="display:flex;gap:8px;margin-bottom:16px">
-        <input id="inputHex" type="text" value="${_colorTemporal}" placeholder="#6366f1"
+        <input id="inputHex" type="text" value="${_colorTemporal}" placeholder="#22c55e"
           maxlength="7" style="
             flex:1;padding:10px 12px;
             background:var(--surface2);border:1px solid var(--border);

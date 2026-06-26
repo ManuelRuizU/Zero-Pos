@@ -63,7 +63,7 @@ function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
       const estadoLabel = c.estado==='vencido'?'⚠️ Vencido':c.estado==='por_vencer'?'⏰ Por vencer':'✅ Al día';
       const diasLabel = c.dias_restantes != null ? (c.dias_restantes < 0 ? `Hace ${-c.dias_restantes}d` : `${c.dias_restantes}d`) : '';
       const avatar = c.nombre[0].toUpperCase();
-      const bgColor = typeof colorAvatar === 'function' ? colorAvatar(c.nombre) : '#6366f1';
+      const bgColor = typeof colorAvatar === 'function' ? colorAvatar(c.nombre) : '#22c55e';
       const waMsg = encodeURIComponent(`Hola ${c.nombre}, te recordamos que tienes una deuda de $${(c.deuda_actual||0).toLocaleString('es-CL')} pendiente. Por favor pasa a regularizar. ¡Gracias!`);
       return `
         <div class="cliente-item" onclick="abrirCliente(${c.id})">
@@ -100,7 +100,7 @@ function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
     const barColor   = c.estado==='vencido'?'#ef4444':c.pct_usado>=80?'#f97316':c.pct_usado>=50?'#f59e0b':'#22c55e';
     const estadoColor = c.estado==='vencido'?'#ef4444':c.estado==='por_vencer'?'#f59e0b':'#22c55e';
     const estadoLabel = c.estado==='vencido'?'⚠️ Vencido':c.estado==='por_vencer'?'⏰ Por vencer':'✅ Al día';
-    const avatarBg   = typeof colorAvatar==='function' ? colorAvatar(c.nombre) : '#6366f1';
+    const avatarBg   = typeof colorAvatar==='function' ? colorAvatar(c.nombre) : '#22c55e';
     const initial    = c.nombre.charAt(0).toUpperCase();
 
     const movs = (c.movimientos||[]).map(m => {
@@ -225,7 +225,7 @@ function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
             🖨️ Reimprimir
           </button>
           <button onclick="abrirModalAbono()"
-                  style="flex:2;padding:13px;background:var(--accent,#6366f1);
+                  style="flex:2;padding:13px;background:var(--accent,#22c55e);
                          color:#fff;border:none;border-radius:10px;
                          cursor:pointer;font-size:14px;font-weight:700;">
             💳 Registrar abono
@@ -323,7 +323,7 @@ function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
             <img src="data:image/png;base64,${r.qr_imagen}" style="width:200px;height:200px">
             <p>Límite: ${fmt(r.limite_credito)}</p>
             <p style="font-size:12px"><a href="${r.url_portal}">${r.url_portal}</a></p>
-            <button onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px">Imprimir tarjeta</button>
+            <button onclick="window.print()" style="padding:10px 20px;background:#22c55e;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px">Imprimir tarjeta</button>
           <script src="/static/js/credit.js"></script>
 </body></html>`);
           w.document.close();
@@ -358,7 +358,7 @@ function escH(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;
             <img src="data:image/png;base64,${r.qr_imagen}" style="width:200px;height:200px;display:block;margin:0 auto">
             <p style="font-size:14px">Límite: ${fmt(_clienteActual.limite_credito||0)}</p>
             <p style="font-size:11px;word-break:break-all"><a href="${r.url_portal}">${r.url_portal}</a></p>
-            <button onclick="window.print()" style="padding:10px 20px;background:#6366f1;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;margin-top:8px">🖨️ Imprimir</button>
+            <button onclick="window.print()" style="padding:10px 20px;background:#22c55e;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;margin-top:8px">🖨️ Imprimir</button>
           <script src="/static/js/credit.js"></script>
 </body></html>`);
         w.document.close();

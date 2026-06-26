@@ -85,7 +85,7 @@
   transition: background .12s; font-size: 13px;
 }
 .inv-cat-item:hover  { background: var(--surface); }
-.inv-cat-item.active { background: rgba(99,102,241,.12); color: var(--accent2); }
+.inv-cat-item.active { background: rgba(34,197,94,.12); color: var(--accent2); }
 .inv-cat-count {
   font-size: 11px; color: var(--text-dim);
   background: rgba(255,255,255,.06); border-radius: 10px; padding: 2px 7px;
@@ -124,12 +124,12 @@
 /* Active filter chip */
 .filtro-activo-chip {
   display: inline-flex; align-items: center; gap: 6px;
-  background: rgba(99,102,241,.15); border: 1px solid var(--accent);
+  background: rgba(34,197,94,.15); border: 1px solid var(--accent);
   border-radius: 20px; padding: 4px 10px;
   font-size: 12px; color: var(--accent2); font-weight: 600;
   margin: 8px 0 0 16px; cursor: pointer;
 }
-.filtro-activo-chip:hover { background: rgba(99,102,241,.25); }
+.filtro-activo-chip:hover { background: rgba(34,197,94,.25); }
 
 /* ── Desktop overrides ───────────────────────────────────────────────────── */
 @media (min-width: 768px) {

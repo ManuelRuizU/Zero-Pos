@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <link rel="manifest" href="/static/manifest.json">
-<meta name="theme-color" content="#6366f1">
+<meta name="theme-color" content="#22c55e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ZERO POS">
@@ -70,7 +70,7 @@
 
 <!-- ── Pantalla: ENTRADA ────────────────────────────────────── -->
 <div id="pantallaEntrada" class="pantalla-post">
-  <div style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#fff;margin-bottom:32px">ZERO<span style="color:#6366f1">POS</span></div>
+  <div style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#fff;margin-bottom:32px">ZERO<span style="color:var(--accent)">POS</span></div>
   <div style="font-size:15px;color:#64748b;margin-bottom:6px">Bienvenido/a</div>
   <div id="entradaNombre" style="font-size:32px;font-weight:700;color:#fff;margin-bottom:4px"></div>
   <div id="entradaHora" class="post-hora" style="font-size:56px;font-weight:200;color:#22c55e;margin-bottom:24px"></div>
@@ -83,7 +83,7 @@
   <div style="font-size:64px;margin-bottom:16px">🌙</div>
   <div style="font-size:15px;color:#64748b">Hasta mañana</div>
   <div id="salidaNombre" style="font-size:32px;font-weight:700;color:#fff;margin-bottom:4px"></div>
-  <div id="salidaHora" class="post-hora" style="font-size:48px;font-weight:200;color:#6366f1;margin-bottom:16px"></div>
+  <div id="salidaHora" class="post-hora" style="font-size:48px;font-weight:200;color:var(--accent);margin-bottom:16px"></div>
   <div id="salidaResumen" style="font-size:14px;color:#64748b;margin-bottom:12px"></div>
   <div style="font-size:16px;color:#e2e8f0;margin-bottom:32px">Buenas noches 👋</div>
   <button onclick="location.href='login.html'" style="background:#1e1e2e;border:1px solid #2d2d5e;color:#e2e8f0;font-size:15px;font-weight:600;padding:14px 40px;border-radius:12px;cursor:pointer">CERRAR</button>
@@ -138,7 +138,7 @@
     <div id="modalCambioPinError"
       style="color:#ef4444;font-size:13px;min-height:18px;margin-bottom:12px"></div>
     <button onclick="_guardarPinNuevo()"
-      style="width:100%;padding:14px;background:#6366f1;border:none;
+      style="width:100%;padding:14px;background:var(--accent);border:none;
         color:#fff;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer">
       Guardar PIN
     </button>

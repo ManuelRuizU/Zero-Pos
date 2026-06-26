@@ -30,7 +30,7 @@
   transition: all .15s; text-align: center;
 }
 .btn-tema:hover  { border-color: var(--accent); color: var(--text); }
-.btn-tema.activo { background: rgba(99,102,241,.18); border-color: var(--accent); color: var(--accent2); }
+.btn-tema.activo { background: rgba(34,197,94,.18); border-color: var(--accent); color: var(--accent2); }
 
 /* Paleta de colores */
 .paleta-colores {
@@ -47,7 +47,7 @@
 .circulo-color:hover  { transform: scale(1.1); }
 .circulo-color.activo { border-color: var(--text) !important; box-shadow: 0 0 0 2px var(--bg); }
 .circulo-custom {
-  background: conic-gradient(#ef4444,#f97316,#eab308,#22c55e,#3b82f6,#8b5cf6,#ec4899,#ef4444);
+  background: conic-gradient(#ef4444,#f97316,#eab308,#22c55e,#3b82f6,var(--accent),#ec4899,#ef4444);
 }
 
 /* Preview de tema en tiempo real */

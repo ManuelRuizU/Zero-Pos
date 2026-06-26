@@ -685,7 +685,7 @@ async function cargarAprendizaje() {
   const data = await fetch('/api/voz/aprendizaje', {credentials:'include'}).then(r=>r.json()).catch(()=>({acciones:[],productos:[],variantes:[]}));
 
   const todas = [
-    ...(data.acciones  || []).map(r => ({...r, tipo:'Acción',  tipo_key:'accion',   color:'#6366f1'})),
+    ...(data.acciones  || []).map(r => ({...r, tipo:'Acción',  tipo_key:'accion',   color:'#22c55e'})),
     ...(data.productos || []).map(r => ({...r, tipo:'Producto', tipo_key:'producto', color:'#22c55e'})),
     ...(data.variantes || []).map(r => ({...r, tipo:'Variante', tipo_key:'variante', color:'#f59e0b'})),
   ];
@@ -1268,7 +1268,7 @@ function _initApariencia() {
 
       <h3>Color principal</h3>
       <div class="paleta-colores">
-        <button class="circulo-color" data-color="zero"    style="background:#6366f1" onclick="aplicarColor('zero')"    title="ZERO (morado)"></button>
+        <button class="circulo-color" data-color="zero"    style="background:#22c55e" onclick="aplicarColor('zero')"    title="ZERO (morado)"></button>
         <button class="circulo-color" data-color="verde"   style="background:#22c55e" onclick="aplicarColor('verde')"   title="Verde"></button>
         <button class="circulo-color" data-color="azul"    style="background:#3b82f6" onclick="aplicarColor('azul')"    title="Azul"></button>
         <button class="circulo-color" data-color="rojo"    style="background:#ef4444" onclick="aplicarColor('rojo')"    title="Rojo"></button>
@@ -1276,7 +1276,7 @@ function _initApariencia() {
         <button class="circulo-color" data-color="rosa"    style="background:#ec4899" onclick="aplicarColor('rosa')"    title="Rosa"></button>
         <button onclick="abrirSelectorColor()" title="Color personalizado" style="
           width:44px;height:44px;border-radius:50%;
-          background:conic-gradient(#ef4444,#f97316,#f59e0b,#22c55e,#3b82f6,#8b5cf6,#ec4899,#ef4444);
+          background:conic-gradient(#ef4444,#f97316,#f59e0b,#22c55e,#3b82f6,#22c55e,#ec4899,#ef4444);
           border:3px solid var(--surface2);cursor:pointer;
           display:flex;align-items:center;justify-content:center;
           transition:transform 0.2s;flex-shrink:0;
@@ -1467,9 +1467,9 @@ function pubRenderLista() {
       ? `<img src="${s.imagen_url}" style="width:60px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">`
       : plantInfo
         ? `<div style="width:60px;height:40px;border-radius:6px;background:linear-gradient(135deg,${plantInfo.color},${plantInfo.color}99);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${plantInfo.icono}</div>`
-        : `<div style="width:60px;height:40px;border-radius:6px;background:linear-gradient(135deg,${s.color||'#6366f1'},${s.color2||'#8b5cf6'});flex-shrink:0"></div>`;
+        : `<div style="width:60px;height:40px;border-radius:6px;background:linear-gradient(135deg,${s.color||'#22c55e'},${s.color2||'#22c55e'});flex-shrink:0"></div>`;
     const badge = plantInfo
-      ? `<span style="font-size:10px;background:#6366f122;color:#818cf8;border-radius:6px;padding:1px 6px;border:1px solid #6366f140">🎨 ${plantInfo.nombre}</span>`
+      ? `<span style="font-size:10px;background:#22c55e22;color:#94a3b8;border-radius:6px;padding:1px 6px;border:1px solid #22c55e40">🎨 ${plantInfo.nombre}</span>`
       : `<span style="font-size:10px;background:#ffffff0a;color:var(--text-dim);border-radius:6px;padding:1px 6px;border:1px solid var(--border)">🖼️ Imagen</span>`;
     return `
     <div style="display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:10px;padding:10px 14px">
@@ -1491,7 +1491,7 @@ function pubRenderLista() {
 
 // ── Metadata de plantillas ────────────────────────────────────────────────────
 const PUB_PLANTILLAS = [
-  {id:'producto_destacado',  icono:'🛍️',  nombre:'Producto',  color:'#6366f1',
+  {id:'producto_destacado',  icono:'🛍️',  nombre:'Producto',  color:'#22c55e',
    campos:[
     {key:'titulo',    label:'Nombre producto', type:'text', src:'slide', ph:'Manzana Roja'},
     {key:'subtitulo', label:'Descripción',     type:'text', src:'slide', ph:'Oferta de hoy'},
@@ -1520,15 +1520,15 @@ const PUB_PLANTILLAS = [
     {key:'color1',   label:'Color 1',         type:'color',src:'datos', def:'#06b6d4'},
     {key:'color2',   label:'Color 2',         type:'color',src:'datos', def:'#0ea5e9'},
   ]},
-  {id:'metodos_pago',        icono:'💳',  nombre:'Pagos',     color:'#8b5cf6',
+  {id:'metodos_pago',        icono:'💳',  nombre:'Pagos',     color:'#22c55e',
    campos:[
     {key:'titulo',        label:'Título',        type:'text',    src:'datos', ph:'Aceptamos'},
     {key:'efectivo',      label:'Efectivo',      type:'checkbox',src:'datos', def:true},
     {key:'transferencia', label:'Transferencia', type:'checkbox',src:'datos', def:true},
     {key:'tarjeta',       label:'Tarjeta',       type:'checkbox',src:'datos', def:false},
     {key:'khipu',         label:'Khipu',         type:'checkbox',src:'datos', def:false},
-    {key:'color1',        label:'Color 1',       type:'color',   src:'datos', def:'#6366f1'},
-    {key:'color2',        label:'Color 2',       type:'color',   src:'datos', def:'#8b5cf6'},
+    {key:'color1',        label:'Color 1',       type:'color',   src:'datos', def:'#22c55e'},
+    {key:'color2',        label:'Color 2',       type:'color',   src:'datos', def:'#22c55e'},
   ]},
   {id:'horario',             icono:'🕐',  nombre:'Horario',   color:'#10b981',
    campos:[
@@ -1553,7 +1553,7 @@ const PUB_PLANTILLAS = [
     {key:'descripcion', label:'Descripción',     type:'text', src:'datos', ph:'Sin azúcar agregada'},
     {key:'precio',      label:'Precio',          type:'text', src:'datos', ph:'$1.490'},
     {key:'color1',      label:'Color 1',         type:'color',src:'datos', def:'#ec4899'},
-    {key:'color2',      label:'Color 2',         type:'color',src:'datos', def:'#8b5cf6'},
+    {key:'color2',      label:'Color 2',         type:'color',src:'datos', def:'#22c55e'},
     {key:'imagen',      label:'Imagen',          type:'file', src:'slide'},
   ]},
   {id:'solo_imagen',         icono:'🖼️', nombre:'Imagen',    color:'#64748b',
@@ -1564,8 +1564,8 @@ const PUB_PLANTILLAS = [
    campos:[
     {key:'nombre_negocio', label:'Nombre del negocio', type:'text', src:'datos', ph:'Mi Tienda'},
     {key:'frase',          label:'Frase del día',      type:'text', src:'datos', ph:'Tu compra de confianza'},
-    {key:'color1',         label:'Color 1',            type:'color',src:'datos', def:'#6366f1'},
-    {key:'color2',         label:'Color 2',            type:'color',src:'datos', def:'#8b5cf6'},
+    {key:'color1',         label:'Color 1',            type:'color',src:'datos', def:'#22c55e'},
+    {key:'color2',         label:'Color 2',            type:'color',src:'datos', def:'#22c55e'},
   ]},
 ];
 
@@ -1583,7 +1583,7 @@ function pubSeleccionarModo(modo) {
   const btnB = document.getElementById('pubBtnModoB');
   const secA = document.getElementById('pubSeccionA');
   const secB = document.getElementById('pubSeccionB');
-  const ACTIVE = 'border-color:#6366f1;background:#6366f130;';
+  const ACTIVE = 'border-color:#22c55e;background:#22c55e30;';
   const IDLE   = 'border-color:var(--border);background:var(--surface2);';
   if (btnA) btnA.style.cssText += modo === 'plantilla' ? ACTIVE : IDLE;
   if (btnB) btnB.style.cssText += modo === 'imagen'    ? ACTIVE : IDLE;
@@ -1653,12 +1653,12 @@ function pubSeleccionarPlantilla(pid) {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:12px';
     colorRow.forEach(campo => {
-      const val = campo.src==='datos' ? datos[campo.key] : (slide[campo.key] || campo.def || '#6366f1');
+      const val = campo.src==='datos' ? datos[campo.key] : (slide[campo.key] || campo.def || '#22c55e');
       const div = document.createElement('div');
       div.style.flex = '1';
       div.innerHTML = `
         <label style="${_LABEL_STYLE}">${campo.label}</label>
-        <input id="pubField_${campo.key}" type="color" value="${val||campo.def||'#6366f1'}"
+        <input id="pubField_${campo.key}" type="color" value="${val||campo.def||'#22c55e'}"
           style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px">`;
       row.appendChild(div);
     });
@@ -1711,8 +1711,8 @@ function pubAbrirModal(id) {
   const c2El = document.getElementById('pubB_color2');
   if (tEl)  tEl.value  = slide?.titulo    || '';
   if (sEl)  sEl.value  = slide?.subtitulo || '';
-  if (c1El) c1El.value = slide?.color     || '#6366f1';
-  if (c2El) c2El.value = slide?.color2    || '#8b5cf6';
+  if (c1El) c1El.value = slide?.color     || '#22c55e';
+  if (c2El) c2El.value = slide?.color2    || '#22c55e';
 
   document.getElementById('pubModal').style.display = 'flex';
 }
@@ -1748,8 +1748,8 @@ async function pubGuardarSlide() {
     });
     if (!fd.has('titulo'))    fd.append('titulo',    _pubSlideActual.titulo    || '');
     if (!fd.has('subtitulo')) fd.append('subtitulo', _pubSlideActual.subtitulo || '');
-    if (!fd.has('color'))     fd.append('color',     _pubSlideActual.color     || '#6366f1');
-    if (!fd.has('color2'))    fd.append('color2',    _pubSlideActual.color2    || '#8b5cf6');
+    if (!fd.has('color'))     fd.append('color',     _pubSlideActual.color     || '#22c55e');
+    if (!fd.has('color2'))    fd.append('color2',    _pubSlideActual.color2    || '#22c55e');
     fd.append('plantilla_id',    pid);
     fd.append('datos_plantilla', JSON.stringify(datosObj));
 

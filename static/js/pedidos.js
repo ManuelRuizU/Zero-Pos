@@ -662,8 +662,8 @@ document.getElementById('fDir').addEventListener('blur', async () => {
     }
     if (res.alerta) {
       alertaEl.innerHTML = `ℹ️ ${res.alerta}`;
-      alertaEl.style.background = 'rgba(99,102,241,.1)';
-      alertaEl.style.borderColor = 'rgba(99,102,241,.3)';
+      alertaEl.style.background = 'rgba(34,197,94,.1)';
+      alertaEl.style.borderColor = 'rgba(34,197,94,.3)';
       alertaEl.style.color = 'var(--accent2)';
       alertaEl.style.display = '';
     }
