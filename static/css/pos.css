@@ -491,7 +491,7 @@ body {
 /* ── Modal base ───────────────────────────── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.7);
-  backdrop-filter: blur(6px); z-index: 300;
+  backdrop-filter: blur(6px); z-index: 1000;
   display: none; align-items: center; justify-content: center;
   padding: 16px;
 }
@@ -1196,10 +1196,6 @@ body.cargando #overlayTurnoCerrado > * {
   letter-spacing: -0.3px; font-variant-numeric: tabular-nums;
 }
 .fab-cart.oculto { transform: scale(0); pointer-events: none; opacity: 0; }
-@keyframes fabCartPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
-@keyframes fcBadgeBounce { 0%,100%{transform:scale(1);} 50%{transform:scale(1.5);} }
-.fab-cart.pulsing { animation: fabCartPulse .4s ease; }
-.fab-cart.bounce .fc-count { animation: fcBadgeBounce .3s ease; }
 @media (min-width: 768px) { .fab-cart { display: none; } }
 
 /* ── Cart panel border-top verde (CAMBIO 9) ──────────────────── */
