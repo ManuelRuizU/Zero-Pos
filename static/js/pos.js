@@ -22,8 +22,22 @@
 let productos = [];
 let carrito = [];
 let cfgApp = {};  // config del negocio cargada al inicio
-let _meId  = null;
-let _meRol = null;
+let _meId     = null;
+let _meRol    = null;
+let _meNombre = '';
+
+function _actualizarTurnoBadge(abierto) {
+  const el = document.getElementById('turnoBadge');
+  if (!el) return;
+  if (abierto) {
+    const terminal = cfgApp.nombre_terminal || cfgApp.nombre_negocio || 'Caja';
+    document.getElementById('turnoBadgeTexto').textContent =
+      `Turno abierto · ${terminal} · ${_meNombre}`;
+    el.style.display = 'flex';
+  } else {
+    el.style.display = 'none';
+  }
+}
 let _fetchProductosCtrl = null;
 
 // ── Cart localStorage ────────────────────────────────────────
@@ -742,9 +756,12 @@ let _permisosPOS = {};
 async function init() {
   const me = await fetch('/api/auth/me', {credentials:'include'}).then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = 'login.html'; return; }
-  _meId  = me.id;
-  _meRol = me.rol || 'cajero';
-  document.getElementById('cajeroNombre').textContent = `👤 ${me.nombre}`;
+  _meId     = me.id;
+  _meRol    = me.rol || 'cajero';
+  _meNombre = me.nombre || '';
+  document.getElementById('cajeroNombre').textContent = me.nombre || '';
+  const _sAvatar = document.getElementById('sidebarAvatar');
+  if (_sAvatar) _sAvatar.textContent = (_meNombre[0] || '?').toUpperCase();
   _permisosPOS = me.permisos || {};
   _aplicarPermisosPOS(me);
 
@@ -894,6 +911,7 @@ async function verificarTurno(me) {
     document.getElementById('overlayTurnoCerrado').style.display = 'none';
   }
   document.body.classList.remove('cargando');
+  _actualizarTurnoBadge(!!t.turno);
 }
 
 async function _irAColacion() {
@@ -1004,6 +1022,7 @@ async function _confirmarTurno() {
       document.getElementById('overlayTurnoCerrado').style.display = 'none';
       document.getElementById('overlayColacion').style.display = 'none';
       showToast('Turno abierto — ¡Listo para vender!', 'success');
+      _actualizarTurnoBadge(true);
     } else {
       const d = await r.json();
       showToast(d.error || 'Error al abrir turno', 'error');
@@ -1243,7 +1262,7 @@ function _renderPaginaGrid(grid, pagina) {
     const modoStock = p.modo_stock || 'normal';
     const sinStock = !p.tiene_variantes && modoStock !== 'sin_stock' && p.stock <= 0;
     const div = document.createElement('div');
-    div.className = 'prod-card' + (sinStock ? ' sin-stock' : '');
+    div.className = 'product-card' + (sinStock ? ' sin-stock' : '');
     div.setAttribute('data-producto-id', p.id);
 
     // Ícono: imagen si existe, sino Tabler por categoría
@@ -1251,45 +1270,48 @@ function _renderPaginaGrid(grid, pagina) {
     let iconHTML;
     if (p.imagen_url) {
       iconHTML = `<img loading="lazy" src="${escH(p.imagen_url)}"` +
-        ` onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"` +
-        ` style="width:100%;height:100%;object-fit:cover;border-radius:12px;display:block">` +
-        `<i class="ti ${tablerIcon}" style="display:none;font-size:26px;color:var(--accent)"></i>`;
+        ` onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'"` +
+        ` style="width:48px;height:48px;object-fit:cover;border-radius:10px;display:block">` +
+        `<i class="ti ${tablerIcon}" style="display:none;font-size:36px;color:var(--accent)"></i>`;
     } else {
-      iconHTML = `<i class="ti ${tablerIcon}"></i>`;
+      iconHTML = `<i class="ti ${tablerIcon}" style="font-size:36px"></i>`;
     }
 
-    // Precio footer: variantes → "desde $X", normal → "$X"
+    // Meta: precio + badge variantes
     let precioHTML;
+    let varianteBadge = '';
     if (p.tiene_variantes) {
       const precioMin = (p._variantes && p._variantes.length)
         ? Math.min(...p._variantes.map(v => v.precio))
         : (p.precio || 0);
-      precioHTML = `<span class="prod-precio">desde ${fmt(precioMin)}</span>`;
+      const nVar = p._variantes ? p._variantes.length : '';
+      precioHTML = `<div class="price">desde ${fmt(precioMin)}</div>`;
+      varianteBadge = `<div class="badge-variants"><i class="ti ti-circle-dot" style="font-size:11px"></i>${nVar ? ' ' + nVar + ' var.' : ''}</div>`;
     } else {
-      precioHTML = `<span class="prod-precio">${fmt(p.precio)}</span>`;
+      precioHTML = `<div class="price">${fmt(p.precio)}</div>`;
     }
 
-    // Indicador de stock en footer
+    // Indicador de stock
     let stockHTML = '';
     if (sinStock) {
-      stockHTML = `<span class="prod-sin-stock">Sin stock</span>`;
+      stockHTML = `<div class="stock-out">Sin stock</div>`;
     } else if (modoStock === 'produccion') {
       const agotado = p.stock <= 0;
       if (agotado) {
         div.classList.add('sin-stock');
-        stockHTML = `<span class="prod-sin-stock">AGOTADO</span>`;
+        stockHTML = `<div class="stock-out">AGOTADO</div>`;
       } else {
-        stockHTML = `<span class="prod-stock-warn">Disponibles: ${p.stock}</span>`;
+        stockHTML = `<div class="stock-low">Disponibles: ${p.stock}</div>`;
       }
     } else if (modoStock === 'normal') {
       const bajo = p.stock > 0 && p.stock <= p.stock_minimo;
-      if (bajo) stockHTML = `<span class="prod-stock-warn">Quedan ${p.stock}</span>`;
+      if (bajo) stockHTML = `<div class="stock-low">Quedan ${p.stock}</div>`;
     }
 
     div.innerHTML = `
-      <div class="prod-icon">${iconHTML}</div>
-      <div class="prod-nombre">${escH(p.nombre)}</div>
-      <div class="prod-footer">${precioHTML}${stockHTML}</div>`;
+      <div class="picon">${iconHTML}</div>
+      <div class="pname">${escH(p.nombre)}</div>
+      <div class="meta">${precioHTML}${varianteBadge}${stockHTML}</div>`;
 
     // Click handlers — lógica sin cambios
     if (p.tiene_variantes) {
@@ -1315,7 +1337,7 @@ function _renderPaginaGrid(grid, pagina) {
     }
     btn.textContent = `Ver más (${_productosFiltrados.length - fin} restantes)`;
     btn.onclick = () => { _paginaProductos++; _renderPaginaGrid(grid, _paginaProductos); };
-    const cards = grid.querySelectorAll('.prod-card');
+    const cards = grid.querySelectorAll('.product-card');
     if (cards.length > 0) {
       if (_observerVScroll) _observerVScroll.disconnect();
       _observerVScroll = new IntersectionObserver(entries => {
@@ -2775,10 +2797,31 @@ function _iniciarPollingCheckout(checkoutId) {
 // ── Variantes (modal fallback) ───────────────────────────────
 let productoActual = null;
 
+// ── Variantes — bottom sheet Aurora v2 ──────────────────────────
+let _varianteSeleccionada = null;
+let _varianteQty = 1;
+let _varianteProd = null;
+
 async function abrirVariantes(prod) {
   productoActual = prod;
+  _varianteProd = prod;
+  _varianteSeleccionada = null;
+  _varianteQty = 1;
+
   document.getElementById('variantesTitulo').textContent = prod.nombre;
-  document.getElementById('variantesGrid').innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Cargando...</div>';
+  document.getElementById('variantesSubtitulo').textContent = 'Elige una presentación';
+  document.getElementById('variantesQtyDisplay').textContent = '1';
+  document.getElementById('variantesAddLabel').textContent = 'Selecciona una opción';
+  document.getElementById('variantesAddPrice').textContent = '';
+  document.getElementById('variantesAddBtn').disabled = true;
+
+  // Ícono del producto en el sheet header
+  const tablerIcon = getProductTablerIcon(prod);
+  document.getElementById('variantesSheetIcon').innerHTML =
+    `<i class="ti ${tablerIcon}"></i>`;
+
+  document.getElementById('variantesGrid').innerHTML =
+    '<div style="color:var(--text-dim);font-size:13px;padding:20px 22px;">Cargando...</div>';
   document.getElementById('modalVariantes').classList.add('active');
 
   const variantes = prod._variantes && prod._variantes.length
@@ -2786,29 +2829,90 @@ async function abrirVariantes(prod) {
     : await fetch(`/api/productos/${prod.id}/variantes`, {credentials:'include'})
         .then(r => r.json()).catch(() => []);
 
-  const grid = document.getElementById('variantesGrid');
+  const list = document.getElementById('variantesGrid');
   if (!variantes.length) {
-    grid.innerHTML = '<div style="color:var(--text-dim);font-size:13px;">Sin variantes disponibles</div>';
+    list.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px 22px;">Sin variantes disponibles</div>';
     return;
   }
-  grid.innerHTML = '';
-  variantes.forEach(v => {
-    const btn = document.createElement('div');
-    btn.className = 'variante-btn' + (v.stock <= 0 ? ' sin-stock' : '');
-    btn.innerHTML = `
-      <div class="variante-nombre">${v.nombre}</div>
-      <div class="variante-precio">${fmt(v.precio)}</div>
-      <div class="variante-stock">Stock: ${v.stock}</div>`;
-    if (v.stock > 0) {
-      btn.onclick = () => { agregarAlCarritoConVariante(prod, v); cerrarVariantes(); };
+
+  document.getElementById('variantesSubtitulo').textContent =
+    `${variantes.length} ${variantes.length === 1 ? 'formato' : 'formatos'} disponibles`;
+
+  list.innerHTML = '';
+  variantes.forEach((v, i) => {
+    const row = document.createElement('div');
+    const agotada = v.stock <= 0;
+    row.className = 'variant-row' + (agotada ? ' sin-stock' : '');
+    if (agotada) row.style.opacity = '0.45';
+
+    const stockBajo = !agotada && v.stock > 0 && v.stock < 5;
+    const esMasVendido = i === 0 && variantes.length > 2;
+    const badgeTop = esMasVendido ? '<span class="badge-top">MÁS VENDIDO</span>' : '';
+    const descLine = agotada
+      ? `<div class="vdesc" style="color:var(--danger)">Sin stock</div>`
+      : stockBajo
+        ? `<div class="vdesc low">⚠ quedan ${v.stock}</div>`
+        : `<div class="vdesc">Stock: ${v.stock}</div>`;
+
+    row.innerHTML = `
+      <i class="ti ti-circle vr-radio"></i>
+      <div class="vinfo">
+        <div class="vtop"><span class="vname">${escH(v.nombre)}</span>${badgeTop}</div>
+        ${descLine}
+      </div>
+      <div class="vprice">${fmt(v.precio)}</div>`;
+
+    if (!agotada) {
+      row.onclick = () => _seleccionarVariante(row, v);
     }
-    grid.appendChild(btn);
+    list.appendChild(row);
   });
+}
+
+function _seleccionarVariante(row, variante) {
+  document.querySelectorAll('#variantesGrid .variant-row').forEach(r => {
+    r.classList.remove('selected');
+    r.querySelector('.vr-radio').className = 'ti ti-circle vr-radio';
+  });
+  row.classList.add('selected');
+  row.querySelector('.vr-radio').className = 'ti ti-circle-check-filled vr-radio';
+  _varianteSeleccionada = variante;
+  _actualizarSheetBtn();
+}
+
+function _actualizarSheetBtn() {
+  if (!_varianteSeleccionada) return;
+  const qty = _varianteQty;
+  document.getElementById('variantesAddLabel').textContent =
+    `Agregar${qty > 1 ? ' ' + qty + ' ×' : ''} ${_varianteSeleccionada.nombre}`;
+  document.getElementById('variantesAddPrice').textContent =
+    fmt(_varianteSeleccionada.precio * qty);
+  document.getElementById('variantesAddBtn').disabled = false;
+}
+
+function _varianteStepper(delta) {
+  _varianteQty = Math.max(1, Math.min(99, _varianteQty + delta));
+  document.getElementById('variantesQtyDisplay').textContent = _varianteQty;
+  if (_varianteSeleccionada) _actualizarSheetBtn();
+}
+
+function _confirmarVarianteSeleccionada() {
+  if (!_varianteSeleccionada || !_varianteProd) return;
+  agregarAlCarritoConVariante(_varianteProd, _varianteSeleccionada);
+  if (_varianteQty > 1) {
+    const key = `${_varianteProd.id}_v${_varianteSeleccionada.id}`;
+    const idx = carrito.findIndex(i => i._key === key);
+    if (idx >= 0) { carrito[idx].cantidad += (_varianteQty - 1); renderCarrito(); }
+  }
+  cerrarVariantes();
 }
 
 function cerrarVariantes() {
   document.getElementById('modalVariantes').classList.remove('active');
   productoActual = null;
+  _varianteSeleccionada = null;
+  _varianteProd = null;
+  _varianteQty = 1;
   cerrarPanelSinTeclado();
 }
 

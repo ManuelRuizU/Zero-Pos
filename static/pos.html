@@ -21,32 +21,40 @@
 </head>
 <body class="cargando">
 
-<!-- Topbar — una sola fila limpia -->
+<!-- Topbar Aurora v2 -->
 <div class="topbar">
-  <button class="btn-top" onclick="abrirNavbar()" title="Menú" style="width:34px;height:34px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px" onmouseenter="this.style.background='#13132a'" onmouseleave="this.style.background='none'">
-    <i class="ti ti-menu-2" style="color:#818cf8;font-size:22px"></i>
+  <button class="btn-top" onclick="abrirNavbar()" title="Menú" style="width:34px;height:34px;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px">
+    <i class="ti ti-menu-2" style="color:var(--text-dim);font-size:22px"></i>
   </button>
   <div class="topbar-logo">ZERO<span>POS</span></div>
-  <button id="btnDashboard" onclick="location.href='admin.html'" title="Dashboard" class="btn-top" style="display:none;width:34px;height:34px;background:#1a2744;border:none;border-radius:8px;cursor:pointer;align-items:center;justify-content:center">
-    <i class="ti ti-layout-dashboard" style="color:#60a5fa;font-size:18px"></i>
-  </button>
+  <!-- Badge turno dinámico -->
+  <div id="turnoBadge" class="turno-badge" style="display:none">
+    <span class="pulse-dot"></span><span id="turnoBadgeTexto">Turno abierto</span>
+  </div>
   <div class="topbar-spacer"></div>
-  <!-- Cola de espera (visible solo cuando hay pedidos) -->
+  <!-- Notificaciones -->
   <button class="btn-top" id="btnColaEspera" onclick="toggleColaEspera()" title="Cola de espera" style="display:none;position:relative">
-    🔔<span id="colaCount" class="notif-badge" style="display:none"></span>
+    <i class="ti ti-bell" style="font-size:17px"></i><span id="colaCount" class="notif-badge" style="display:none"></span>
   </button>
-  <!-- Fiados vencidos (visible solo cuando hay pendientes) -->
   <button class="btn-top" id="btnCreditBadge" onclick="location.href='credit.html'" title="ZERO CREDIT — fiados vencidos" style="display:none;position:relative">
-    📒<span id="creditBadge" class="notif-badge">0</span>
+    <i class="ti ti-credit-card" style="font-size:17px"></i><span id="creditBadge" class="notif-badge">0</span>
   </button>
-  <!-- Cola impresión (visible solo cuando hay tickets pendientes) -->
   <button class="btn-top" id="btnImpresoraBadge" onclick="abrirModalImpresoraCola()" title="Tickets sin imprimir" style="display:none;position:relative">
-    🖨️<span id="impresoraBadge" class="notif-badge">0</span>
+    <i class="ti ti-printer" style="font-size:17px"></i><span id="impresoraBadge" class="notif-badge">0</span>
   </button>
+  <!-- Escanear (topbar) -->
+  <button class="scan-btn" onclick="Escaner?.abrir()" title="Escanear código de barras">
+    <i class="ti ti-barcode"></i>Escanear
+  </button>
+  <!-- Vista toggle -->
+  <div class="view-toggle">
+    <button id="btnVista" class="vt-btn" onclick="toggleVista()" title="Cambiar vista"></button>
+  </div>
   <!-- Usuario dropdown -->
   <div style="position:relative">
     <button class="btn-top" id="btnUserMenu" onclick="toggleUserMenu()">
-      👤 <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle"></span>
+      <i class="ti ti-user" style="font-size:15px"></i>
+      <span id="cajeroNombre" style="font-size:12px;color:var(--text-dim);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle"></span>
     </button>
     <div id="userMenuDropdown" class="user-dropdown">
       <button onclick="window.location.href='login.html'">🔄 Cambiar usuario</button>
@@ -59,6 +67,22 @@
 <div class="voz-escuche" id="vozEscuche"></div>
 
 <div class="layout">
+
+  <!-- Sidebar desktop (CAMBIO 3) — oculto en mobile via CSS -->
+  <aside class="sidebar">
+    <a href="/static/pos.html" class="logo" title="Caja"><i class="ti ti-bolt"></i></a>
+    <nav class="nav">
+      <a href="/static/pos.html"        class="sidebar-nav-icon active" title="Caja"><i class="ti ti-shopping-cart"></i></a>
+      <a href="/static/inventario.html" class="sidebar-nav-icon"        title="Inventario"><i class="ti ti-package"></i></a>
+      <a href="/static/admin.html"      class="sidebar-nav-icon"        title="Reportes"><i class="ti ti-chart-bar"></i></a>
+      <a href="/static/admin.html"      class="sidebar-nav-icon"        title="Clientes"><i class="ti ti-users"></i></a>
+      <a href="/static/admin.html"      class="sidebar-nav-icon"        title="Configuración"><i class="ti ti-settings"></i></a>
+    </nav>
+    <div class="user">
+      <div class="s-avatar" id="sidebarAvatar">?</div>
+      <button onclick="cerrarSesion()" class="sidebar-nav-icon" id="btnCerrarSesionMenu" title="Cerrar sesión" style="display:none"><i class="ti ti-logout"></i></button>
+    </div>
+  </aside>
 
   <!-- Panel productos -->
   <div class="productos-panel">
@@ -143,12 +167,14 @@
   </div>
 </div>
 
-<!-- Cart FAB (mobile) -->
-<button class="fab-carrito" id="fabCarrito" onclick="toggleCarritoMobile()">
-  🛒 <span class="fab-count" id="fabCount">0</span>
-  <span style="opacity:.6">·</span>
-  <span class="fab-total" id="fabTotal">$0</span>
-</button>
+<!-- Cart FAB mobile v2 (CAMBIO 8) -->
+<div class="fab-cart" id="fabCarrito" onclick="toggleCarritoMobile()">
+  <div class="ci">
+    <i class="ti ti-shopping-cart"></i>
+    <span class="fc-count" id="fabCount">0</span>
+  </div>
+  <span class="ftotal" id="fabTotal">$0</span>
+</div>
 
 <!-- Cart overlay (mobile) -->
 <div class="cart-overlay" id="cartOverlay" onclick="toggleCarritoMobile()"></div>
@@ -542,7 +568,7 @@
         <div class="metodo-icon">🏦</div>Khipu
       </div>
       <div class="metodo-btn" data-met="sumup" onclick="selMetodo(this)">
-        <div class="metodo-icon">📡</div>SumUp Air
+        <div class="metodo-icon">📡</div>SumUp 
       </div>
     </div>
     <div id="secSumup" style="display:none;padding:12px 0;text-align:center;color:var(--text-dim);font-size:13px">
@@ -705,12 +731,30 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="modalVariantes">
-  <div class="modal-variantes">
-    <div class="modal-title" id="variantesTitulo" style="font-size:17px;font-weight:700;margin-bottom:4px;"></div>
-    <div style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">Elige una presentación</div>
-    <div class="variantes-grid" id="variantesGrid"></div>
-    <button class="btn-cancelar" style="width:100%;margin-top:4px;" onclick="cerrarVariantes()">Cancelar</button>
+<!-- Selector variantes — bottom sheet (CAMBIO 6) -->
+<div class="modal-overlay sheet-overlay" id="modalVariantes">
+  <div class="variant-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head">
+      <div class="sicon" id="variantesSheetIcon"><i class="ti ti-bolt"></i></div>
+      <div class="stitle">
+        <div class="h" id="variantesTitulo"></div>
+        <div class="s" id="variantesSubtitulo">Elige una presentación</div>
+      </div>
+      <button class="close" onclick="cerrarVariantes()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="variant-list" id="variantesGrid"></div>
+    <div class="sheet-foot">
+      <div class="stepper">
+        <button class="sbtn" onclick="_varianteStepper(-1)"><i class="ti ti-minus"></i></button>
+        <span class="qty" id="variantesQtyDisplay">1</span>
+        <button class="sbtn plus" onclick="_varianteStepper(+1)"><i class="ti ti-plus"></i></button>
+      </div>
+      <button class="btn-sheet-add" id="variantesAddBtn" onclick="_confirmarVarianteSeleccionada()" disabled>
+        <span id="variantesAddLabel">Selecciona una opción</span>
+        <span id="variantesAddPrice"></span>
+      </button>
+    </div>
   </div>
 </div>
 

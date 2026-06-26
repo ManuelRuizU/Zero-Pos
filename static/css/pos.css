@@ -4,18 +4,26 @@
    Depende de: zero-tokens.css, zero-base.css, zero-components.css, zero-layout.css
 ═══════════════════════════════════════════════════════════════ */
 
-/* ── Tokens Aurora v2 — overrides para la caja ───────────────── */
+/* ── Tokens Aurora v2 — caja ─────────────────────────────────── */
 :root {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --surface2: #21262d;
-  --border: #30363d;
-  --text: #e6edf3;
-  --text2: #8b949e;
+  --bg: #0f0f1a;
+  --surface: #13132a;
+  --surface-2: #1a1a2e;
+  --surface2: #1a1a2e;
+  --border: #1e1e32;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --text-muted: #4b5563;
+  --text2: #94a3b8;
   --accent: #22c55e;
   --accent-dim: rgba(34,197,94,0.12);
-  --danger: #f85149;
-  --warn: #d29922;
+  --accent-border: rgba(34,197,94,0.3);
+  --amber: #f59e0b;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --radius-card: 16px;
+  --radius-chip: 20px;
+  --radius-modal: 20px 20px 0 0;
   --radius: 10px;
 }
 
@@ -445,12 +453,12 @@ body {
 }
 .descuento-input:focus { border-color: var(--accent); }
 .btn-cobrar {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: #fff;
-  border-radius: 14px; padding: 16px; font-size: 17px; font-weight: 700;
-  cursor: pointer; transition: all .2s; width: 100%;
-  box-shadow: 0 4px 20px rgba(99,102,241,.4);
+  background: var(--accent); border: none; color: #04140a;
+  border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 700;
+  cursor: pointer; transition: filter .15s; width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.btn-cobrar:hover { filter: brightness(1.12); transform: translateY(-1px); }
+.btn-cobrar:hover { filter: brightness(1.08); }
 .btn-cobrar:active { transform: scale(.98); }
 .btn-cobrar:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
@@ -945,4 +953,256 @@ body.cargando #overlayTurnoCerrado > * {
 .denom-label {
   font-size: 14px; font-weight: 600;
   display: flex; align-items: center; gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   AURORA v2 — Rediseño visual (CAMBIOS 2, 3, 4, 6, 8, 9)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Sidebar desktop 60px (CAMBIO 3) ─────────────────────────── */
+.sidebar { display: none; }
+@media (min-width: 768px) {
+  .sidebar {
+    width: 60px; flex-shrink: 0; background: #0c0c16;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px 0; z-index: 10;
+  }
+}
+.sidebar .logo {
+  width: 38px; height: 38px; border-radius: 11px;
+  background: var(--accent); color: #04140a;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; margin-bottom: 20px; flex-shrink: 0; text-decoration: none;
+}
+.sidebar .nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.sidebar-nav-icon {
+  width: 42px; height: 42px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 21px; color: var(--text-dim); cursor: pointer;
+  transition: all .15s; text-decoration: none;
+}
+.sidebar-nav-icon:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.sidebar-nav-icon.active { background: var(--accent-dim); color: var(--accent); }
+.sidebar .user { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.sidebar .s-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--surface-2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--text);
+}
+
+/* ── Turno badge + pulse (CAMBIO 4) ──────────────────────────── */
+.turno-badge {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--accent-dim); border-radius: 999px;
+  padding: 6px 13px; font-size: 12px; color: var(--accent);
+  font-weight: 600; white-space: nowrap; flex-shrink: 0;
+}
+@keyframes pulse {
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.55;transform:scale(.85)}
+}
+.pulse-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); display: inline-block;
+  animation: pulse 1.8s ease-in-out infinite; flex-shrink: 0;
+}
+
+/* ── Scan button topbar (CAMBIO 4) ───────────────────────────── */
+.scan-btn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--accent-dim); border: 1px solid var(--accent-border);
+  border-radius: 12px; color: var(--accent);
+  padding: 9px 14px; font-size: 13px; font-weight: 700;
+  cursor: pointer; flex-shrink: 0; white-space: nowrap;
+  transition: filter .15s;
+}
+.scan-btn:hover { filter: brightness(1.12); }
+
+/* ── View toggle (CAMBIO 4) ──────────────────────────────────── */
+.view-toggle {
+  display: flex; background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px; padding: 4px; gap: 2px; flex-shrink: 0;
+}
+.view-toggle .vt-btn {
+  width: 34px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim); cursor: pointer; font-size: 16px;
+  border: none; background: none; transition: all .15s;
+}
+.view-toggle .vt-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.view-toggle .vt-btn.active { background: var(--accent-dim); color: var(--accent); }
+
+/* ── Product card v2 (CAMBIO 5) ──────────────────────────────── */
+.product-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-card); padding: 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.product-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 28px -10px rgba(34,197,94,0.3);
+  border-color: var(--accent-border);
+}
+.product-card.sin-stock { opacity: .45; cursor: not-allowed; pointer-events: none; }
+@keyframes prodFlashCard {
+  0%,100%{box-shadow:none;} 50%{box-shadow:0 0 0 3px var(--accent);}
+}
+.product-card.flash { animation: prodFlashCard 0.2s ease; }
+.product-card .picon {
+  font-size: 40px; color: var(--accent); height: 48px;
+  display: flex; align-items: center; justify-content: center;
+}
+.product-card .picon img {
+  width: 48px; height: 48px; object-fit: cover; border-radius: 10px;
+}
+.product-card .pname {
+  font-size: 14px; font-weight: 600; color: var(--text);
+  text-align: center; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; width: 100%;
+}
+.product-card .meta {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px; margin-top: auto; text-align: center; width: 100%;
+}
+.price {
+  font-size: 16px; font-weight: 800; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.badge-variants {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(245,158,11,0.12); color: var(--amber);
+  border-radius: 8px; padding: 3px 9px; font-size: 11px; font-weight: 700;
+}
+.stock-low { font-size: 11px; font-weight: 600; color: var(--amber); }
+.stock-out { font-size: 11px; font-weight: 700; color: var(--danger); }
+
+/* ── Variant sheet (CAMBIO 6) ────────────────────────────────── */
+.modal-overlay.sheet-overlay {
+  align-items: flex-end; padding: 0;
+}
+.variant-sheet {
+  width: 100%; max-width: 520px; max-height: 90vh;
+  background: var(--surface); border-top: 1px solid var(--border);
+  border-radius: var(--radius-modal); display: flex; flex-direction: column;
+  box-shadow: 0 -20px 60px rgba(0,0,0,0.5);
+}
+.sheet-handle {
+  width: 36px; height: 4px; border-radius: 99px;
+  background: rgba(255,255,255,0.18); margin: 14px auto 4px; flex-shrink: 0;
+}
+.sheet-head {
+  display: flex; align-items: center; gap: 13px;
+  padding: 14px 22px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sheet-head .sicon {
+  width: 46px; height: 46px; border-radius: 12px; background: var(--surface-2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 25px; color: var(--accent); flex-shrink: 0;
+}
+.sheet-head .stitle { flex: 1; min-width: 0; }
+.sheet-head .stitle .h { font-size: 16px; font-weight: 700; }
+.sheet-head .stitle .s { font-size: 12.5px; color: var(--text-dim); margin-top: 1px; }
+.sheet-head .close {
+  width: 32px; height: 32px; border-radius: 9px; background: var(--surface-2);
+  border: 1px solid var(--border); display: flex; align-items: center;
+  justify-content: center; color: var(--text-dim); cursor: pointer;
+  font-size: 17px; flex-shrink: 0; line-height: 1;
+}
+.variant-list { flex: 1; overflow-y: auto; }
+.variant-row {
+  display: flex; align-items: center; gap: 13px; padding: 14px 22px;
+  border-bottom: 1px solid var(--border); cursor: pointer;
+  border-left: 3px solid transparent; transition: background .15s;
+}
+.variant-row:hover { background: rgba(255,255,255,0.02); }
+.variant-row .vr-radio { font-size: 21px; color: var(--text-muted); flex-shrink: 0; }
+.variant-row .vinfo { flex: 1; min-width: 0; }
+.variant-row .vtop { display: flex; align-items: center; gap: 8px; }
+.variant-row .vname { font-size: 14px; font-weight: 600; }
+.variant-row .vdesc { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+.variant-row .vdesc.low { color: var(--amber); }
+.variant-row .vprice {
+  font-size: 14.5px; font-weight: 700; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.badge-top {
+  font-size: 9px; font-weight: 800;
+  background: rgba(245,158,11,0.15); color: var(--amber);
+  border-radius: 5px; padding: 2px 7px; letter-spacing: .5px;
+}
+.variant-row.selected { background: rgba(34,197,94,0.08); border-left-color: var(--accent); }
+.variant-row.selected .vr-radio { color: var(--accent); }
+.sheet-foot {
+  display: flex; align-items: center; gap: 13px;
+  padding: 16px 22px; border-top: 1px solid var(--border);
+  background: #0c0c16; flex-shrink: 0;
+}
+.stepper {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface-2); border-radius: 11px; padding: 4px; flex-shrink: 0;
+}
+.stepper .sbtn {
+  width: 36px; height: 36px; border-radius: 7px; border: none;
+  background: transparent; color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; transition: background .15s;
+}
+.stepper .sbtn:hover { background: rgba(255,255,255,0.06); }
+.stepper .sbtn.plus { color: var(--accent); }
+.stepper .qty {
+  min-width: 28px; text-align: center;
+  font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.sheet-foot .btn-sheet-add {
+  flex: 1; border: none; cursor: pointer;
+  background: var(--accent); color: #04140a;
+  font: 700 15px system-ui,sans-serif; border-radius: 12px; padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  transition: filter .15s;
+}
+.sheet-foot .btn-sheet-add:hover { filter: brightness(1.08); }
+.sheet-foot .btn-sheet-add:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── FAB cart v2 (CAMBIO 8) ──────────────────────────────────── */
+.fab-cart {
+  position: fixed; bottom: 20px; right: 16px; z-index: 997;
+  display: flex; align-items: center; gap: 11px;
+  background: var(--accent); border-radius: 100px; padding: 13px 18px;
+  box-shadow: 0 14px 30px -8px rgba(34,197,94,0.5); cursor: pointer;
+  transition: transform .15s, opacity .2s;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.fab-cart:active { transform: scale(.95); }
+.fab-cart .ci {
+  position: relative; color: #04140a; font-size: 23px;
+  display: flex; align-items: center;
+}
+.fab-cart .ci .fc-count {
+  position: absolute; top: -7px; right: -9px;
+  background: var(--danger); color: #fff;
+  font-size: 10px; font-weight: 800; border-radius: 999px;
+  width: 17px; height: 17px;
+  display: flex; align-items: center; justify-content: center;
+}
+.fab-cart .ftotal {
+  font-size: 16px; font-weight: 800; color: #04140a;
+  letter-spacing: -0.3px; font-variant-numeric: tabular-nums;
+}
+.fab-cart.oculto { transform: scale(0); pointer-events: none; opacity: 0; }
+@keyframes fabCartPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
+@keyframes fcBadgeBounce { 0%,100%{transform:scale(1);} 50%{transform:scale(1.5);} }
+.fab-cart.pulsing { animation: fabCartPulse .4s ease; }
+.fab-cart.bounce .fc-count { animation: fcBadgeBounce .3s ease; }
+@media (min-width: 768px) { .fab-cart { display: none; } }
+
+/* ── Cart panel border-top verde (CAMBIO 9) ──────────────────── */
+@media (min-width: 768px) {
+  .carrito-panel { border-top: 2px solid var(--accent); }
 }
