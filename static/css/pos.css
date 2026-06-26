@@ -464,22 +464,43 @@ body {
 
 /* ── Cart FAB (mobile only) ───────────────── */
 .fab-carrito {
-  position: fixed; bottom: 20px; right: 16px; z-index: 997;
-  background: var(--accent); color: #fff; border: none;
-  border-radius: 28px; height: 56px; min-width: 56px; padding: 0 20px;
-  font-size: 16px; font-weight: 700; cursor: pointer;
-  box-shadow: 0 4px 20px rgba(99,102,241,.5);
-  display: flex; align-items: center; gap: 8px;
-  transition: transform .15s, box-shadow .15s, opacity .2s;
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #000;
+  border-radius: 100px;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 4px 20px rgba(34,197,94,0.4);
+  cursor: pointer;
+  z-index: 100;
+  white-space: nowrap;
+  transition: transform .2s, opacity .2s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }
-.fab-carrito:active { transform: scale(.95); box-shadow: 0 2px 10px rgba(99,102,241,.4); }
-.fab-carrito.pulsing { animation: fabPulse .4s ease; }
-.fab-carrito.oculto { transform: scale(0); pointer-events: none; opacity: 0; }
-@keyframes fabPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.08);} }
-@keyframes badge-bounce { 0%,100%{transform:scale(1);} 50%{transform:scale(1.5);} }
-.fab-carrito.bounce .fab-count { animation: badge-bounce .3s ease; }
+.fab-carrito:active { transform: translateX(-50%) scale(.95); }
+.fab-carrito.oculto { transform: translateX(-50%) scale(0); pointer-events: none; opacity: 0; }
+.fab-cantidad {
+  background: rgba(0,0,0,0.2);
+  border-radius: 20px;
+  padding: 2px 8px;
+  font-size: 13px;
+}
+.fab-monto {
+  font-size: 15px;
+  font-weight: 700;
+}
+.fab-cobrar {
+  font-size: 14px;
+  opacity: 0.85;
+}
 
 /* ── Cart overlay (mobile) ────────────────── */
 .cart-overlay {
@@ -1170,33 +1191,7 @@ body.cargando #overlayTurnoCerrado > * {
 .sheet-foot .btn-sheet-add:hover { filter: brightness(1.08); }
 .sheet-foot .btn-sheet-add:disabled { opacity: .4; cursor: not-allowed; }
 
-/* ── FAB cart v2 (CAMBIO 8) ──────────────────────────────────── */
-.fab-cart {
-  position: fixed; bottom: 20px; right: 16px; z-index: 997;
-  display: flex; align-items: center; gap: 11px;
-  background: var(--accent); border-radius: 100px; padding: 13px 18px;
-  box-shadow: 0 14px 30px -8px rgba(34,197,94,0.5); cursor: pointer;
-  transition: transform .15s, opacity .2s;
-  -webkit-tap-highlight-color: transparent; user-select: none;
-}
-.fab-cart:active { transform: scale(.95); }
-.fab-cart .ci {
-  position: relative; color: #04140a; font-size: 23px;
-  display: flex; align-items: center;
-}
-.fab-cart .ci .fc-count {
-  position: absolute; top: -7px; right: -9px;
-  background: var(--danger); color: #fff;
-  font-size: 10px; font-weight: 800; border-radius: 999px;
-  width: 17px; height: 17px;
-  display: flex; align-items: center; justify-content: center;
-}
-.fab-cart .ftotal {
-  font-size: 16px; font-weight: 800; color: #04140a;
-  letter-spacing: -0.3px; font-variant-numeric: tabular-nums;
-}
-.fab-cart.oculto { transform: scale(0); pointer-events: none; opacity: 0; }
-@media (min-width: 768px) { .fab-cart { display: none; } }
+@media (min-width: 768px) { .fab-carrito { display: none; } }
 
 /* ── Cart panel border-top verde (CAMBIO 9) ──────────────────── */
 @media (min-width: 768px) {

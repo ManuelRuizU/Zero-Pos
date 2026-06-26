@@ -1705,18 +1705,17 @@ function abrirInputDescuento() {
 
 function actualizarFAB() {
   const totalItems = carrito.reduce((s, i) => s + i.cantidad, 0);
+  const fab = document.getElementById('fabCarrito');
+  if (!fab) return;
+  if (totalItems === 0) {
+    fab.classList.add('oculto');
+    return;
+  }
   const fc = document.getElementById('fabCount');
   const ft = document.getElementById('fabTotal');
   if (fc) fc.textContent = totalItems;
   if (ft) ft.textContent = fmt(total);
-  const fab = document.getElementById('fabCarrito');
-  if (fab && totalItems > 0) {
-    // Pulse (whole FAB) + badge bounce
-    fab.classList.remove('pulsing', 'bounce');
-    void fab.offsetWidth;
-    fab.classList.add('pulsing', 'bounce');
-    setTimeout(() => fab.classList.remove('bounce'), 350);
-  }
+  fab.classList.remove('oculto');
 }
 
 // ── Helpers móvil ────────────────────────────────────────────
