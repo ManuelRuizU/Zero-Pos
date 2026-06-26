@@ -453,7 +453,7 @@ body {
 }
 .descuento-input:focus { border-color: var(--accent); }
 .btn-cobrar {
-  background: var(--accent); border: none; color: #04140a;
+  background: var(--accent); border: none; color: #fff;
   border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 700;
   cursor: pointer; transition: filter .15s; width: 100%;
   display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -469,7 +469,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   background: var(--accent);
-  color: #000;
+  color: #ffffff;
   border-radius: 100px;
   padding: 14px 24px;
   display: flex;
