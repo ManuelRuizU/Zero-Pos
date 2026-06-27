@@ -702,13 +702,25 @@ body {
 .vc-no { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim); border-radius: 10px; padding: 9px; font-size: 13px; cursor: pointer; }
 
 /* ── Toast ────────────────────────────────── */
-.toast {
-  position: fixed; top: 80px; bottom: auto; left: 50%; transform: translateX(-50%);
-  background: var(--surface2); border: 1px solid var(--accent); color: var(--text);
-  border-radius: 12px; padding: 12px 20px; font-size: 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.4); z-index: 300;
-  opacity: 0; pointer-events: none; transition: opacity .25s;
+.toast-producto, .snackbar, [class*="toast"] {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
+  z-index: 300;
+  pointer-events: none;
+  width: auto;
+  max-width: 280px;
+  opacity: 0;
+  transition: opacity .25s;
 }
 .toast.show { opacity: 1; }
 .toast.success { border-color: var(--success); color: var(--success); }
@@ -784,8 +796,7 @@ body {
   .fab-carrito { display: none; }
   .cart-overlay { display: none !important; }
 
-  /* Toast stays at top on desktop too */
-  .toast { top: 80px; bottom: auto; }
+
 }
 
 @media (min-width: 1200px) {
