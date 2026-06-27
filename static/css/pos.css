@@ -890,6 +890,14 @@ body {
   pointer-events: none;
 }
 #feedbackEscaner.show { opacity: 1; }
+#scannerCount {
+  position: absolute; top: 20px; left: 20px;
+  background: var(--accent); color: #000;
+  border-radius: 100px; padding: 8px 16px;
+  font-size: 14px; font-weight: 700;
+  white-space: nowrap; z-index: 10;
+  display: none;
+}
 /* Durante carga inicial: ocultar contenido hasta confirmar turno */
 body.cargando .layout,
 body.cargando .topbar {

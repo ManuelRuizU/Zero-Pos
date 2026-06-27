@@ -3106,6 +3106,7 @@ const Escaner = {
   _callback:     null,
   _procesando:   false,
   _zxingPromise: null,
+  _sesionItems:  0,
   INTERVALO_MS:  800,
 
   _cargarZXing() {
@@ -3140,6 +3141,9 @@ const Escaner = {
 
   async abrir(onCodigo) {
     this._callback = onCodigo || null;
+    this._sesionItems = 0;
+    const sc = document.getElementById('scannerCount');
+    if (sc) sc.style.display = 'none';
     if (!this.video) await this.init();
     document.getElementById('modalEscaner').style.display = 'flex';
     try {
@@ -3239,9 +3243,21 @@ const Escaner = {
       this.cerrar();
     } else {
       procesarCodigo(codigo);
+      this._sesionItems++;
       this._pausado = true;
-      setTimeout(() => { this._pausado = false; }, 1500);
+      setTimeout(() => {
+        this._pausado = false;
+        this._actualizarContadorScanner();
+      }, 1500);
     }
+  },
+
+  _actualizarContadorScanner() {
+    const el = document.getElementById('scannerCount');
+    if (!el) return;
+    const total = carrito.reduce((s, i) => s + i.precio_unit * i.cantidad, 0);
+    el.textContent = `🛒 ${this._sesionItems} · ${fmt(total)}`;
+    el.style.display = 'block';
   },
 
   _feedbackExito() {
