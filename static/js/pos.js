@@ -1521,8 +1521,6 @@ function _agregarProdAlCarrito(prod, modifDesc, precioExtra) {
       const stockDisp = prod.stock_real ?? prod.stock;
       if (modoStock !== 'sin_stock' && stockDisp > 0 && carrito[idx].cantidad > stockDisp) {
         showToast(`⚠️ Stock insuficiente — quedan ${stockDisp} unidades`, 'warning');
-      } else {
-        showToast('+ ' + prod.nombre, 'success');
       }
       return;
     }
@@ -1536,7 +1534,6 @@ function _agregarProdAlCarrito(prod, modifDesc, precioExtra) {
     _new: true,
   });
   renderCarrito();
-  showToast('+ ' + prod.nombre, 'success');
 }
 
 // ── Carrito ───────────────────────────────────────────────────
@@ -2934,7 +2931,6 @@ function agregarAlCarritoConVariante(prod, variante) {
     });
   }
   renderCarrito();
-  if (!_stockWarn) showToast(`+ ${prod.nombre} (${variante.nombre})`, 'success');
 }
 
 // ── Venta rápida ─────────────────────────────────────────────
