@@ -703,10 +703,10 @@ body {
 
 /* ── Toast ────────────────────────────────── */
 .toast {
-  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
-  background: #1e1e2e; border: 1px solid var(--border);
+  position: fixed; top: 80px; bottom: auto; left: 50%; transform: translateX(-50%);
+  background: var(--surface2); border: 1px solid var(--accent); color: var(--text);
   border-radius: 12px; padding: 12px 20px; font-size: 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.4); z-index: 500;
+  box-shadow: 0 8px 32px rgba(0,0,0,.4); z-index: 300;
   opacity: 0; pointer-events: none; transition: opacity .25s;
   white-space: nowrap;
 }
@@ -784,8 +784,8 @@ body {
   .fab-carrito { display: none; }
   .cart-overlay { display: none !important; }
 
-  /* Toast at normal bottom on desktop */
-  .toast { bottom: 24px; }
+  /* Toast stays at top on desktop too */
+  .toast { top: 80px; bottom: auto; }
 }
 
 @media (min-width: 1200px) {
