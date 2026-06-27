@@ -25,7 +25,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .logo{font-weight:700;font-size:16px;} .logo span{color:var(--accent);}
 .back{background:none;border:1px solid var(--border);color:var(--text-dim);
   border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;margin-left:auto;}
-.scanner-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;}
+.scanner-area{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;}
 video{width:100%;max-width:400px;border-radius:16px;border:2px solid var(--accent);}
 .manual-row{display:flex;gap:10px;width:100%;max-width:400px;}
 .cod-input{flex:1;background:var(--surface);border:1px solid var(--border);
@@ -41,3 +41,42 @@ video{width:100%;max-width:400px;border-radius:16px;border:2px solid var(--accen
 .btn-agregar{width:100%;background:var(--success);border:none;color:#fff;
   border-radius:10px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;}
 .msg{font-size:13px;color:var(--text-dim);text-align:center;}
+
+/* ── Toast de escaneo ──────────────────────────────────────── */
+#scannerToast {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 400;
+  opacity: 0;
+  transition: opacity .2s;
+  pointer-events: none;
+}
+#scannerToast.show { opacity: 1; }
+
+/* ── Badge carrito acumulado ───────────────────────────────── */
+#scannerBadge {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #000;
+  border-radius: 100px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  z-index: 400;
+  display: none;
+  cursor: pointer;
+}

@@ -31,11 +31,14 @@
     <div class="res-nombre" id="resNombre"></div>
     <div class="res-precio" id="resPrecio"></div>
     <div class="res-stock" id="resStock"></div>
-    <button class="btn-agregar" onclick="irAPos()">+ Agregar al carrito →</button>
+    <button class="btn-agregar" onclick="agregarYContinuar()">+ Agregar al carrito →</button>
   </div>
   <p class="msg" id="msg">Apunta la cámara al código de barras</p>
+  <div id="scannerToast"></div>
+  <div id="scannerBadge" onclick="irAPos()"></div>
 </div>
 
+<script src="/static/js/zero-utils.js"></script>
 <script src="/static/js/scanner.js"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@
    ═════════════════════════════════════════════════════════════ */
 
 let productoEncontrado = null;
+window._carrito = {};
 
 async function iniciarCamara() {
   try {
@@ -39,13 +40,58 @@ function mostrarProducto(p) {
   document.getElementById('resStock').textContent = `Stock: ${p.stock}`;
   document.getElementById('resultado').style.display='block';
   document.getElementById('msg').textContent='';
+  const yaEnCarrito = window._carrito[p.id];
+  mostrarToastScanner(p.nombre, yaEnCarrito ? yaEnCarrito.cantidad + 1 : 1);
+}
+
+function agregarYContinuar() {
+  if (!productoEncontrado) return;
+  const id = productoEncontrado.id;
+  if (window._carrito[id]) {
+    window._carrito[id].cantidad++;
+  } else {
+    window._carrito[id] = { ...productoEncontrado, cantidad: 1 };
+  }
+  actualizarBadgeScanner();
+  document.getElementById('resultado').style.display = 'none';
+  document.getElementById('codigoInput').value = '';
+  document.getElementById('codigoInput').focus();
+  productoEncontrado = null;
 }
 
 function irAPos() {
-  if (productoEncontrado) {
+  const items = Object.values(window._carrito || {});
+  if (items.length > 0) {
+    sessionStorage.setItem('scan_products', JSON.stringify(items));
+  } else if (productoEncontrado) {
     sessionStorage.setItem('scan_product', JSON.stringify(productoEncontrado));
   }
-  location.href='pos.html';
+  location.href = 'pos.html';
+}
+
+function mostrarToastScanner(nombre, cantidad) {
+  const toast = document.getElementById('scannerToast');
+  if (!toast) return;
+  toast.textContent = `✅ ${nombre} ×${cantidad}`;
+  toast.classList.add('show');
+  clearTimeout(window._scanToastTimer);
+  window._scanToastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 2000);
+}
+
+function actualizarBadgeScanner() {
+  const badge = document.getElementById('scannerBadge');
+  if (!badge) return;
+  const items = Object.values(window._carrito || {});
+  const total = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
+  const count = items.reduce((s, i) => s + i.cantidad, 0);
+  if (count > 0) {
+    badge.textContent = `🛒 ${count} · $${fmt(total)}`;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
 }
 
 iniciarCamara();
