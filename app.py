@@ -481,6 +481,19 @@ self.addEventListener('fetch', e => {{
         except Exception:
             return {"tipo": "store"}
 
+    # Páginas HTML que requieren sesión activa
+    _PAGINAS_PROTEGIDAS = {
+        '/static/pos.html', '/static/admin.html', '/static/inventario.html',
+        '/static/cliente.html', '/static/cocina.html', '/static/meson.html',
+        '/static/credit.html', '/static/pedidos.html',
+    }
+
+    @app.before_request
+    def proteger_paginas():
+        if request.path in _PAGINAS_PROTEGIDAS:
+            if not session.get('usuario_id'):
+                return redirect(url_for('static', filename='login.html'))
+
     @app.route("/")
     def index():
         return redirect(url_for("static", filename="login.html"))
