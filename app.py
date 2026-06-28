@@ -6,7 +6,7 @@ import logging
 from datetime import timedelta
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from flask import Flask, redirect, url_for, send_from_directory, request
+from flask import Flask, redirect, url_for, send_from_directory, request, session
 from flask_cors import CORS
 from flask_session import Session
 
