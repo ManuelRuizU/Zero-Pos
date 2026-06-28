@@ -300,6 +300,7 @@ async function cargarConfig() {
   setChk('cfg_modulo_delivery',         cfgActual.modulo_delivery);
   setChk('cfg_modo_mesas',                       cfgActual.modo_mesas);
   setChk('cfg_turno_contar_denominaciones',      cfgActual.turno_contar_denominaciones);
+  setChk('cfg_cajero_reemplazo_colacion',        cfgActual.cajero_reemplazo_colacion);
 
   set('cfg_google_maps_api_key', cfgActual.google_maps_api_key ? '••••••••' : '');
   set('cfg_delivery_tarifa_tipo',   cfgActual.delivery_tarifa_tipo || 'gratis');
@@ -351,7 +352,7 @@ const SECCIONES = {
   khipu:     ['khipu_receiver_id','khipu_secret'],
   sumup:     ['sumup_api_key','sumup_merchant_code','sumup_email','sumup_currency'],
   banco:     ['banco_titular','banco_nombre','banco_tipo_cuenta','banco_cuenta'],
-  pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa','modulo_delivery','modo_mesas','turno_contar_denominaciones'],
+  pantallas: ['pantalla_cliente_activa','pantalla_cocina_activa','modulo_delivery','modo_mesas','turno_contar_denominaciones','cajero_reemplazo_colacion'],
   delivery:  ['delivery_tarifa_tipo','delivery_precio_fijo','delivery_precio_km1','delivery_precio_km3','delivery_precio_km5','delivery_precio_mas5','delivery_texto'],
   backup:    ['backup_hora','backup_retener_dias','backup_email_destino','smtp_provider','smtp_host','smtp_port','smtp_user','backup_rclone_remote'],
 };

@@ -292,26 +292,38 @@ document.addEventListener('keydown', e => {
 })();
 
 async function adaptarModosPorEstado() {
-  function _soloEntrada() {
-    const btnSalida = document.getElementById('btnModoSalida');
-    const btnIniCol = document.getElementById('btnModoSalidaColacion');
-    const btnFinCol = document.getElementById('btnModoEntradaColacion');
-    if (btnSalida) btnSalida.style.display = 'none';
-    if (btnIniCol) btnIniCol.style.display = 'none';
-    if (btnFinCol) btnFinCol.style.display = 'none';
-    seleccionarModo('entrada');
+  const BTNS = {
+    entrada:          document.getElementById('btnModoEntrada'),
+    salida:           document.getElementById('btnModoSalida'),
+    salida_colacion:  document.getElementById('btnModoSalidaColacion'),
+    entrada_colacion: document.getElementById('btnModoEntradaColacion'),
+  };
+
+  function _mostrarSolo(...modos) {
+    Object.entries(BTNS).forEach(([m, btn]) => {
+      if (btn) btn.style.display = modos.includes(m) ? '' : 'none';
+    });
+    // Respetar ?modo= si es visible, sino seleccionar el primero
+    const urlModo = new URLSearchParams(window.location.search).get('modo');
+    seleccionarModo((urlModo && modos.includes(urlModo)) ? urlModo : modos[0]);
   }
 
   try {
-    const r = await fetch('/api/auth/turno/actual', {credentials: 'include'});
-    if (r.status === 401) {
-      _soloEntrada();
-      return;
+    const r = await fetch('/api/auth/turno/estado', {credentials: 'include'});
+    const data = await r.json();
+
+    if (data.estado === 'cerrado') {
+      _mostrarSolo('entrada');
+    } else if (data.estado === 'abierto') {
+      _mostrarSolo('salida_colacion', 'salida');
+    } else if (data.estado === 'colacion_activa') {
+      data.cajero_reemplazo
+        ? _mostrarSolo('entrada_colacion', 'entrada')
+        : _mostrarSolo('entrada_colacion');
     }
-    // 200 con o sin turno → sesión activa → todos los botones visibles
   } catch(e) {
-    // Sin sesión o error de red → solo mostrar ENTRADA
-    _soloEntrada();
+    // Error de red → fallback seguro: solo ABRIR TURNO
+    _mostrarSolo('entrada');
   }
 }
 

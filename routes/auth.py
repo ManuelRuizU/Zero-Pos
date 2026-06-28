@@ -474,6 +474,36 @@ def turno_actual():
         return jsonify({"turno": dict(turno)})
 
 
+@auth_bp.route("/turno/estado", methods=["GET"])
+def turno_estado_publico():
+    """Endpoint público — devuelve estado del turno para la pantalla de login."""
+    with db_session() as conn:
+        cfg = conn.execute(
+            "SELECT valor FROM config WHERE clave='cajero_reemplazo_colacion'"
+        ).fetchone()
+        cajero_reemplazo = bool(cfg and cfg['valor'] == '1')
+
+        turno = conn.execute(
+            "SELECT id, usuario_id FROM turnos WHERE estado='abierto' ORDER BY apertura DESC LIMIT 1"
+        ).fetchone()
+
+        if not turno:
+            return jsonify({"estado": "cerrado", "cajero_reemplazo": cajero_reemplazo})
+
+        ultima = conn.execute(
+            """SELECT tipo FROM asistencia
+               WHERE usuario_id=? AND DATE(fecha)=DATE('now')
+               ORDER BY fecha DESC LIMIT 1""",
+            (turno['usuario_id'],)
+        ).fetchone()
+
+        en_colacion = ultima and ultima['tipo'] == 'salida_colacion'
+        return jsonify({
+            "estado": "colacion_activa" if en_colacion else "abierto",
+            "cajero_reemplazo": cajero_reemplazo
+        })
+
+
 # ── Usuarios CRUD (admin) ─────────────────────────────────────────────────────
 
 @auth_bp.route("/usuarios", methods=["GET"])
