@@ -1216,3 +1216,32 @@ body.cargando #overlayTurnoCerrado > * {
 @media (min-width: 768px) {
   .carrito-panel { border-top: 2px solid var(--accent); }
 }
+
+/* ── Modal confirm genérico (colación, etc.) ─────────────────── */
+.modal-confirm-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 9990;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.modal-confirm-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; padding: 32px 24px;
+  text-align: center; width: 100%; max-width: 320px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.modal-confirm-icon  { font-size: 40px; }
+.modal-confirm-titulo { font-size: 18px; font-weight: 700; color: var(--text); }
+.modal-confirm-msg   { font-size: 14px; color: var(--text-dim); }
+.modal-confirm-btns  { display: flex; gap: 12px; margin-top: 8px; }
+.modal-confirm-btn-cancel {
+  flex: 1; padding: 12px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface2);
+  color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.modal-confirm-btn-ok {
+  flex: 1; padding: 12px; border-radius: 12px;
+  border: none; background: var(--accent);
+  color: #000; font-size: 14px; font-weight: 700; cursor: pointer;
+}

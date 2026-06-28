@@ -914,9 +914,24 @@ async function verificarTurno(me) {
   _actualizarTurnoBadge(!!t.turno);
 }
 
-async function _irAColacion() {
-  if (!confirm('¿Confirmas que vas a colación?')) return;
+function confirmarColacion(callback) {
+  const modal = document.getElementById('modalConfirmColacion');
+  if (!modal) {
+    if (confirm('¿Confirmas que vas a colación?')) callback();
+    return;
+  }
+  modal.style.display = 'flex';
+  document.getElementById('btnConfirmColacionOk').onclick = () => {
+    modal.style.display = 'none';
+    callback();
+  };
+  document.getElementById('btnConfirmColacionCancel').onclick = () => {
+    modal.style.display = 'none';
+  };
+}
 
+async function _irAColacion() {
+  confirmarColacion(async () => {
   const rAsist = await fetch('/api/auth/asistencia', {
     method: 'POST',
     credentials: 'include',
@@ -938,6 +953,7 @@ async function _irAColacion() {
   document.getElementById('overlayColacionHora').textContent = hora;
   document.getElementById('overlayColacion').style.display = 'flex';
   document.getElementById('overlayTurnoCerrado').style.display = 'none';
+  }); // fin confirmarColacion
 }
 
 async function _abrirModalTurno(modo) {
