@@ -291,7 +291,32 @@ document.addEventListener('keydown', e => {
   if (m && _MODO_BTN[m]) seleccionarModo(m);
 })();
 
+async function adaptarModosPorEstado() {
+  function _soloEntrada() {
+    const btnSalida = document.getElementById('btnModoSalida');
+    const btnIniCol = document.getElementById('btnModoSalidaColacion');
+    const btnFinCol = document.getElementById('btnModoEntradaColacion');
+    if (btnSalida) btnSalida.style.display = 'none';
+    if (btnIniCol) btnIniCol.style.display = 'none';
+    if (btnFinCol) btnFinCol.style.display = 'none';
+    seleccionarModo('entrada');
+  }
+
+  try {
+    const r = await fetch('/api/auth/turno/actual', {credentials: 'include'});
+    if (r.status === 401) {
+      _soloEntrada();
+      return;
+    }
+    // 200 con o sin turno → sesión activa → todos los botones visibles
+  } catch(e) {
+    // Sin sesión o error de red → solo mostrar ENTRADA
+    _soloEntrada();
+  }
+}
+
 cargarUsuarios();
+adaptarModosPorEstado();
 
 
 let _cambiarPinUsuarioId = null;
