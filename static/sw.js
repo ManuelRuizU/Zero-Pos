@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zeropos-v23';
+const CACHE_NAME = 'zeropos-v24';
 const URLS_TO_CACHE = [
   '/static/pos.html',
   '/static/admin.html',
@@ -60,16 +60,25 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) {
     return;
   }
-  // Archivos estáticos: cache-first
+  // Network-first con fallback a caché.
+  // Safari lanza "Response served by service worker has redirections" si el SW
+  // devuelve una respuesta redirigida (302 de Flask → login). Con {redirect:'follow'}
+  // el fetch sigue la redirección y response.redirected queda true; en ese caso
+  // devolvemos la respuesta sin cachear para que Safari no la rechace.
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      return cached || fetch(event.request).then(response => {
-        if (response.ok && url.pathname.startsWith('/static/')) {
+    fetch(event.request, {redirect: 'follow'})
+      .then(response => {
+        // NO cachear redirects — Safari los rechaza como respuesta SW
+        if (response.redirected || response.type === 'opaqueredirect') {
+          return response;
+        }
+        // Solo cachear respuestas 200 de archivos estáticos
+        if (response.status === 200 && url.pathname.startsWith('/static/')) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });
