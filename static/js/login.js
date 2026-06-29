@@ -315,10 +315,16 @@ async function adaptarModosPorEstado() {
   };
 
   function _mostrarSolo(...modos) {
+    const urlModo = new URLSearchParams(window.location.search).get('modo');
+    // Si venimos de cerrar turno/colación el modo URL debe ganar aunque el turno
+    // ya esté cerrado — no revertir a 'entrada' en ese caso.
+    const MODOS_SALIDA = ['salida', 'salida_colacion'];
+    if (urlModo && MODOS_SALIDA.includes(urlModo) && !modos.includes(urlModo)) {
+      modos = [urlModo];
+    }
     Object.entries(BTNS).forEach(([m, btn]) => {
       if (btn) btn.style.display = modos.includes(m) ? '' : 'none';
     });
-    const urlModo = new URLSearchParams(window.location.search).get('modo');
     seleccionarModo((urlModo && modos.includes(urlModo)) ? urlModo : modos[0]);
     // Revelar grid ahora que el estado es conocido — elimina el flash de 4 botones
     document.querySelector('.modo-grid')?.classList.add('visible');
