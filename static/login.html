@@ -70,78 +70,59 @@
 
 <!-- ── Pantalla: ENTRADA ────────────────────────────────────── -->
 <div id="pantallaEntrada" class="pantalla-post">
-  <div style="font-size:28px;font-weight:900;letter-spacing:-1px;color:#fff;margin-bottom:32px">ZERO<span style="color:var(--accent)">POS</span></div>
-  <div style="font-size:15px;color:#64748b;margin-bottom:6px">Bienvenido/a</div>
-  <div id="entradaNombre" style="font-size:32px;font-weight:700;color:#fff;margin-bottom:4px"></div>
-  <div id="entradaHora" class="post-hora" style="font-size:56px;font-weight:200;color:#22c55e;margin-bottom:24px"></div>
-  <div id="entradaHorasSemana" style="font-size:13px;color:#64748b;margin-bottom:32px"></div>
-  <button onclick="location.href='pos.html'" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer">IR A LA CAJA</button>
+  <div class="post-logo-txt">ZERO<span>POS</span></div>
+  <div class="post-sub-lbl">Bienvenido/a</div>
+  <div id="entradaNombre" class="post-nombre-grande"></div>
+  <div id="entradaHora" class="post-hora"></div>
+  <div id="entradaHorasSemana" class="post-semana-txt"></div>
+  <button onclick="location.href='pos.html'" class="btn-post-ir">IR A LA CAJA</button>
 </div>
 
 <!-- ── Pantalla: SALIDA ─────────────────────────────────────── -->
 <div id="pantallaSalida" class="pantalla-post">
-  <div style="font-size:64px;margin-bottom:16px">🌙</div>
-  <div style="font-size:15px;color:#64748b">Hasta mañana</div>
-  <div id="salidaNombre" style="font-size:32px;font-weight:700;color:#fff;margin-bottom:4px"></div>
-  <div id="salidaHora" class="post-hora" style="font-size:48px;font-weight:200;color:var(--accent);margin-bottom:16px"></div>
-  <div id="salidaResumen" style="font-size:14px;color:#64748b;margin-bottom:12px"></div>
-  <div style="font-size:16px;color:#e2e8f0;margin-bottom:32px">Buenas noches 👋</div>
-  <button onclick="location.href='login.html'" style="background:#1e1e2e;border:1px solid #2d2d5e;color:#e2e8f0;font-size:15px;font-weight:600;padding:14px 40px;border-radius:12px;cursor:pointer">CERRAR</button>
+  <div class="post-emoji">🌙</div>
+  <div class="post-sub-lbl">Hasta mañana</div>
+  <div id="salidaNombre" class="post-nombre-grande"></div>
+  <div id="salidaHora" class="post-hora"></div>
+  <div id="salidaResumen" class="post-resumen-txt"></div>
+  <div class="post-buenas-txt">Buenas noches 👋</div>
+  <button onclick="location.href='login.html'" class="btn-post-cerrar">CERRAR</button>
 </div>
 
 <!-- ── Pantalla: SALIDA COLACIÓN ────────────────────────────── -->
 <div id="pantallaSalidaColacion" class="pantalla-post">
-  <div style="font-size:64px;margin-bottom:16px">☕</div>
-  <div id="salidaColNombre" style="font-size:28px;font-weight:700;color:#fff;margin-bottom:8px"></div>
-  <div style="font-size:16px;color:#64748b;margin-bottom:8px">Buen provecho</div>
-  <div id="salidaColHora" style="font-size:18px;color:#f59e0b;margin-bottom:8px"></div>
-  <div style="font-size:14px;color:#64748b;margin-bottom:32px">Recuerda regresar en 30–60 minutos</div>
-  <button onclick="location.href='login.html'" style="background:#1e1e2e;border:1px solid #2d2d5e;color:#e2e8f0;font-size:15px;font-weight:600;padding:14px 40px;border-radius:12px;cursor:pointer">CERRAR</button>
+  <div class="post-emoji">☕</div>
+  <div id="salidaColNombre" class="post-nombre-med"></div>
+  <div class="post-sub-colacion">Buen provecho</div>
+  <div id="salidaColHora" class="post-hora-warn"></div>
+  <div class="post-sub-sm">Recuerda regresar en 30–60 minutos</div>
+  <button onclick="location.href='login.html'" class="btn-post-cerrar">CERRAR</button>
 </div>
 
 <!-- ── Pantalla: ENTRADA COLACIÓN ───────────────────────────── -->
 <div id="pantallaEntradaColacion" class="pantalla-post">
-  <div style="font-size:64px;margin-bottom:16px">👋</div>
-  <div id="entradaColNombre" style="font-size:28px;font-weight:700;color:#fff;margin-bottom:8px"></div>
-  <div style="font-size:16px;color:#64748b;margin-bottom:8px">Bienvenido de vuelta</div>
-  <div id="entradaColMinutos" style="font-size:22px;font-weight:700;color:#f59e0b;margin-bottom:8px"></div>
-  <div id="entradaColHora" style="font-size:18px;color:#22c55e;margin-bottom:32px"></div>
-  <button onclick="location.href='pos.html'" style="background:#22c55e;border:none;color:#000;font-size:16px;font-weight:700;padding:16px 48px;border-radius:12px;cursor:pointer">IR A LA CAJA</button>
+  <div class="post-emoji">👋</div>
+  <div id="entradaColNombre" class="post-nombre-med"></div>
+  <div class="post-sub-colacion">Bienvenido de vuelta</div>
+  <div id="entradaColMinutos" class="post-minutos-warn"></div>
+  <div id="entradaColHora" class="post-hora-ok"></div>
+  <button onclick="location.href='pos.html'" class="btn-post-ir">IR A LA CAJA</button>
 </div>
 
 <!-- ── Modal cambio PIN obligatorio ───────────────────────────── -->
-<div id="modalCambioPin" style="
-  display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,0.85);
-  z-index:9999;
-  align-items:center;justify-content:center;
-">
-  <div style="background:#1e1e2e;border-radius:16px;padding:32px 24px;
-    max-width:320px;width:90%;text-align:center">
-    <div style="font-size:36px;margin-bottom:12px">⚠️</div>
-    <div style="font-size:18px;font-weight:700;color:#f1f5f9;margin-bottom:8px">
-      Cambia tu PIN
-    </div>
-    <div style="font-size:13px;color:#94a3b8;margin-bottom:24px;line-height:1.5">
-      Por seguridad debes establecer un PIN personal antes de continuar
-    </div>
+<div id="modalCambioPin" class="modal-cambio-pin-overlay">
+  <div class="modal-cambio-pin-box">
+    <div class="modal-cambio-pin-icon">⚠️</div>
+    <div class="modal-cambio-pin-titulo">Cambia tu PIN</div>
+    <div class="modal-cambio-pin-sub">Por seguridad debes establecer un PIN personal antes de continuar</div>
     <input id="inputPinNuevo" type="password" inputmode="numeric"
       maxlength="4" placeholder="Nuevo PIN (4 dígitos)"
-      style="width:100%;box-sizing:border-box;padding:12px;border-radius:8px;
-        border:1px solid #334155;background:#0f172a;color:#f1f5f9;
-        font-size:16px;text-align:center;margin-bottom:10px">
+      class="modal-cambio-pin-input">
     <input id="inputPinConfirmar" type="password" inputmode="numeric"
       maxlength="4" placeholder="Confirmar PIN"
-      style="width:100%;box-sizing:border-box;padding:12px;border-radius:8px;
-        border:1px solid #334155;background:#0f172a;color:#f1f5f9;
-        font-size:16px;text-align:center;margin-bottom:16px">
-    <div id="modalCambioPinError"
-      style="color:#ef4444;font-size:13px;min-height:18px;margin-bottom:12px"></div>
-    <button onclick="_guardarPinNuevo()"
-      style="width:100%;padding:14px;background:var(--accent);border:none;
-        color:#fff;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer">
-      Guardar PIN
-    </button>
+      class="modal-cambio-pin-input">
+    <div id="modalCambioPinError"></div>
+    <button onclick="_guardarPinNuevo()" class="modal-cambio-pin-btn">Guardar PIN</button>
   </div>
 </div>
 

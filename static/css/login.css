@@ -26,7 +26,7 @@ body {
   background: #0f0f1a;
   background-image:
     radial-gradient(ellipse at 30% 20%, rgba(34,197,94,0.15) 0%, transparent 50%),
-    radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.1) 0%, transparent 50%);
+    radial-gradient(ellipse at 70% 80%, rgba(34,197,94,0.08) 0%, transparent 50%);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -311,7 +311,10 @@ body {
   gap: 8px;
   width: min(280px, 90vw);
   margin-bottom: 24px;
+  opacity: 0;
+  transition: opacity .2s;
 }
+.modo-grid.visible { opacity: 1; }
 .btn-modo {
   padding: 10px 6px;
   background: rgba(255,255,255,0.04);
@@ -346,4 +349,60 @@ body {
 .post-hora {
   font-variant-numeric: tabular-nums;
   letter-spacing: -2px;
+}
+
+/* Elementos comunes post-login */
+.post-logo-txt { font-size:28px; font-weight:900; letter-spacing:-1px; color:#fff; margin-bottom:32px; }
+.post-logo-txt span { color: var(--accent); }
+.post-emoji         { font-size:64px; margin-bottom:16px; }
+.post-sub-lbl       { font-size:15px; color:#64748b; margin-bottom:6px; }
+.post-nombre-grande { font-size:32px; font-weight:700; color:#fff; margin-bottom:4px; }
+.post-nombre-med    { font-size:28px; font-weight:700; color:#fff; margin-bottom:8px; }
+.post-semana-txt    { font-size:13px; color:#64748b; margin-bottom:32px; }
+.post-resumen-txt   { font-size:14px; color:#64748b; margin-bottom:12px; }
+.post-buenas-txt    { font-size:16px; color:#e2e8f0; margin-bottom:32px; }
+.post-sub-sm        { font-size:14px; color:#64748b; margin-bottom:32px; }
+.post-sub-colacion  { font-size:16px; color:#64748b; margin-bottom:8px; }
+.post-minutos-warn  { font-size:22px; font-weight:700; color:var(--warn); margin-bottom:8px; }
+.post-hora-warn     { font-size:18px; color:var(--warn); margin-bottom:8px; }
+.post-hora-ok       { font-size:18px; color:var(--accent); margin-bottom:32px; }
+#entradaHora        { font-size:56px; font-weight:200; color:var(--accent); margin-bottom:24px; }
+#salidaHora         { font-size:48px; font-weight:200; color:var(--accent); margin-bottom:16px; }
+.btn-post-ir {
+  background:var(--accent); border:none; color:#000;
+  font-size:16px; font-weight:700; padding:16px 48px;
+  border-radius:12px; cursor:pointer;
+}
+.btn-post-cerrar {
+  background:var(--surface2); border:1px solid var(--border); color:var(--text);
+  font-size:15px; font-weight:600; padding:14px 40px;
+  border-radius:12px; cursor:pointer;
+}
+
+/* ── Modal cambio PIN ────────────────────────────────────────── */
+.modal-cambio-pin-overlay {
+  display: none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.85); z-index:9999;
+  align-items:center; justify-content:center;
+}
+.modal-cambio-pin-box {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:16px; padding:32px 24px;
+  max-width:320px; width:90%; text-align:center;
+}
+.modal-cambio-pin-icon   { font-size:36px; margin-bottom:12px; }
+.modal-cambio-pin-titulo { font-size:18px; font-weight:700; color:var(--text); margin-bottom:8px; }
+.modal-cambio-pin-sub    { font-size:13px; color:var(--text2); margin-bottom:24px; line-height:1.5; }
+.modal-cambio-pin-input  {
+  width:100%; box-sizing:border-box; display:block;
+  padding:12px; border-radius:8px;
+  border:1px solid var(--border); background:var(--bg); color:var(--text);
+  font-size:16px; text-align:center; margin-bottom:10px;
+}
+#inputPinConfirmar       { margin-bottom:16px; }
+#modalCambioPinError     { color:var(--danger); font-size:13px; min-height:18px; margin-bottom:12px; }
+.modal-cambio-pin-btn    {
+  width:100%; padding:14px;
+  background:var(--accent); border:none; color:#000;
+  font-size:15px; font-weight:700; border-radius:10px; cursor:pointer;
 }

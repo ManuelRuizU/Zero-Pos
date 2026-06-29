@@ -162,6 +162,7 @@ async function intentarLogin() {
   try {
     const body = {pin, modo: _modoAcceso};
     if (usuarioSeleccionado) body.usuario_id = usuarioSeleccionado.id;
+    else if (_cambiarPinUsuarioId) body.usuario_id = _cambiarPinUsuarioId;
     const r = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -207,7 +208,7 @@ async function _mostrarPantallaPost(data) {
       horasSemana = `Esta semana: ${hrs} hrs trabajadas de ${pact} hrs pactadas`;
     } catch(e) {}
 
-    // Si turno cerrado → ir directo a pos.html (el overlay turno-cerrado lo cubre allá)
+    // Si turno cerrado → mostrar brevemente "Abriendo caja..." y redirigir
     if (rol !== 'cocina') {
       let turnoAbierto = false;
       try {
@@ -215,7 +216,11 @@ async function _mostrarPantallaPost(data) {
         turnoAbierto = !!tRes.turno;
       } catch(e) {}
       if (!turnoAbierto) {
-        window.location.href = 'pos.html';
+        document.getElementById('entradaNombre').textContent      = nombre;
+        document.getElementById('entradaHora').textContent        = hora;
+        document.getElementById('entradaHorasSemana').textContent = 'Abriendo caja...';
+        document.getElementById('pantallaEntrada').classList.add('activa');
+        setTimeout(() => { window.location.href = 'pos.html'; }, 1500);
         return;
       }
     }
@@ -284,12 +289,8 @@ document.addEventListener('keydown', e => {
   else if (e.key === 'Escape') volverUsuarios();
 });
 
-// Detectar ?modo= en URL
-(function() {
-  const params = new URLSearchParams(window.location.search);
-  const m = params.get('modo');
-  if (m && _MODO_BTN[m]) seleccionarModo(m);
-})();
+// ?modo= en URL se respeta dentro de _mostrarSolo() en adaptarModosPorEstado()
+// — no se aplica aquí para evitar race condition con el fetch async
 
 async function adaptarModosPorEstado() {
   const BTNS = {
@@ -303,9 +304,10 @@ async function adaptarModosPorEstado() {
     Object.entries(BTNS).forEach(([m, btn]) => {
       if (btn) btn.style.display = modos.includes(m) ? '' : 'none';
     });
-    // Respetar ?modo= si es visible, sino seleccionar el primero
     const urlModo = new URLSearchParams(window.location.search).get('modo');
     seleccionarModo((urlModo && modos.includes(urlModo)) ? urlModo : modos[0]);
+    // Revelar grid ahora que el estado es conocido — elimina el flash de 4 botones
+    document.querySelector('.modo-grid')?.classList.add('visible');
   }
 
   try {
@@ -320,10 +322,11 @@ async function adaptarModosPorEstado() {
       data.cajero_reemplazo
         ? _mostrarSolo('entrada_colacion', 'entrada')
         : _mostrarSolo('entrada_colacion');
+    } else {
+      _mostrarSolo('entrada'); // estado inesperado — fallback seguro
     }
   } catch(e) {
-    // Error de red → fallback seguro: solo ABRIR TURNO
-    _mostrarSolo('entrada');
+    _mostrarSolo('entrada'); // error de red — fallback seguro
   }
 }
 
