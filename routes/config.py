@@ -47,6 +47,8 @@ CLAVES_PERMITIDAS = {
     "whatsapp_plantilla",
     "sumup_api_key", "sumup_merchant_code", "sumup_currency", "sumup_email",
     "cajero_reemplazo_colacion",
+    "turno_contar_denominaciones",
+    "mensaje_ticket",
 }
 
 _VALIDADORES = {
