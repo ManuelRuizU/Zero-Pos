@@ -903,6 +903,7 @@ let _turnoRequerirConteo = false;
 async function verificarTurno(me) {
   const t = await fetch('/api/auth/turno/actual', {credentials:'include'}).then(r => r.json());
   if (!t.turno) {
+    history.replaceState(null, '', '/static/login.html');
     const overlay = document.getElementById('overlayTurnoCerrado');
     overlay.style.display = 'flex';
     const usr = document.getElementById('overlayTurnoUsuario');
