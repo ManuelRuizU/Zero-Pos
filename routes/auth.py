@@ -542,13 +542,18 @@ def crear_usuario():
         import json as _json
         permisos_json = _json.dumps(data["permisos"])
 
+    try:
+        jornada = int(data.get("jornada_horas_semanales", 45))
+    except (TypeError, ValueError):
+        jornada = 45
+
     import bcrypt
     hashed = bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
 
     with db_session() as conn:
         cur = conn.execute(
-            "INSERT INTO usuarios (nombre, pin_hash, rol, sucursal_id, permisos) VALUES (?,?,?,?,?)",
-            (nombre, hashed, rol, sucursal_id, permisos_json)
+            "INSERT INTO usuarios (nombre, pin_hash, rol, sucursal_id, permisos, jornada_horas_semanales) VALUES (?,?,?,?,?,?)",
+            (nombre, hashed, rol, sucursal_id, permisos_json, jornada)
         )
         return jsonify({"ok": True, "id": cur.lastrowid}), 201
 

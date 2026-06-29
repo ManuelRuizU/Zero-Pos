@@ -1087,7 +1087,7 @@ async function cargarUsuarios() {
         <td style="padding:8px"><span style="background:${u.activo?'#0f2d1a':'#2d1515'};color:${u.activo?'#86efac':'#f87171'};border-radius:4px;padding:2px 8px;font-size:11px">${u.activo?'Activo':'Inactivo'}</span></td>
         <td style="padding:8px;display:flex;gap:6px">
           <button class="btn" style="padding:4px 10px;font-size:12px" onclick="editarUsuario(${u.id})">Editar</button>
-          ${u.rol!=='admin'?`<button class="btn" style="padding:4px 10px;font-size:12px;background:${u.activo?'#2d1515':'#0f2d1a'}" onclick="toggleUsuario(${u.id},${u.activo})">${u.activo?'Desactivar':'Activar'}</button>`:''}
+          ${u.rol!=='admin'?`<button class="btn" style="padding:4px 10px;font-size:12px;background:${u.activo?'#2d1515':'#0f2d1a'}" onclick="toggleUsuario(${u.id},${u.activo})">${u.activo?'Desactivar':'Activar'}</button><button class="btn" style="padding:4px 10px;font-size:12px;background:#2d1515;color:#f87171" onclick="eliminarUsuario(${u.id},'${u.nombre.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">Eliminar</button>`:''}
         </td>
       </tr>`).join('')}
     </tbody></table>`;
@@ -1235,10 +1235,40 @@ async function guardarUsuario() {
   else { const e = await r.json(); alert('Error: ' + (e.error||'No se pudo guardar')); }
 }
 
+function _confirmar(msg, onOk, { btnLabel = 'Confirmar', danger = false } = {}) {
+  document.getElementById('modalConfirmMsg').textContent = msg;
+  const btn = document.getElementById('btnConfirmOk');
+  btn.textContent = btnLabel;
+  btn.style.background = danger ? 'var(--danger)' : 'var(--accent)';
+  btn.style.color = '#fff';
+  btn.onclick = () => { _confirmCancel(); onOk(); };
+  document.getElementById('modalConfirm').style.display = 'flex';
+}
+function _confirmCancel() {
+  document.getElementById('modalConfirm').style.display = 'none';
+}
+
 async function toggleUsuario(id, activo) {
-  if (!confirm(activo ? '¿Desactivar este usuario?' : '¿Activar este usuario?')) return;
-  await fetch(`/api/auth/usuarios/${id}`, {method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({activo: activo ? 0 : 1})});
-  cargarEquipo();
+  _confirmar(
+    activo ? '¿Desactivar este usuario?' : '¿Activar este usuario?',
+    async () => {
+      await fetch(`/api/auth/usuarios/${id}`, {method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({activo: activo ? 0 : 1})});
+      cargarEquipo();
+    },
+    { btnLabel: activo ? 'Desactivar' : 'Activar' }
+  );
+}
+
+async function eliminarUsuario(id, nombre) {
+  _confirmar(
+    `¿Eliminar a "${nombre}"? Esta acción no se puede deshacer.`,
+    async () => {
+      const r = await fetch(`/api/auth/usuarios/${id}`, {method:'DELETE', credentials:'include'});
+      if (!r.ok) { const e = await r.json(); _confirmar(e.error || 'No se pudo eliminar', () => {}, {btnLabel:'Cerrar'}); return; }
+      cargarEquipo();
+    },
+    { btnLabel: 'Eliminar', danger: true }
+  );
 }
 
 function _initApariencia() {

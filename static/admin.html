@@ -760,7 +760,8 @@
     <div class="modal-box" style="max-width:440px">
       <h3 id="modalUsuarioTitulo">Nuevo Usuario</h3>
       <input id="usuNombre" class="flujo-input" placeholder="Nombre" style="margin-bottom:10px">
-      <input id="usuPin" class="flujo-input" placeholder="PIN de 4 dígitos" inputmode="numeric" maxlength="4" style="margin-bottom:10px">
+      <input id="usuPin" type="text" class="flujo-input" placeholder="PIN de 4 dígitos (ej: 5678)" inputmode="numeric" maxlength="4" autocomplete="off" style="margin-bottom:4px">
+      <div id="usuPinHint" style="font-size:11px;color:var(--text-dim);margin-bottom:10px">El usuario deberá cambiar el PIN si usas 1234</div>
 
       <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:4px">Rol</label>
       <select id="usuRol" class="flujo-input" style="margin-bottom:10px" onchange="actualizarPermisosUI()">
@@ -1151,6 +1152,17 @@
 
 <div id="overlayComandoStockAdmin" onclick="cerrarComandoStockAdmin()"
   style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1099;"></div>
+
+<!-- ── Modal confirmación genérico ───────────────────────────── -->
+<div id="modalConfirm" class="modal-overlay" style="display:none" onclick="if(event.target===this)_confirmCancel()">
+  <div class="modal-box" style="max-width:320px;text-align:center">
+    <div id="modalConfirmMsg" style="font-size:15px;color:var(--text);margin-bottom:24px;line-height:1.5"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn" style="flex:1" onclick="_confirmCancel()">Cancelar</button>
+      <button class="btn" style="flex:1" id="btnConfirmOk">Confirmar</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
