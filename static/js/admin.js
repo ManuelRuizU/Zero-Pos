@@ -70,9 +70,7 @@ async function cargarDashboard() {
 }
 
 function irAProductosPendientes() {
-  const btn = document.querySelector('.nav-btn[onclick*="productos"]');
-  if (btn) btn.click();
-  alert('Hay ' + document.getElementById('kpiPendientes').textContent + ' productos creados desde el mesón pendientes de verificar.');
+  window.location.href = '/static/inventario.html?filtrar=pendientes';
 }
 
 function irAInventarioSinCat() {
@@ -955,7 +953,7 @@ function catNuevoDepto() {
     if (r.ok) {
       catCerrarModal();
       _catArbol[nombre] = [];
-      renderCatArbol(_catArbol);
+      renderCatArbol(_catArbol, _catDeptoActivo);
     } else {
       alert(r.error || 'Error al crear departamento');
     }
@@ -1584,10 +1582,8 @@ function pubSeleccionarModo(modo) {
   const btnB = document.getElementById('pubBtnModoB');
   const secA = document.getElementById('pubSeccionA');
   const secB = document.getElementById('pubSeccionB');
-  const ACTIVE = 'border-color:#22c55e;background:#22c55e30;';
-  const IDLE   = 'border-color:var(--border);background:var(--surface2);';
-  if (btnA) btnA.style.cssText += modo === 'plantilla' ? ACTIVE : IDLE;
-  if (btnB) btnB.style.cssText += modo === 'imagen'    ? ACTIVE : IDLE;
+  if (btnA) { btnA.style.borderColor = modo === 'plantilla' ? '#22c55e' : 'var(--border)'; btnA.style.background = modo === 'plantilla' ? '#22c55e30' : 'var(--surface2)'; }
+  if (btnB) { btnB.style.borderColor = modo === 'imagen'    ? '#22c55e' : 'var(--border)'; btnB.style.background = modo === 'imagen'    ? '#22c55e30' : 'var(--surface2)'; }
   if (secA) secA.style.display = modo === 'plantilla' ? 'flex' : 'none';
   if (secB) secB.style.display = modo === 'imagen'    ? 'flex' : 'none';
   if (modo === 'plantilla' && !document.querySelector('.pub-plantilla-card')) {
