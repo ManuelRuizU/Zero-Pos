@@ -1,6 +1,6 @@
 # CLAUDE.md — Contrato de Desarrollo ZERO POS
 # Lee este archivo COMPLETO antes de tocar cualquier código.
-# Última actualización: 2026-06-25
+# Última actualización: 2026-06-29
 
 ---
 
@@ -282,6 +282,21 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Admin accede a admin.html desde el botón dashboard en pos.html, no en el login
 - Vista asistencia en admin.html (tab Equipo): tabla + barras de progreso por usuario
   Verde ≤90% jornada | Amarillo >90% | Rojo ≥100%
+- `crear_usuario()` en routes/auth.py: el INSERT **debe incluir jornada_horas_semanales**
+  (se lee de `data.get("jornada_horas_semanales", 45)` — sin esto el valor siempre queda en 45)
+
+### Cajero de reemplazo en colación (login.js + routes/auth.py)
+- Config key `cajero_reemplazo_colacion` = '1' habilita botón "ABRIR TURNO" durante colación
+- `/api/auth/turno/estado` devuelve `estado='colacion_activa'`, `cajero_reemplazo=True/False`,
+  `cajero_nombre` (nombre del cajero principal en colación)
+- `_estadoTurno` en login.js almacena esta respuesta para usarla en `_mostrarPantallaPost()`
+- Si `_estadoTurno.estado === 'colacion_activa'` en el flujo entrada sin turno propio:
+  - `entradaSubtitulo` → "👥 Cajero de reemplazo"
+  - `entradaHorasSemana` → "Cubriendo a: [cajero_nombre]"
+  - redirect a pos.html después de 3 segundos (en vez de 1.5s)
+- Cada cajero (principal y reemplazo) tiene su propio registro de turno en BD
+- La pantalla "¿Quién eres?" muestra TODOS los usuarios activos — cada uno selecciona
+  su nombre y PIN por separado al abrir/cerrar su turno
 
 ### Flujo de navegación login → caja (LECCIÓN APRENDIDA)
 - Login con modo=entrada (cualquier rol excepto cocina):
@@ -293,6 +308,34 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - La verificación del turno se hace en `_mostrarPantallaPost()` en login.js
   consultando `/api/auth/turno/actual` después del login exitoso
 - **NO** mostrar pantalla bienvenida si el turno está cerrado — genera confusión
+- **LECCIÓN APRENDIDA:** pos.js redirige a `login.html?modo=salida` DESPUÉS de cerrar el
+  turno — cuando login.html carga, el turno ya está cerrado. `adaptarModosPorEstado()`
+  detectaba `estado='cerrado'` y sobreescribía el modo a 'entrada', mandando al cajero
+  al flujo de "Abriendo caja" en vez de "Buenas noches".
+  **FIX:** en `_mostrarSolo()` (login.js), si `urlModo` es 'salida' o 'salida_colacion'
+  y no está en los modos calculados por estado, forzar `modos = [urlModo]`.
+  `const MODOS_SALIDA = ['salida', 'salida_colacion']` — estos siempre ganan sobre el estado.
+
+### Límite de sesiones cajero (routes/auth.py)
+- Config key `max_cajeros` (default 2): máximo de sesiones cajero simultáneas
+- **LECCIÓN APRENDIDA:** la función original `_contar_sesiones_activas()` contaba TODOS
+  los archivos en `flask_sessions/` incluyendo sesiones admin y de prueba, bloqueando
+  login de cajeros con error 403 "Límite alcanzado" aunque no hubiera nadie logueado.
+- **FIX:** `_contar_sesiones_cajero()` abre cada archivo pickle y solo cuenta los que
+  tienen `usuario_rol == 'cajero'`. NUNCA volver al conteo ciego por mtime.
+- `flask_sessions/` acumula archivos con el tiempo — si hay 403 inexplicable en cajero,
+  verificar cantidad de archivos: `ls flask_sessions/ | wc -l`
+- Los archivos expiran por mtime > 12h (ajustado desde 8h para dar más margen)
+- **NO** usar `confirm()` ni `alert()` nativos en admin.js — usar `_confirmar()`
+
+### Modales de confirmación en admin.html
+- `_confirmar(msg, onOk, {btnLabel, danger})` en admin.js — reemplaza todos los `confirm()`
+- `#modalConfirm` en admin.html con `#modalConfirmMsg` y `#btnConfirmOk`
+- `danger: true` → botón rojo (`var(--danger)`)
+- Ejemplo: `_confirmar('¿Eliminar?', () => hacerAlgo(), { btnLabel: 'Eliminar', danger: true })`
+- `_confirmCancel()` cierra el modal
+- `eliminarUsuario(id, nombre)` hace DELETE a `/api/auth/usuarios/<id>` (soft delete activo=0)
+- **NUNCA** usar `confirm()` o `alert()` en admin.js — rompe UX en dispositivos táctiles
 
 ### Integración SumUp (routes/sumup.py)
 - Hosted Checkout API con `hosted_checkout.enabled=True`
