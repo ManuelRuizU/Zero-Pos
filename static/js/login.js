@@ -10,6 +10,8 @@ let pin = '';
 let usuarioSeleccionado = null;
 let _modoAcceso = 'entrada';
 
+let _estadoTurno = { estado: 'cerrado', cajero_reemplazo: false, cajero_nombre: '' };
+
 const _MODO_BTN = {
   entrada:           'btnModoEntrada',
   salida:            'btnModoSalida',
@@ -208,7 +210,7 @@ async function _mostrarPantallaPost(data) {
       horasSemana = `Esta semana: ${hrs} hrs trabajadas de ${pact} hrs pactadas`;
     } catch(e) {}
 
-    // Si turno cerrado → mostrar brevemente "Abriendo caja..." y redirigir
+    // Verificar si hay turno propio abierto
     if (rol !== 'cocina') {
       let turnoAbierto = false;
       try {
@@ -216,11 +218,21 @@ async function _mostrarPantallaPost(data) {
         turnoAbierto = !!tRes.turno;
       } catch(e) {}
       if (!turnoAbierto) {
-        document.getElementById('entradaNombre').textContent      = nombre;
-        document.getElementById('entradaHora').textContent        = hora;
-        document.getElementById('entradaHorasSemana').textContent = 'Abriendo caja...';
+        // Detectar si es cajero de reemplazo (entra mientras otro está en colación)
+        const esReemplazo = _estadoTurno.estado === 'colacion_activa';
+        const sub = document.getElementById('entradaSubtitulo');
+        document.getElementById('entradaNombre').textContent = nombre;
+        document.getElementById('entradaHora').textContent   = hora;
+        if (esReemplazo) {
+          if (sub) sub.textContent = '👥 Cajero de reemplazo';
+          const cajero = _estadoTurno.cajero_nombre || 'cajero principal';
+          document.getElementById('entradaHorasSemana').textContent = `Cubriendo a: ${cajero}`;
+        } else {
+          if (sub) sub.textContent = 'Bienvenido/a';
+          document.getElementById('entradaHorasSemana').textContent = 'Abriendo caja...';
+        }
         document.getElementById('pantallaEntrada').classList.add('activa');
-        setTimeout(() => { window.location.href = 'pos.html'; }, 1500);
+        setTimeout(() => { window.location.href = 'pos.html'; }, esReemplazo ? 3000 : 1500);
         return;
       }
     }
@@ -240,8 +252,10 @@ async function _mostrarPantallaPost(data) {
   }
 
   if (modo === 'entrada') {
-    document.getElementById('entradaNombre').textContent     = nombre;
-    document.getElementById('entradaHora').textContent       = hora;
+    const sub = document.getElementById('entradaSubtitulo');
+    if (sub) sub.textContent = 'Bienvenido/a';
+    document.getElementById('entradaNombre').textContent      = nombre;
+    document.getElementById('entradaHora').textContent        = hora;
     document.getElementById('entradaHorasSemana').textContent = horasSemana;
     setTimeout(() => location.href = rol === 'cocina' ? 'cocina.html' : 'pos.html', 3000);
   } else if (modo === 'salida') {
@@ -313,6 +327,7 @@ async function adaptarModosPorEstado() {
   try {
     const r = await fetch('/api/auth/turno/estado', {credentials: 'include'});
     const data = await r.json();
+    _estadoTurno = data;
 
     if (data.estado === 'cerrado') {
       _mostrarSolo('entrada');

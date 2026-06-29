@@ -483,24 +483,27 @@ def turno_estado_publico():
         ).fetchone()
         cajero_reemplazo = bool(cfg and cfg['valor'] == '1')
 
-        turno = conn.execute(
-            "SELECT id, usuario_id FROM turnos WHERE estado='abierto' ORDER BY apertura DESC LIMIT 1"
+        row = conn.execute(
+            """SELECT t.id, t.usuario_id, u.nombre AS cajero_nombre
+               FROM turnos t JOIN usuarios u ON t.usuario_id = u.id
+               WHERE t.estado='abierto' ORDER BY t.apertura DESC LIMIT 1"""
         ).fetchone()
 
-        if not turno:
+        if not row:
             return jsonify({"estado": "cerrado", "cajero_reemplazo": cajero_reemplazo})
 
         ultima = conn.execute(
             """SELECT tipo FROM asistencia
                WHERE usuario_id=? AND DATE(fecha)=DATE('now')
                ORDER BY fecha DESC LIMIT 1""",
-            (turno['usuario_id'],)
+            (row['usuario_id'],)
         ).fetchone()
 
         en_colacion = ultima and ultima['tipo'] == 'salida_colacion'
         return jsonify({
             "estado": "colacion_activa" if en_colacion else "abierto",
-            "cajero_reemplazo": cajero_reemplazo
+            "cajero_reemplazo": cajero_reemplazo,
+            "cajero_nombre": row['cajero_nombre'],
         })
 
 
