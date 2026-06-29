@@ -35,21 +35,24 @@ def listar_usuarios_publico():
         return jsonify([dict(r) for r in rows])
 
 
-def _contar_sesiones_activas() -> int:
-    """Cuenta sesiones activas en flask_sessions (archivos con sesión válida)."""
+def _contar_sesiones_cajero() -> int:
+    """Cuenta sesiones activas de cajeros leyendo el rol de cada archivo de sesión."""
+    import os, pickle
     try:
         from flask import current_app
         session_dir = current_app.config.get("SESSION_FILE_DIR", "flask_sessions")
-        import os, time
         count = 0
         now = time.time()
-        for f in os.listdir(session_dir):
-            path = os.path.join(session_dir, f)
+        for fname in os.listdir(session_dir):
+            path = os.path.join(session_dir, fname)
             try:
-                # Considerar sesiones activas si fueron modificadas en las últimas 8h
-                if now - os.path.getmtime(path) < 8 * 3600:
+                if now - os.path.getmtime(path) >= 12 * 3600:
+                    continue  # sesión expirada por tiempo
+                with open(path, "rb") as fh:
+                    data = pickle.load(fh)
+                if isinstance(data, dict) and data.get("usuario_rol") == "cajero":
                     count += 1
-            except OSError:
+            except Exception:
                 pass
         return count
     except Exception:
@@ -102,7 +105,7 @@ def login():
                         "SELECT valor FROM config WHERE clave='max_cajeros'"
                     ).fetchone()
                     max_cajeros = int(max_cfg["valor"]) if max_cfg else 2
-                    activas = _contar_sesiones_activas()
+                    activas = _contar_sesiones_cajero()
                     if activas >= max_cajeros:
                         logger.warning(
                             f"Límite cajeros alcanzado ({activas}/{max_cajeros}), "
