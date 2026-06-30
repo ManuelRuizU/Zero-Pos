@@ -300,7 +300,7 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - **NUNCA** volver a redirigir a `login.html?modo=salida` al cerrar turno — rompe este flujo
 - Ventaja: `asistencia.turno_id` queda correctamente enlazado (antes quedaba NULL con el re-login)
 
-### Cajero de reemplazo en colación (login.js + routes/auth.py)
+### Cajero de reemplazo en colación (login.js + routes/auth.py + pos.html)
 - Config key `cajero_reemplazo_colacion` = '1' habilita botón "ABRIR TURNO" durante colación
 - `/api/auth/turno/estado` devuelve `estado='colacion_activa'`, `cajero_reemplazo=True/False`,
   `cajero_nombre` (nombre del cajero principal en colación)
@@ -312,6 +312,14 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Cada cajero (principal y reemplazo) tiene su propio registro de turno en BD
 - La pantalla "¿Quién eres?" muestra TODOS los usuarios activos — cada uno selecciona
   su nombre y PIN por separado al abrir/cerrar su turno
+- **LECCIÓN APRENDIDA:** el botón "ABRIR TURNO" del overlayColacion (pos.html) NO debe
+  llamar a `_abrirModalTurno('abrir')` — eso abriría el turno bajo la sesión del cajero
+  principal sin identificar al reemplazo. Debe redirigir a `location.href='login.html'`
+  para que el reemplazo se autentique con su propio PIN y abra su propio turno.
+- **`colacion_pendiente`**: `turno_estado_publico()` detecta si hay `salida_colacion` sin
+  `entrada_colacion` hoy aunque no haya turno abierto. Si `colacion_pendiente:true`,
+  login.js muestra `['entrada_colacion','entrada']` en vez de solo `['entrada']`.
+  Permite que el cajero principal vuelva de colación aunque el reemplazo ya terminó.
 
 ### Flujo de navegación login → caja (LECCIÓN APRENDIDA)
 - Login con modo=entrada (cualquier rol excepto cocina):
