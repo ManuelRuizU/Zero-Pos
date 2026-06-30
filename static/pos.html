@@ -386,6 +386,21 @@
   </button>
 </div>
 
+<!-- ── Overlay despedida fin de turno ────────────────────────── -->
+<div id="overlayDespedidaTurno" class="overlay-centered" style="display:none;z-index:9999;gap:20px">
+  <div style="font-size:28px;font-weight:700;letter-spacing:2px;color:var(--text)">
+    ZERO<span style="color:var(--accent)">POS</span>
+  </div>
+  <div style="width:90px;height:90px;border-radius:50%;border:3px solid var(--border);display:flex;align-items:center;justify-content:center;">
+    <i class="ti ti-moon" style="font-size:48px;color:var(--accent)"></i>
+  </div>
+  <div style="text-align:center;display:flex;flex-direction:column;gap:6px">
+    <div style="font-size:14px;color:var(--text-dim)">Turno cerrado · Hasta mañana</div>
+    <div id="despedidaNombre" style="font-size:28px;font-weight:700;color:var(--text)"></div>
+    <div id="despedidaHora" style="font-size:20px;font-weight:300;color:var(--accent)"></div>
+  </div>
+</div>
+
 <!-- ── Modal apertura/cierre turno ──────────────────────────── -->
 <div class="modal-overlay" id="modalTurno" style="display:none;z-index:10000">
   <div class="modal" style="max-width:400px;width:100%;padding:0;overflow:hidden;max-height:92vh;display:flex;flex-direction:column">

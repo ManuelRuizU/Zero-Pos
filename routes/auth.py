@@ -304,6 +304,7 @@ def cerrar_turno():
         return jsonify({"error": "No autenticado"}), 401
 
     data = request.get_json(silent=True) or {}
+    motivo = data.get("motivo", "colacion")  # 'fin_turno' | 'colacion'
     denoms = data.get("denominaciones", {})
     if denoms:
         fondo_final = sum(int(k) * int(v) for k, v in denoms.items() if str(v).isdigit())
@@ -362,6 +363,16 @@ def cerrar_turno():
              turno_id)
         )
 
+        # Registrar salida de asistencia automáticamente al cerrar turno real
+        if motivo == "fin_turno":
+            try:
+                conn.execute(
+                    "INSERT INTO asistencia (usuario_id, tipo, turno_id) VALUES (?,?,?)",
+                    (uid, "salida", turno_id)
+                )
+            except Exception as _ae:
+                logger.warning(f"Error registrando asistencia salida automática: {_ae}")
+
         # Turno completo post-UPDATE (cierre ya está seteado)
         row = conn.execute(
             """SELECT t.*, u.nombre as cajero
@@ -415,7 +426,8 @@ def cerrar_turno():
         threading.Thread(target=_print, daemon=True,
                          name=f"cierre-turno-{turno_data.get('id')}").start()
 
-    return jsonify({"ok": True})
+    cajero_nombre = turno_data.get("cajero", "") if turno_data else ""
+    return jsonify({"ok": True, "cajero": cajero_nombre})
 
 
 @auth_bp.route("/turno/resumen", methods=["GET"])

@@ -944,7 +944,7 @@ async function _irAColacion() {
     method: 'POST',
     credentials: 'include',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({fondo_final: 0, denominaciones: {}})
+    body: JSON.stringify({fondo_final: 0, denominaciones: {}, motivo: 'colacion'})
   });
 
   const nombre = document.getElementById('overlayTurnoUsuario')?.textContent || '';
@@ -1046,21 +1046,30 @@ async function _confirmarTurno() {
     }
   } else {
     const body = denoms && Object.keys(denoms).length
-      ? { denominaciones: denoms }
-      : { fondo_final: total };
+      ? { denominaciones: denoms, motivo: 'fin_turno' }
+      : { fondo_final: total, motivo: 'fin_turno' };
     const r = await fetch('/api/auth/turno/cerrar', {
       method: 'POST', credentials: 'include',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(body),
     });
     if (r.ok) {
+      const d = await r.json().catch(() => ({}));
       document.getElementById('modalTurno').style.display = 'none';
-      location.href = 'login.html?modo=salida';
+      _mostrarDespedidaTurno(d.cajero || _meNombre);
     } else {
       const d = await r.json();
       showToast(d.error || 'Error al cerrar turno', 'error');
     }
   }
+}
+
+function _mostrarDespedidaTurno(nombre) {
+  const hora = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit', hour12:false});
+  document.getElementById('despedidaNombre').textContent = nombre;
+  document.getElementById('despedidaHora').textContent  = hora;
+  document.getElementById('overlayDespedidaTurno').style.display = 'flex';
+  setTimeout(() => { location.href = 'login.html'; }, 2500);
 }
 
 // ── Departamentos, Categorías y Subcategorías ────────────────
