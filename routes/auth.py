@@ -505,7 +505,21 @@ def turno_estado_publico():
         ).fetchone()
 
         if not row:
-            return jsonify({"estado": "cerrado", "cajero_reemplazo": cajero_reemplazo})
+            # Verificar si algún usuario tiene salida_colacion sin entrada_colacion hoy
+            col = conn.execute("""
+                SELECT 1 FROM asistencia
+                WHERE DATE(fecha) = DATE('now') AND tipo = 'salida_colacion'
+                  AND usuario_id NOT IN (
+                      SELECT usuario_id FROM asistencia
+                      WHERE DATE(fecha) = DATE('now') AND tipo = 'entrada_colacion'
+                  )
+                LIMIT 1
+            """).fetchone()
+            return jsonify({
+                "estado": "cerrado",
+                "cajero_reemplazo": cajero_reemplazo,
+                "colacion_pendiente": bool(col),
+            })
 
         ultima = conn.execute(
             """SELECT tipo FROM asistencia
