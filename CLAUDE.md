@@ -251,7 +251,7 @@ Modificarlas sin necesidad directa está PROHIBIDO.
   La corrección fue ocultar `.layout` y `.topbar` directamente.
 - z-index: 9999 (mayor que cualquier modal)
 - `_confirmarTurno()` al abrir turno: oculta el overlay (todos los roles)
-- Al cerrar turno exitosamente → redirige a `login.html?modo=salida`
+- Al cerrar turno exitosamente → muestra `#overlayDespedidaTurno` 2.5s → redirige a `login.html` limpio
 - El botón "ABRIR EL TURNO" llama `_abrirModalTurno('abrir')` (con guión bajo)
 - **NO** agregar redirect a admin.html al abrir turno — todos los roles quedan en pos.html
 
@@ -274,7 +274,7 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - Endpoints: GET /api/auth/asistencia (semana actual, tabla para admin)
              GET /api/auth/asistencia/resumen (horas semana, jornada pactada)
 - login.html muestra 4 botones de modo antes del teclado PIN
-- URL ?modo=salida preselecciona el modo automáticamente (usado por cerrar turno)
+- URL ?modo=salida ya NO se usa para cerrar turno (Opción B: salida se registra automáticamente)
 - Pantallas post-login: pantallaEntrada (auto-redirect 3s, solo si turno abierto) / pantallaSalida /
   pantallaSalidaColacion / pantallaEntradaColacion
 - Auto-redirect de pantallaEntrada → SIEMPRE a pos.html (no a admin.html)
@@ -284,6 +284,21 @@ Modificarlas sin necesidad directa está PROHIBIDO.
   Verde ≤90% jornada | Amarillo >90% | Rojo ≥100%
 - `crear_usuario()` en routes/auth.py: el INSERT **debe incluir jornada_horas_semanales**
   (se lee de `data.get("jornada_horas_semanales", 45)` — sin esto el valor siempre queda en 45)
+
+### Cierre de turno — Opción B (routes/auth.py + pos.js)
+- `cerrar_turno()` acepta campo `motivo`: `'fin_turno'` | `'colacion'` (default: `'colacion'`)
+- **`motivo:'fin_turno'`** (cierre real de jornada):
+  - Inserta `asistencia(tipo='salida', turno_id=X)` automáticamente — sin re-login
+  - Retorna `{"ok": True, "cajero": nombre}` para el overlay
+- **`motivo:'colacion'`** (pausa al mediodía):
+  - NO inserta salida (ya se hizo `salida_colacion` antes de llamar a cerrar_turno)
+  - Comportamiento igual al anterior
+- `_confirmarTurno()` en pos.js envía `motivo:'fin_turno'` y llama `_mostrarDespedidaTurno()`
+- `_irAColacion()` en pos.js envía `motivo:'colacion'` — sin cambio de flujo
+- `_mostrarDespedidaTurno(nombre)`: muestra `#overlayDespedidaTurno` 2.5s → `location.href='login.html'`
+- `#overlayDespedidaTurno` en pos.html: ícono luna, nombre cajero, hora — patrón `.overlay-centered`
+- **NUNCA** volver a redirigir a `login.html?modo=salida` al cerrar turno — rompe este flujo
+- Ventaja: `asistencia.turno_id` queda correctamente enlazado (antes quedaba NULL con el re-login)
 
 ### Cajero de reemplazo en colación (login.js + routes/auth.py)
 - Config key `cajero_reemplazo_colacion` = '1' habilita botón "ABRIR TURNO" durante colación
