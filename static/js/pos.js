@@ -932,6 +932,12 @@ function confirmarColacion(callback) {
 }
 
 async function _irAColacion() {
+  const estadoR = await fetch('/api/auth/turno/estado', {credentials: 'include'})
+    .then(r => r.json()).catch(() => ({}));
+  if (!estadoR.puede_colacion) {
+    showToast('No puedes ir a colación mientras hay otro cajero activo', 'error');
+    return;
+  }
   confirmarColacion(async () => {
   const rAsist = await fetch('/api/auth/asistencia', {
     method: 'POST',

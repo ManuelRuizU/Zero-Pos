@@ -344,7 +344,9 @@ async function adaptarModosPorEstado() {
         ? _mostrarSolo('entrada_colacion', 'entrada')
         : _mostrarSolo('entrada');
     } else if (data.estado === 'abierto') {
-      _mostrarSolo('salida_colacion', 'salida');
+      data.puede_colacion
+        ? _mostrarSolo('salida_colacion', 'salida')
+        : _mostrarSolo('salida');
     } else if (data.estado === 'colacion_activa') {
       data.cajero_reemplazo
         ? _mostrarSolo('entrada_colacion', 'entrada')

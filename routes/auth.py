@@ -325,6 +325,15 @@ def cerrar_turno():
         if not turno:
             return jsonify({"error": "No hay turno abierto"}), 404
 
+        if motivo == "colacion":
+            open_count = conn.execute(
+                "SELECT COUNT(*) FROM turnos WHERE estado='abierto'"
+            ).fetchone()[0]
+            if open_count > 1:
+                return jsonify({
+                    "error": "No puedes ir a colación mientras hay otro cajero activo"
+                }), 403
+
         turno_id = turno["id"]
         fondo_inicial = int(turno["fondo_inicial"] or 0)
 
@@ -498,6 +507,11 @@ def turno_estado_publico():
         ).fetchone()
         cajero_reemplazo = bool(cfg and cfg['valor'] == '1')
 
+        open_count = conn.execute(
+            "SELECT COUNT(*) FROM turnos WHERE estado='abierto'"
+        ).fetchone()[0]
+        puede_colacion = (open_count == 1)
+
         row = conn.execute(
             """SELECT t.id, t.usuario_id, u.nombre AS cajero_nombre
                FROM turnos t JOIN usuarios u ON t.usuario_id = u.id
@@ -519,6 +533,7 @@ def turno_estado_publico():
                 "estado": "cerrado",
                 "cajero_reemplazo": cajero_reemplazo,
                 "colacion_pendiente": bool(col),
+                "puede_colacion": False,
             })
 
         ultima = conn.execute(
@@ -533,6 +548,7 @@ def turno_estado_publico():
             "estado": "colacion_activa" if en_colacion else "abierto",
             "cajero_reemplazo": cajero_reemplazo,
             "cajero_nombre": row['cajero_nombre'],
+            "puede_colacion": puede_colacion,
         })
 
 
