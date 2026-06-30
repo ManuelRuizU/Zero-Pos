@@ -333,6 +333,23 @@ def cerrar_turno():
                 return jsonify({
                     "error": "No puedes ir a colación mientras hay otro cajero activo"
                 }), 403
+            # Bloquear si hay otro usuario en colación (salida sin vuelta hoy).
+            # Se excluye el uid actual porque su salida_colacion ya fue grabada
+            # en /api/auth/asistencia antes de llegar a este endpoint.
+            col_ajena = conn.execute("""
+                SELECT 1 FROM asistencia
+                WHERE DATE(fecha) = DATE('now') AND tipo = 'salida_colacion'
+                  AND usuario_id != ?
+                  AND usuario_id NOT IN (
+                      SELECT usuario_id FROM asistencia
+                      WHERE DATE(fecha) = DATE('now') AND tipo = 'entrada_colacion'
+                  )
+                LIMIT 1
+            """, (uid,)).fetchone()
+            if col_ajena:
+                return jsonify({
+                    "error": "No puedes ir a colación mientras hay alguien en colación"
+                }), 403
 
         turno_id = turno["id"]
         fondo_inicial = int(turno["fondo_inicial"] or 0)
@@ -510,7 +527,20 @@ def turno_estado_publico():
         open_count = conn.execute(
             "SELECT COUNT(*) FROM turnos WHERE estado='abierto'"
         ).fetchone()[0]
-        puede_colacion = (open_count == 1)
+
+        # Cualquier usuario con salida_colacion sin entrada_colacion hoy
+        col_pendiente = conn.execute("""
+            SELECT 1 FROM asistencia
+            WHERE DATE(fecha) = DATE('now') AND tipo = 'salida_colacion'
+              AND usuario_id NOT IN (
+                  SELECT usuario_id FROM asistencia
+                  WHERE DATE(fecha) = DATE('now') AND tipo = 'entrada_colacion'
+              )
+            LIMIT 1
+        """).fetchone()
+
+        # Solo puede ir a colación si está solo Y nadie está pendiente de volver
+        puede_colacion = (open_count == 1) and not bool(col_pendiente)
 
         row = conn.execute(
             """SELECT t.id, t.usuario_id, u.nombre AS cajero_nombre
@@ -519,20 +549,10 @@ def turno_estado_publico():
         ).fetchone()
 
         if not row:
-            # Verificar si algún usuario tiene salida_colacion sin entrada_colacion hoy
-            col = conn.execute("""
-                SELECT 1 FROM asistencia
-                WHERE DATE(fecha) = DATE('now') AND tipo = 'salida_colacion'
-                  AND usuario_id NOT IN (
-                      SELECT usuario_id FROM asistencia
-                      WHERE DATE(fecha) = DATE('now') AND tipo = 'entrada_colacion'
-                  )
-                LIMIT 1
-            """).fetchone()
             return jsonify({
                 "estado": "cerrado",
                 "cajero_reemplazo": cajero_reemplazo,
-                "colacion_pendiente": bool(col),
+                "colacion_pendiente": bool(col_pendiente),
                 "puede_colacion": False,
             })
 
@@ -548,6 +568,7 @@ def turno_estado_publico():
             "estado": "colacion_activa" if en_colacion else "abierto",
             "cajero_reemplazo": cajero_reemplazo,
             "cajero_nombre": row['cajero_nombre'],
+            "colacion_pendiente": bool(col_pendiente),
             "puede_colacion": puede_colacion,
         })
 
