@@ -1066,6 +1066,7 @@ async function _confirmarTurno() {
 
 function _mostrarDespedidaTurno(nombre) {
   const hora = new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit', hour12:false});
+  document.getElementById('despedidaSaludo').textContent = `Turno cerrado · ${saludoPorHora('salida')}`;
   document.getElementById('despedidaNombre').textContent = nombre;
   document.getElementById('despedidaHora').textContent  = hora;
   document.getElementById('overlayDespedidaTurno').style.display = 'flex';

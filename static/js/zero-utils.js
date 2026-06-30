@@ -63,6 +63,24 @@ async function fetchZero(url, options = {}) {
 }
 
 /**
+ * Saludo según la hora del día.
+ * @param {'entrada'|'salida'} tipo
+ * @returns {string}
+ */
+window.saludoPorHora = function(tipo) {
+  const h = new Date().getHours();
+  if (tipo === 'entrada') {
+    if (h >= 5  && h < 12) return 'Buenos días';
+    if (h >= 12 && h < 20) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+  // salida
+  if (h >= 5  && h < 12) return 'Buen día';
+  if (h >= 12 && h < 20) return 'Buenas tardes';
+  return 'Buenas noches';
+};
+
+/**
  * Genera un color determinista a partir de un string (para avatares).
  */
 const _PALETA_AVATARES = ['#22c55e','#22c55e','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#0ea5e9'];

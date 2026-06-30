@@ -228,7 +228,7 @@ async function _mostrarPantallaPost(data) {
           const cajero = _estadoTurno.cajero_nombre || 'cajero principal';
           document.getElementById('entradaHorasSemana').textContent = `Cubriendo a: ${cajero}`;
         } else {
-          if (sub) sub.textContent = 'Bienvenido/a';
+          if (sub) sub.textContent = saludoPorHora('entrada');
           document.getElementById('entradaHorasSemana').textContent = 'Abriendo caja...';
         }
         document.getElementById('pantallaEntrada').classList.add('activa');
@@ -253,15 +253,19 @@ async function _mostrarPantallaPost(data) {
 
   if (modo === 'entrada') {
     const sub = document.getElementById('entradaSubtitulo');
-    if (sub) sub.textContent = 'Bienvenido/a';
+    if (sub) sub.textContent = saludoPorHora('entrada');
     document.getElementById('entradaNombre').textContent      = nombre;
     document.getElementById('entradaHora').textContent        = hora;
     document.getElementById('entradaHorasSemana').textContent = horasSemana;
     setTimeout(() => location.href = rol === 'cocina' ? 'cocina.html' : 'pos.html', 3000);
   } else if (modo === 'salida') {
+    const saludo = saludoPorHora('salida');
+    const subtEl = document.getElementById('salidaSubtitulo');
+    const buenEl = document.getElementById('salidaBuenas');
+    if (subtEl) subtEl.textContent = saludo;
+    if (buenEl) buenEl.textContent = saludo;
     document.getElementById('salidaNombre').textContent  = nombre;
     document.getElementById('salidaHora').textContent    = hora;
-    // Calcular horas trabajadas hoy
     try {
       const res = await fetch('/api/auth/asistencia/resumen', {credentials:'include'}).then(r=>r.json());
       if (res.ultima_entrada) {
