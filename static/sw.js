@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zeropos-v28';
+const CACHE_NAME = 'zeropos-v29';
 const URLS_TO_CACHE = [
   '/static/pos.html',
   '/static/admin.html',
