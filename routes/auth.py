@@ -247,22 +247,52 @@ def abrir_turno():
         ensure_column(conn, 'turnos', 'denominaciones_apertura', 'TEXT')
         ensure_column(conn, 'turnos', 'denominaciones_cierre', 'TEXT')
 
+        # Bloquear si el usuario ya tiene un turno pausado — debe reactivar
+        mi_colacion = conn.execute(
+            "SELECT id FROM turnos WHERE usuario_id=? AND estado='colacion'", (uid,)
+        ).fetchone()
+        if mi_colacion:
+            return jsonify({
+                "error": "Tienes un turno en pausa, usa reactivar",
+                "turno_id": mi_colacion["id"],
+            }), 409
+
+        # Regla caja única (default '1' — un cajero activo a la vez)
+        cfg_unica = conn.execute(
+            "SELECT valor FROM config WHERE clave='modo_unica_caja'"
+        ).fetchone()
+        unica_caja = (cfg_unica is None or cfg_unica["valor"] == "1")
+
+        if unica_caja:
+            otros_abiertos = conn.execute(
+                "SELECT COUNT(*) FROM turnos WHERE estado='abierto' AND usuario_id != ?",
+                (uid,)
+            ).fetchone()[0]
+            if otros_abiertos > 0:
+                return jsonify({"error": "Hay otro cajero activo en caja"}), 409
+            en_colacion = conn.execute(
+                "SELECT COUNT(*) FROM turnos WHERE estado='colacion'"
+            ).fetchone()[0]
+            if en_colacion > 1:
+                return jsonify({"error": "Solo puede haber un turno en colación a la vez"}), 409
+
         cur = conn.execute(
             """INSERT INTO turnos (usuario_id, fondo_inicial, estado, denominaciones_apertura)
                SELECT ?, ?, 'abierto', ?
                WHERE NOT EXISTS (
                    SELECT 1 FROM turnos
-                   WHERE usuario_id=? AND estado='abierto'
+                   WHERE usuario_id=? AND estado IN ('abierto', 'colacion')
                )""",
             (uid, fondo, denoms_json, uid)
         )
         if cur.rowcount == 0:
-            abierto = conn.execute(
-                "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
+            fila = conn.execute(
+                "SELECT id FROM turnos WHERE usuario_id=? AND estado IN ('abierto','colacion')",
+                (uid,)
             ).fetchone()
             return jsonify({
-                "error": "Ya tienes un turno abierto",
-                "turno_id": abierto["id"] if abierto else None,
+                "error": "Ya tienes un turno abierto o en pausa",
+                "turno_id": fila["id"] if fila else None,
             }), 409
         turno_id = cur.lastrowid
         session["turno_id"] = turno_id
@@ -326,30 +356,27 @@ def cerrar_turno():
             return jsonify({"error": "No hay turno abierto"}), 404
 
         if motivo == "colacion":
-            open_count = conn.execute(
-                "SELECT COUNT(*) FROM turnos WHERE estado='abierto'"
+            ya_en_colacion = conn.execute(
+                "SELECT COUNT(*) FROM turnos WHERE estado='colacion'"
             ).fetchone()[0]
-            if open_count > 1:
-                return jsonify({
-                    "error": "No puedes ir a colación mientras hay otro cajero activo"
-                }), 403
-            # Bloquear si hay otro usuario en colación (salida sin vuelta hoy).
-            # Se excluye el uid actual porque su salida_colacion ya fue grabada
-            # en /api/auth/asistencia antes de llegar a este endpoint.
-            col_ajena = conn.execute("""
-                SELECT 1 FROM asistencia
-                WHERE DATE(fecha) = DATE('now') AND tipo = 'salida_colacion'
-                  AND usuario_id != ?
-                  AND usuario_id NOT IN (
-                      SELECT usuario_id FROM asistencia
-                      WHERE DATE(fecha) = DATE('now') AND tipo = 'entrada_colacion'
-                  )
-                LIMIT 1
-            """, (uid,)).fetchone()
-            if col_ajena:
+            if ya_en_colacion > 0:
                 return jsonify({
                     "error": "No puedes ir a colación mientras hay alguien en colación"
                 }), 403
+            otros_abiertos = conn.execute(
+                "SELECT COUNT(*) FROM turnos WHERE estado='abierto' AND usuario_id != ?",
+                (uid,)
+            ).fetchone()[0]
+            if otros_abiertos > 0:
+                return jsonify({
+                    "error": "No puedes ir a colación mientras hay otro cajero activo"
+                }), 403
+            conn.execute(
+                "UPDATE turnos SET estado='colacion' WHERE id=?",
+                (turno["id"],)
+            )
+            session.pop("turno_id", None)
+            return jsonify({"ok": True, "estado": "colacion"})
 
         turno_id = turno["id"]
         fondo_inicial = int(turno["fondo_inicial"] or 0)
@@ -456,6 +483,53 @@ def cerrar_turno():
     return jsonify({"ok": True, "cajero": cajero_nombre})
 
 
+@auth_bp.route("/turno/reactivar", methods=["POST"])
+def turno_reactivar():
+    """Reactiva el turno pausado por colación del usuario actual."""
+    uid = session.get("usuario_id")
+    if not uid:
+        return jsonify({"error": "No autenticado"}), 401
+
+    with db_session() as conn:
+        turno = conn.execute(
+            "SELECT id FROM turnos WHERE usuario_id=? AND estado='colacion'",
+            (uid,)
+        ).fetchone()
+        if not turno:
+            return jsonify({"error": "No hay turno en colación para reactivar"}), 404
+
+        turno_id = turno["id"]
+        conn.execute("UPDATE turnos SET estado='abierto' WHERE id=?", (turno_id,))
+
+        # Calcular minutos de colación para mostrar en pantalla
+        minutos = None
+        try:
+            sal = conn.execute(
+                """SELECT fecha FROM asistencia
+                   WHERE usuario_id=? AND tipo='salida_colacion'
+                   AND DATE(fecha)=DATE('now')
+                   ORDER BY fecha DESC LIMIT 1""",
+                (uid,)
+            ).fetchone()
+            if sal:
+                from datetime import datetime
+                salida = datetime.fromisoformat(sal["fecha"])
+                minutos = int((datetime.utcnow() - salida).total_seconds() / 60)
+        except Exception:
+            pass
+
+        try:
+            conn.execute(
+                "INSERT INTO asistencia (usuario_id, tipo, turno_id) VALUES (?,?,?)",
+                (uid, "entrada_colacion", turno_id)
+            )
+        except Exception as e:
+            logger.warning(f"Error registrando entrada_colacion en reactivar: {e}")
+
+    session["turno_id"] = turno_id
+    return jsonify({"ok": True, "turno_id": turno_id, "minutos": minutos})
+
+
 @auth_bp.route("/turno/resumen", methods=["GET"])
 def turno_resumen():
     """Resumen de ventas del turno abierto actual."""
@@ -517,60 +591,59 @@ def turno_actual():
 
 @auth_bp.route("/turno/estado", methods=["GET"])
 def turno_estado_publico():
-    """Endpoint público — devuelve estado del turno para la pantalla de login."""
+    """Estado global del turno — sin heurísticas de asistencia."""
     with db_session() as conn:
         cfg = conn.execute(
             "SELECT valor FROM config WHERE clave='cajero_reemplazo_colacion'"
         ).fetchone()
         cajero_reemplazo = bool(cfg and cfg['valor'] == '1')
 
-        open_count = conn.execute(
-            "SELECT COUNT(*) FROM turnos WHERE estado='abierto'"
-        ).fetchone()[0]
+        col_row = conn.execute(
+            """SELECT t.usuario_id, u.nombre AS cajero_nombre
+               FROM turnos t JOIN usuarios u ON t.usuario_id = u.id
+               WHERE t.estado='colacion' LIMIT 1"""
+        ).fetchone()
 
-        # Cualquier usuario con salida_colacion sin entrada_colacion hoy
-        col_pendiente = conn.execute("""
-            SELECT 1 FROM asistencia
-            WHERE DATE(fecha) = DATE('now') AND tipo = 'salida_colacion'
-              AND usuario_id NOT IN (
-                  SELECT usuario_id FROM asistencia
-                  WHERE DATE(fecha) = DATE('now') AND tipo = 'entrada_colacion'
-              )
-            LIMIT 1
-        """).fetchone()
-
-        # Solo puede ir a colación si está solo Y nadie está pendiente de volver
-        puede_colacion = (open_count == 1) and not bool(col_pendiente)
-
-        row = conn.execute(
-            """SELECT t.id, t.usuario_id, u.nombre AS cajero_nombre
+        abierto_row = conn.execute(
+            """SELECT t.usuario_id, u.nombre AS cajero_nombre
                FROM turnos t JOIN usuarios u ON t.usuario_id = u.id
                WHERE t.estado='abierto' ORDER BY t.apertura DESC LIMIT 1"""
         ).fetchone()
 
-        if not row:
-            return jsonify({
-                "estado": "cerrado",
-                "cajero_reemplazo": cajero_reemplazo,
-                "colacion_pendiente": bool(col_pendiente),
-                "puede_colacion": False,
-            })
+        # puede_colacion: nadie en pausa → cualquier cajero activo puede ir
+        puede_colacion = col_row is None
 
-        ultima = conn.execute(
-            """SELECT tipo FROM asistencia
-               WHERE usuario_id=? AND DATE(fecha)=DATE('now')
-               ORDER BY fecha DESC LIMIT 1""",
-            (row['usuario_id'],)
-        ).fetchone()
+        if col_row:
+            estado = "colacion_activa"
+            cajero_nombre = col_row["cajero_nombre"]
+        elif abierto_row:
+            estado = "abierto"
+            cajero_nombre = abierto_row["cajero_nombre"]
+        else:
+            estado = "cerrado"
+            cajero_nombre = None
 
-        en_colacion = ultima and ultima['tipo'] == 'salida_colacion'
-        return jsonify({
-            "estado": "colacion_activa" if en_colacion else "abierto",
-            "cajero_reemplazo": cajero_reemplazo,
-            "cajero_nombre": row['cajero_nombre'],
-            "colacion_pendiente": bool(col_pendiente),
+        resp = {
+            "estado": estado,
             "puede_colacion": puede_colacion,
-        })
+            "cajero_reemplazo": cajero_reemplazo,
+        }
+        if cajero_nombre:
+            resp["cajero_nombre"] = cajero_nombre
+
+        # mi_turno: estado del turno del usuario que está en la pantalla de login
+        usuario_id = request.args.get("usuario_id")
+        if usuario_id:
+            try:
+                fila = conn.execute(
+                    "SELECT estado FROM turnos WHERE usuario_id=? AND estado IN ('abierto','colacion')",
+                    (int(usuario_id),)
+                ).fetchone()
+                resp["mi_turno"] = fila["estado"] if fila else "ninguno"
+            except (ValueError, TypeError):
+                resp["mi_turno"] = "ninguno"
+
+        return jsonify(resp)
 
 
 # ── Usuarios CRUD (admin) ─────────────────────────────────────────────────────

@@ -903,6 +903,19 @@ let _turnoRequerirConteo = false;
 async function verificarTurno(me) {
   const t = await fetch('/api/auth/turno/actual', {credentials:'include'}).then(r => r.json());
   if (!t.turno) {
+    // Comprobar si el usuario tiene turno en colación (página recargada o nueva pestaña)
+    const uid = me?.id;
+    if (uid) {
+      const estadoR = await fetch(`/api/auth/turno/estado?usuario_id=${uid}`, {credentials:'include'})
+        .then(r => r.json()).catch(() => ({}));
+      if (estadoR.mi_turno === 'colacion') {
+        document.getElementById('overlayColacion').style.display = 'flex';
+        document.getElementById('overlayTurnoCerrado').style.display = 'none';
+        document.body.classList.remove('cargando');
+        _actualizarTurnoBadge(false);
+        return;
+      }
+    }
     history.replaceState(null, '', '/static/login.html');
     const overlay = document.getElementById('overlayTurnoCerrado');
     overlay.style.display = 'flex';
@@ -910,9 +923,23 @@ async function verificarTurno(me) {
     if (usr && me) usr.textContent = me.nombre || me.username || '';
   } else {
     document.getElementById('overlayTurnoCerrado').style.display = 'none';
+    document.getElementById('overlayColacion').style.display = 'none';
   }
   document.body.classList.remove('cargando');
   _actualizarTurnoBadge(!!t.turno);
+}
+
+async function _volverDeColacion() {
+  const r = await fetch('/api/auth/turno/reactivar', {
+    method: 'POST',
+    credentials: 'include',
+  }).then(r => r.json()).catch(() => ({}));
+  if (r.ok) {
+    document.getElementById('overlayColacion').style.display = 'none';
+    location.reload();
+  } else {
+    showToast(r.error || 'No se pudo reactivar el turno', 'error');
+  }
 }
 
 function confirmarColacion(callback) {

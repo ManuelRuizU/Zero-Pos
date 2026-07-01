@@ -102,6 +102,8 @@ function mostrarPin(u) {
   document.getElementById('pantallaUsuarios').style.opacity = '0';
   document.getElementById('pantallaUsuarios').style.pointerEvents = 'none';
   document.getElementById('pantallaPin').classList.add('activa');
+  // Refinar botones de modo con el estado de turno de este usuario específico
+  if (u?.id) adaptarModosPorEstado(u.id);
 }
 
 function volverUsuarios() {
@@ -284,10 +286,8 @@ async function _mostrarPantallaPost(data) {
     document.getElementById('entradaColNombre').textContent = nombre;
     document.getElementById('entradaColHora').textContent   = `Son las ${hora}`;
     try {
-      const rCol = await fetch('/api/auth/asistencia', {
+      const rCol = await fetch('/api/auth/turno/reactivar', {
         method: 'POST', credentials: 'include',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({tipo: 'entrada_colacion'})
       }).then(r => r.json());
       if (rCol.minutos != null) {
         document.getElementById('entradaColMinutos').textContent =
@@ -310,7 +310,7 @@ document.addEventListener('keydown', e => {
 // ?modo= en URL se respeta dentro de _mostrarSolo() en adaptarModosPorEstado()
 // — no se aplica aquí para evitar race condition con el fetch async
 
-async function adaptarModosPorEstado() {
+async function adaptarModosPorEstado(userId) {
   const BTNS = {
     entrada:          document.getElementById('btnModoEntrada'),
     salida:           document.getElementById('btnModoSalida'),
@@ -320,8 +320,6 @@ async function adaptarModosPorEstado() {
 
   function _mostrarSolo(...modos) {
     const urlModo = new URLSearchParams(window.location.search).get('modo');
-    // Si venimos de cerrar turno/colación el modo URL debe ganar aunque el turno
-    // ya esté cerrado — no revertir a 'entrada' en ese caso.
     const MODOS_SALIDA = ['salida', 'salida_colacion'];
     if (urlModo && MODOS_SALIDA.includes(urlModo) && !modos.includes(urlModo)) {
       modos = [urlModo];
@@ -330,29 +328,38 @@ async function adaptarModosPorEstado() {
       if (btn) btn.style.display = modos.includes(m) ? '' : 'none';
     });
     seleccionarModo((urlModo && modos.includes(urlModo)) ? urlModo : modos[0]);
-    // Revelar grid ahora que el estado es conocido — elimina el flash de 4 botones
     document.querySelector('.modo-grid')?.classList.add('visible');
   }
 
   try {
-    const r = await fetch('/api/auth/turno/estado', {credentials: 'include'});
+    const url = userId
+      ? `/api/auth/turno/estado?usuario_id=${userId}`
+      : '/api/auth/turno/estado';
+    const r = await fetch(url, {credentials: 'include'});
     const data = await r.json();
     _estadoTurno = data;
 
-    if (data.estado === 'cerrado') {
-      data.colacion_pendiente
-        ? _mostrarSolo('entrada_colacion', 'entrada')
-        : _mostrarSolo('entrada');
-    } else if (data.estado === 'abierto') {
+    const miTurno = data.mi_turno; // 'abierto' | 'colacion' | 'ninguno' | undefined
+
+    if (miTurno === 'colacion') {
+      // Este usuario tiene turno pausado — solo puede volver
+      _mostrarSolo('entrada_colacion');
+    } else if (miTurno === 'abierto') {
+      // Este usuario tiene turno activo
       data.puede_colacion
         ? _mostrarSolo('salida_colacion', 'salida')
         : _mostrarSolo('salida');
-    } else if (data.estado === 'colacion_activa') {
-      data.cajero_reemplazo
-        ? _mostrarSolo('entrada_colacion', 'entrada')
-        : _mostrarSolo('entrada_colacion');
     } else {
-      _mostrarSolo('entrada'); // estado inesperado — fallback seguro
+      // Sin turno propio — depende del estado global
+      if (data.estado === 'colacion_activa') {
+        data.cajero_reemplazo
+          ? _mostrarSolo('entrada_colacion', 'entrada')
+          : _mostrarSolo('entrada');
+      } else if (data.estado === 'abierto') {
+        _mostrarSolo('entrada'); // multi-caja: puede abrir en otra terminal
+      } else {
+        _mostrarSolo('entrada'); // cerrado — inicio de jornada
+      }
     }
   } catch(e) {
     _mostrarSolo('entrada'); // error de red — fallback seguro
