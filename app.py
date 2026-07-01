@@ -701,6 +701,12 @@ def _mantenimiento_db():
                 "INSERT INTO config (clave, valor) VALUES ('ultimo_mantenimiento_db', datetime('now'))"
                 " ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor"
             )
+            # Limpiar intentos de login con bloqueo expirado hace más de 1 hora
+            conn.execute("""
+                DELETE FROM login_intentos
+                WHERE bloqueado_hasta < (unixepoch() - 3600)
+                AND bloqueado_hasta > 0
+            """)
         # VACUUM requiere conexión fuera de transacción activa
         import sqlite3, os
         db_path = os.path.join(os.path.dirname(__file__), 'zero_pos.db')

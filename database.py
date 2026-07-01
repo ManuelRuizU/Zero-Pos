@@ -706,6 +706,18 @@ def _m023_turnos_descuadre(conn):
     ensure_column(conn, 'turnos', 'ventas_count',    'INTEGER')
 
 
+def _m025_login_intentos(conn):
+    """Rate limiting persistente: intentos de login fallidos por IP."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS login_intentos (
+            ip              TEXT PRIMARY KEY,
+            intentos        INTEGER DEFAULT 0,
+            bloqueado_hasta REAL    DEFAULT 0,
+            ultimo_intento  REAL    DEFAULT 0
+        )
+    """)
+
+
 _MIGRACIONES = [
     (1, "stock_movimientos: variante_id, stock_antes/despues, venta_id, notas", _m001_stock_trazabilidad),
     (2, "proveedor_productos: relación explícita proveedor-producto",            _m002_proveedor_productos),
@@ -731,6 +743,7 @@ _MIGRACIONES = [
     (22, "SII: índice ventas.cliente_rut para consultas por RUT",               _m022_indices_sii),
     (23, "turnos: descuadre, ventas_efectivo, ventas_total, ventas_count",      _m023_turnos_descuadre),
     (24, "ventas: columna neto para desglose IVA separado",                    _m024_ventas_neto),
+    (25, "login_intentos: rate limiting persistente por IP en SQLite",         _m025_login_intentos),
 ]
 
 

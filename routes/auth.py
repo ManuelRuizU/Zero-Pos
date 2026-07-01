@@ -3,7 +3,6 @@ import logging
 import threading
 import time
 from datetime import datetime, timedelta
-from collections import defaultdict
 from flask import Blueprint, request, jsonify, session
 from database import db_session, ensure_column
 
@@ -15,8 +14,41 @@ ROLES_VALIDOS = {'admin', 'cajero', 'cocina', 'propietario'}
 _MAX_INTENTOS = 10
 _BLOQUEO_SEGUNDOS = 300  # 5 minutos
 
-_intentos: dict[str, int]   = defaultdict(int)
-_bloqueado_hasta: dict[str, float] = {}
+
+def _esta_bloqueado(conn, ip) -> tuple[bool, int]:
+    row = conn.execute(
+        "SELECT bloqueado_hasta FROM login_intentos WHERE ip=?", (ip,)
+    ).fetchone()
+    if not row:
+        return False, 0
+    ahora = time.time()
+    if row[0] > ahora:
+        return True, int(row[0] - ahora)
+    return False, 0
+
+
+def _registrar_intento_fallido(conn, ip):
+    ahora = time.time()
+    conn.execute("""
+        INSERT INTO login_intentos (ip, intentos, ultimo_intento)
+        VALUES (?, 1, ?)
+        ON CONFLICT(ip) DO UPDATE SET
+            intentos = intentos + 1,
+            ultimo_intento = ?
+    """, (ip, ahora, ahora))
+    row = conn.execute(
+        "SELECT intentos FROM login_intentos WHERE ip=?", (ip,)
+    ).fetchone()
+    if row and row[0] >= _MAX_INTENTOS:
+        conn.execute("""
+            UPDATE login_intentos
+            SET bloqueado_hasta=?, intentos=0
+            WHERE ip=?
+        """, (time.time() + _BLOQUEO_SEGUNDOS, ip))
+
+
+def _limpiar_intentos(conn, ip):
+    conn.execute("DELETE FROM login_intentos WHERE ip=?", (ip,))
 
 
 def _usuario_activo(conn, usuario_id: int):
@@ -62,12 +94,6 @@ def _contar_sesiones_cajero() -> int:
 @auth_bp.route("/login", methods=["POST"])
 def login():
     ip = request.remote_addr or "unknown"
-    ahora = time.time()
-
-    if _bloqueado_hasta.get(ip, 0) > ahora:
-        restante = int(_bloqueado_hasta[ip] - ahora)
-        logger.warning(f"Login bloqueado por fuerza bruta: ip={ip} restante={restante}s")
-        return jsonify({"error": f"Demasiados intentos. Espera {restante} segundos."}), 429
 
     data = request.get_json(silent=True) or {}
     pin = str(data.get("pin", "")).strip()
@@ -83,6 +109,11 @@ def login():
     usuario_id = data.get("usuario_id")
 
     with db_session() as conn:
+        bloqueado, restante = _esta_bloqueado(conn, ip)
+        if bloqueado:
+            logger.warning(f"Login bloqueado por fuerza bruta: ip={ip} restante={restante}s")
+            return jsonify({"error": f"Demasiados intentos. Espera {restante} segundos."}), 429
+
         if usuario_id:
             u = conn.execute(
                 "SELECT * FROM usuarios WHERE id=? AND activo=1", (usuario_id,)
@@ -125,9 +156,8 @@ def login():
                         "mensaje":     "Debes cambiar tu PIN antes de continuar",
                     }), 200
 
-                # Login exitoso — limpiar contador
-                _intentos.pop(ip, None)
-                _bloqueado_hasta.pop(ip, None)
+                # Login exitoso — limpiar contador persistente
+                _limpiar_intentos(conn, ip)
 
                 session["usuario_id"]       = u["id"]
                 session["usuario_nombre"]   = u["nombre"]
@@ -179,10 +209,10 @@ def login():
             except Exception:
                 continue
 
-    _intentos[ip] += 1
-    if _intentos[ip] >= _MAX_INTENTOS:
-        _bloqueado_hasta[ip] = time.time() + _BLOQUEO_SEGUNDOS
-        _intentos.pop(ip, None)
+    with db_session() as conn:
+        _registrar_intento_fallido(conn, ip)
+        bloqueado, _ = _esta_bloqueado(conn, ip)
+    if bloqueado:
         logger.warning(f"IP bloqueada por fuerza bruta: {ip}")
         return jsonify({"error": f"Demasiados intentos. Bloqueado por {_BLOQUEO_SEGUNDOS // 60} minutos."}), 429
 
