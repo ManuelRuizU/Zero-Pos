@@ -339,23 +339,31 @@ async function adaptarModosPorEstado(userId) {
     const data = await r.json();
     _estadoTurno = data;
 
+    // Banner: mostrar quién está en colación para guiar al siguiente en identificarse
+    const banner = document.getElementById('colacionBanner');
+    const bannerNombre = document.getElementById('colacionBannerNombre');
+    if (banner && bannerNombre) {
+      if (data.estado === 'colacion_activa' && data.cajero_nombre) {
+        bannerNombre.textContent = data.cajero_nombre;
+        banner.style.display = 'flex';
+      } else {
+        banner.style.display = 'none';
+      }
+    }
+
     const miTurno = data.mi_turno; // 'abierto' | 'colacion' | 'ninguno' | undefined
 
     if (miTurno === 'colacion') {
-      // Este usuario tiene turno pausado — solo puede volver
       _mostrarSolo('entrada_colacion');
     } else if (miTurno === 'abierto') {
-      // Este usuario tiene turno activo
       data.puede_colacion
         ? _mostrarSolo('salida_colacion', 'salida')
         : _mostrarSolo('salida');
     } else {
-      // Sin turno propio → solo puede abrir turno, sin importar el estado global.
-      // 'entrada_colacion' es exclusivo de quien tiene mi_turno='colacion'.
       _mostrarSolo('entrada');
     }
   } catch(e) {
-    _mostrarSolo('entrada'); // error de red — fallback seguro
+    _mostrarSolo('entrada');
   }
 }
 
