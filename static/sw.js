@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zeropos-v36';
+const CACHE_NAME = 'zeropos-v37';
 const URLS_TO_CACHE = [
   '/static/pos.html',
   '/static/admin.html',
@@ -52,33 +52,37 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  // API: NO interceptar — dejar pasar al browser
+
+  // Navegaciones HTML (mode='navigate'): NO interceptar.
+  // Safari lanza "Response served by service worker has redirections" si el SW
+  // devuelve una respuesta que siguió un 302 de Flask. La solución correcta es
+  // dejar que el browser maneje las navegaciones de forma nativa — incluyendo
+  // cualquier redirect a login. Los sub-recursos (CSS/JS) se cachean por separado.
+  if (event.request.mode === 'navigate') {
+    return;
+  }
+
+  // API: NO interceptar
   if (url.pathname.startsWith('/api/')) {
     return;
   }
+
   // Externos: NO interceptar
   if (url.origin !== self.location.origin) {
     return;
   }
-  // Network-first con fallback a caché.
-  // Safari lanza "Response served by service worker has redirections" si el SW
-  // devuelve una respuesta redirigida (302 de Flask → login). Con {redirect:'follow'}
-  // el fetch sigue la redirección y response.redirected queda true; en ese caso
-  // devolvemos la respuesta sin cachear para que Safari no la rechace.
+
+  // Sub-recursos estáticos: cache-first, actualiza caché en background
   event.respondWith(
-    fetch(event.request, {redirect: 'follow'})
-      .then(response => {
-        // NO cachear redirects — Safari los rechaza como respuesta SW
-        if (response.redirected || response.type === 'opaqueredirect') {
-          return response;
-        }
-        // Solo cachear respuestas 200 de archivos estáticos
+    caches.match(event.request).then(cached => {
+      const networkFetch = fetch(event.request).then(response => {
         if (response.status === 200 && url.pathname.startsWith('/static/')) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      })
-      .catch(() => caches.match(event.request))
+      });
+      return cached || networkFetch;
+    }).catch(() => caches.match(event.request))
   );
 });
