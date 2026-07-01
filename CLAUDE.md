@@ -1,6 +1,6 @@
 # CLAUDE.md — Contrato de Desarrollo ZERO POS
 # Lee este archivo COMPLETO antes de tocar cualquier código.
-# Última actualización: 2026-06-29
+# Última actualización: 2026-07-01
 
 ---
 
@@ -290,36 +290,66 @@ Modificarlas sin necesidad directa está PROHIBIDO.
 - **`motivo:'fin_turno'`** (cierre real de jornada):
   - Inserta `asistencia(tipo='salida', turno_id=X)` automáticamente — sin re-login
   - Retorna `{"ok": True, "cajero": nombre}` para el overlay
-- **`motivo:'colacion'`** (pausa al mediodía):
-  - NO inserta salida (ya se hizo `salida_colacion` antes de llamar a cerrar_turno)
-  - Comportamiento igual al anterior
+- **`motivo:'colacion'`** (pausa — NO cierra el turno):
+  - Hace `UPDATE turnos SET estado='colacion'` — el turno queda VIVO en BD
+  - Llama `session.pop("turno_id")` para que Flask no lo vea como turno activo
+  - Retorna `{"ok": True, "estado": "colacion"}` — SIN imprimir ticket de cierre
+  - La sesión Flask queda activa (usuario_id presente)
 - `_confirmarTurno()` en pos.js envía `motivo:'fin_turno'` y llama `_mostrarDespedidaTurno()`
-- `_irAColacion()` en pos.js envía `motivo:'colacion'` — sin cambio de flujo
+- `_irAColacion()` en pos.js envía `motivo:'colacion'` → muestra `#overlayColacion`
 - `_mostrarDespedidaTurno(nombre)`: muestra `#overlayDespedidaTurno` 2.5s → `location.href='login.html'`
 - `#overlayDespedidaTurno` en pos.html: ícono luna, nombre cajero, hora — patrón `.overlay-centered`
 - **NUNCA** volver a redirigir a `login.html?modo=salida` al cerrar turno — rompe este flujo
 - Ventaja: `asistencia.turno_id` queda correctamente enlazado (antes quedaba NULL con el re-login)
 
-### Cajero de reemplazo en colación (login.js + routes/auth.py + pos.html)
-- Config key `cajero_reemplazo_colacion` = '1' habilita botón "ABRIR TURNO" durante colación
-- `/api/auth/turno/estado` devuelve `estado='colacion_activa'`, `cajero_reemplazo=True/False`,
-  `cajero_nombre` (nombre del cajero principal en colación)
-- `_estadoTurno` en login.js almacena esta respuesta para usarla en `_mostrarPantallaPost()`
-- Si `_estadoTurno.estado === 'colacion_activa'` en el flujo entrada sin turno propio:
-  - `entradaSubtitulo` → "👥 Cajero de reemplazo"
-  - `entradaHorasSemana` → "Cubriendo a: [cajero_nombre]"
-  - redirect a pos.html después de 3 segundos (en vez de 1.5s)
-- Cada cajero (principal y reemplazo) tiene su propio registro de turno en BD
-- La pantalla "¿Quién eres?" muestra TODOS los usuarios activos — cada uno selecciona
-  su nombre y PIN por separado al abrir/cerrar su turno
-- **LECCIÓN APRENDIDA:** el botón "ABRIR TURNO" del overlayColacion (pos.html) NO debe
-  llamar a `_abrirModalTurno('abrir')` — eso abriría el turno bajo la sesión del cajero
-  principal sin identificar al reemplazo. Debe redirigir a `location.href='login.html'`
-  para que el reemplazo se autentique con su propio PIN y abra su propio turno.
-- **`colacion_pendiente`**: `turno_estado_publico()` detecta si hay `salida_colacion` sin
-  `entrada_colacion` hoy aunque no haya turno abierto. Si `colacion_pendiente:true`,
-  login.js muestra `['entrada_colacion','entrada']` en vez de solo `['entrada']`.
-  Permite que el cajero principal vuelva de colación aunque el reemplazo ya terminó.
+### Estado colación en turnos (BD + routes/auth.py) — ARQUITECTURA ACTUAL
+- `turnos.estado` es la fuente de verdad: `'abierto'` → `'colacion'` → `'abierto'` → `'cerrado'`
+- **`turno_reactivar()`** — `POST /api/auth/turno/reactivar`:
+  - `UPDATE turnos SET estado='abierto'` + `session["turno_id"] = turno_id`
+  - Inserta `asistencia(tipo='entrada_colacion', turno_id)` y calcula `minutos` de colación
+  - Retorna `{"ok": True, "turno_id": X, "minutos": N}`
+  - Solo funciona si el usuario tiene un turno con `estado='colacion'` en BD
+- **`turno_estado_publico()`** — `GET /api/auth/turno/estado`:
+  - `estado`: `'colacion_activa'` | `'abierto'` | `'cerrado'`
+  - `cajero_nombre`: nombre del cajero principal en colación (o activo)
+  - `puede_colacion`: True si no hay ningún turno en estado `'colacion'` en BD
+  - `mi_turno` (opcional, con `?usuario_id=X`): `'abierto'` | `'colacion'` | `'ninguno'`
+  - **`colacion_pendiente` fue ELIMINADO** — reemplazado por `mi_turno`
+  - **`cajero_reemplazo=True/False` fue ELIMINADO** — ya no se usa
+- **`modo_unica_caja`** (Config key, default `'1'`):
+  - `'1'`: solo puede haber un cajero con turno `estado='abierto'` simultáneamente
+  - `'0'`: permite múltiples turnos abiertos (futuras terminales adicionales)
+- **Reglas de validación backend** (en `cerrar_turno` con `motivo='colacion'`):
+  - Rechaza 403 si ya hay otro turno con `estado='colacion'` (solo un principal en colación)
+  - Rechaza 403 si hay otros turnos con `estado='abierto'` (cajero reemplazo activo)
+  - Cajero flotante NUNCA puede ir a colación si ya hay uno en colación
+
+### overlayColacion y login.html — flujo de identidad
+- `#overlayColacion` muestra nombre y hora de salida a colación del cajero principal
+- **UN SOLO BOTÓN**: "IDENTIFICARSE" → `location.href='login.html'`
+  - Sirve para AMBOS casos: principal volviendo y cajero flotante abriendo reemplazo
+  - **NO existe botón "VOLVER A LA CAJA" sin PIN** — nunca reintroducir
+  - Razón: sin PIN cualquiera puede reactivar el turno del principal sin identificarse
+- `login.html` muestra `#colacionBanner` (☕ [cajero_nombre] está en colación)
+  cuando `turno_estado_publico()` retorna `estado='colacion_activa'`
+- En login.html, al seleccionar avatar, `adaptarModosPorEstado(u.id)` determina:
+  - `mi_turno='colacion'` → solo **VOLVER DE COLACIÓN** → `turno/reactivar`
+  - `mi_turno='abierto'` → **SALIDA** (+ COLACIÓN si `puede_colacion`)
+  - `mi_turno='ninguno'` → solo **ABRIR TURNO** (cajero flotante)
+- `verificarTurno(me)` en pos.js: si `mi_turno='colacion'` → `location.href='login.html'`
+  (nunca muestra overlay sin pasar por PIN)
+- **`_volverDeColacion()` fue ELIMINADA de pos.js** — dead code después del fix de seguridad
+
+### Cajero flotante / reemplazo (modelo operacional)
+- Un cajero principal por turno; el cajero flotante cubre SECUENCIALMENTE múltiples cajas
+- Cada cajero tiene su propio registro de turno en BD — nunca comparten turno_id
+- La pantalla "¿Quién eres?" muestra todos los usuarios activos sin filtro
+- **Secuencia correcta de colación con reemplazo**:
+  1. Principal va a colación → `estado='colacion'` en BD → overlayColacion
+  2. Flotante va a login → banner "☕ [Principal] en colación" → abre su turno
+  3. Flotante vende, luego cierra su turno con `motivo:'fin_turno'` → login.html
+  4. Principal va a login → banner sigue visible → selecciona su avatar
+  5. Sistema muestra solo "VOLVER DE COLACIÓN" → PIN → `turno/reactivar` → POS
 
 ### Flujo de navegación login → caja (LECCIÓN APRENDIDA)
 - Login con modo=entrada (cualquier rol excepto cocina):
