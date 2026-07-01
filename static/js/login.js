@@ -350,16 +350,9 @@ async function adaptarModosPorEstado(userId) {
         ? _mostrarSolo('salida_colacion', 'salida')
         : _mostrarSolo('salida');
     } else {
-      // Sin turno propio — depende del estado global
-      if (data.estado === 'colacion_activa') {
-        data.cajero_reemplazo
-          ? _mostrarSolo('entrada_colacion', 'entrada')
-          : _mostrarSolo('entrada');
-      } else if (data.estado === 'abierto') {
-        _mostrarSolo('entrada'); // multi-caja: puede abrir en otra terminal
-      } else {
-        _mostrarSolo('entrada'); // cerrado — inicio de jornada
-      }
+      // Sin turno propio → solo puede abrir turno, sin importar el estado global.
+      // 'entrada_colacion' es exclusivo de quien tiene mi_turno='colacion'.
+      _mostrarSolo('entrada');
     }
   } catch(e) {
     _mostrarSolo('entrada'); // error de red — fallback seguro
