@@ -181,9 +181,11 @@ body {
 /* Departments */
 .deptos {
   display: flex; gap: 6px; padding: 6px 12px 2px;
-  overflow-x: auto; flex-shrink: 0; scrollbar-width: none;
+  overflow-x: auto; flex-shrink: 0; flex-wrap: nowrap;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
   border-bottom: 1px solid rgba(255,255,255,.04);
 }
+.deptos.oculto { display: none; }
 .deptos::-webkit-scrollbar { display: none; }
 .depto-btn {
   background: none; border: none; color: var(--text-dim);
@@ -195,8 +197,10 @@ body {
 /* Categories */
 .categorias {
   display: flex; gap: 8px; padding: 8px 12px;
-  overflow-x: auto; flex-shrink: 0; scrollbar-width: none;
+  overflow-x: auto; flex-shrink: 0; flex-wrap: nowrap;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
 }
+.categorias.oculto { display: none; }
 .categorias::-webkit-scrollbar { display: none; }
 .cat-btn {
   background: var(--surface); border: 1px solid var(--border);
@@ -205,6 +209,7 @@ body {
   white-space: nowrap; transition: all .15s; flex-shrink: 0;
 }
 .cat-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cat-back { background: var(--surface2) !important; border-color: var(--accent) !important; color: var(--accent) !important; font-weight: 700; }
 
 /* Subcategories */
 .subcategorias-row {

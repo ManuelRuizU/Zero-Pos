@@ -1110,8 +1110,8 @@ const _DEPTO_META = {
 
 async function cargarCategorias() {
   const data = await fetch('/api/productos/categorias', {credentials:'include'}).then(r => r.json()).catch(() => []);
-  const div = document.getElementById('categorias');
-  const deptos = document.getElementById('deptos');
+  const div    = document.getElementById('categorias');
+  const deptDiv = document.getElementById('deptos');
   const seenDeptos = new Set();
   data.forEach(c => {
     catIconoMap[c.id] = c.icono || '📦';
@@ -1131,19 +1131,57 @@ async function cargarCategorias() {
       db.dataset.depto = d;
       db.onclick = () => selDepto(db, d);
       db.textContent = `${meta.emoji} ${meta.label}`;
-      deptos.appendChild(db);
+      deptDiv.appendChild(db);
     }
   });
+  // Una sola fila: si hay múltiples deptos, empezar en vista deptos (cats ocultos)
+  // Si hay ≤1 depto, ocultar la fila de deptos y mostrar directamente las categorías
+  if (seenDeptos.size > 1) {
+    div.classList.add('oculto');
+  } else {
+    deptDiv.style.display = 'none';
+  }
 }
 
 function selDepto(btn, depto) {
   document.querySelectorAll('.depto-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   deptoActual = depto;
-  document.querySelectorAll('#categorias .cat-btn:not([data-id=""])').forEach(b => {
-    const d = catDeptoMap[b.dataset.id] || 'Alimentación';
-    b.style.display = (!depto || d === depto) ? '' : 'none';
-  });
+
+  const catDiv  = document.getElementById('categorias');
+  const deptDiv = document.getElementById('deptos');
+
+  if (!depto) {
+    // Volver a vista departamentos
+    deptDiv.classList.remove('oculto');
+    catDiv.classList.add('oculto');
+    document.querySelectorAll('#categorias .cat-btn:not([data-id=""])').forEach(b => {
+      b.style.display = '';
+    });
+  } else {
+    // Drill-down: ocultar deptos, mostrar categorías filtradas
+    deptDiv.classList.add('oculto');
+    catDiv.classList.remove('oculto');
+    document.querySelectorAll('#categorias .cat-btn:not([data-id=""])').forEach(b => {
+      const d = catDeptoMap[b.dataset.id] || 'Alimentación';
+      b.style.display = (d === depto) ? '' : 'none';
+    });
+    // Chip volver (se crea una sola vez, se reutiliza)
+    let backBtn = document.getElementById('catBackBtn');
+    if (!backBtn) {
+      backBtn = document.createElement('button');
+      backBtn.id = 'catBackBtn';
+      backBtn.className = 'cat-btn cat-back';
+      backBtn.onclick = () => {
+        const todosDepto = document.querySelector('.depto-btn[data-depto=""]');
+        if (todosDepto) selDepto(todosDepto, '');
+      };
+      catDiv.insertBefore(backBtn, catDiv.firstChild);
+    }
+    const meta = _DEPTO_META[depto] || { emoji: '📦', label: depto };
+    backBtn.textContent = `← ${meta.emoji} ${meta.label}`;
+  }
+
   const allCatBtn = document.querySelector('#categorias .cat-btn[data-id=""]');
   if (allCatBtn) selCat(allCatBtn, '');
 }
