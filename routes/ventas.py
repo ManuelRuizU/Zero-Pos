@@ -1,44 +1,17 @@
+#routes/ventas.py
 import logging
-import re
-import threading
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session
-from database import (db_session, pesos, registrar_movimiento_stock, tiene_permiso,
-                       encolar_ticket, marcar_ticket_impreso, marcar_ticket_fallido,
-                       log_event)
+from database import db_session, pesos
 from routes.productos import cache_invalidate as _invalidate_productos
 
 ventas_bp = Blueprint("ventas", __name__, url_prefix="/api/ventas")
 
-# ── Caché de configuración (TTL 60 s) ────────────────────────────────────────
-_config_cache: dict = {}
-_config_cache_ts: float = 0.0
-_CONFIG_TTL = 60  # segundos
-
-
-def _get_config_cached(conn) -> dict:
-    global _config_cache, _config_cache_ts
-    import time
-    ahora = time.time()
-    if ahora - _config_cache_ts < _CONFIG_TTL and _config_cache:
-        return _config_cache
-    rows = conn.execute("SELECT clave, valor FROM config").fetchall()
-    _config_cache = {r["clave"]: r["valor"] for r in rows}
-    _config_cache_ts = ahora
-    return _config_cache
-
-
-def invalidar_config_cache() -> None:
-    global _config_cache_ts
-    _config_cache_ts = 0.0
-
-
-# ── Estado en memoria para pantalla cliente (Orange Pi = servidor único) ─────
+# Estado en memoria para pantalla cliente (Orange Pi = servidor único)
 _pantalla: dict = {
     "items": [], "total": 0, "subtotal": 0, "iva": 0,
     "metodo_pago": "", "monto_recibido": 0, "vuelto": 0,
     "estado": "idle", "activa": False,
-    "checkout_id": "", "link_pago": "",
 }
 
 @ventas_bp.after_request
@@ -68,25 +41,12 @@ def crear_venta():
         return jsonify({"error": "Carrito vacío"}), 400
 
     metodo_pago = data.get("metodo_pago", "efectivo")
-    # 'tarjeta_pendiente' = reserva la venta sin descontar stock ni imprimir ticket
-    # Se usa cuando el pago SumUp aún no fue confirmado
-    es_pendiente = (metodo_pago == "tarjeta_pendiente")
-    if es_pendiente:
-        metodo_pago = "tarjeta"
     descuento_global = float(data.get("descuento", 0))
-
-    # Verificar descuento máximo permitido por rol
-    if descuento_global > 0:
-        max_desc_pct = tiene_permiso(dict(session), "descuento_maximo_pct")
-        if max_desc_pct is False or max_desc_pct == 0:
-            return jsonify({"error": "No tienes permiso para aplicar descuentos"}), 403
-
     cliente_nombre = data.get("cliente_nombre")
-    cliente_rut = (data.get("cliente_rut") or "").strip() or None
-    if cliente_rut and not re.match(r'^\d{1,8}-[\dkK]$', cliente_rut):
-        return jsonify({"error": "RUT inválido. Formato: 12345678-9"}), 400
+    cliente_rut = data.get("cliente_rut")
     notas = data.get("notas")
     pedido_id = data.get("pedido_id")
+    turno_id  = session.get("turno_id")
     empleado  = session.get("usuario_nombre", "")
 
     venta_id = None
@@ -96,13 +56,6 @@ def crear_venta():
     config_imp = {}
 
     with db_session() as conn:
-        turno = conn.execute(
-            "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
-        ).fetchone()
-        if not turno:
-            return jsonify({"error": "Debes abrir turno antes de vender"}), 409
-        turno_id = turno["id"]
-
         items_validados = []
 
         for item in items:
@@ -137,34 +90,6 @@ def crear_venta():
                     return jsonify({"error": f"Stock insuficiente: {prod['nombre']}"}), 409
                 precio_unit = float(prod["precio"])
 
-            # FEFO: si el producto tiene lotes activos, usar el de vencimiento más próximo
-            lote_id = item.get("lote_id") or None
-            lote_info = None
-            if not lote_id:
-                lote_row = conn.execute(
-                    """SELECT id, numero_lote, fecha_vencimiento, cantidad_actual
-                       FROM lotes WHERE producto_id=? AND estado='activo'
-                       AND cantidad_actual > 0
-                       ORDER BY fecha_vencimiento ASC NULLS LAST LIMIT 1""",
-                    (pid,)
-                ).fetchone()
-                if lote_row:
-                    lote_id = lote_row["id"]
-                    lote_info = {
-                        "id": lote_row["id"],
-                        "numero_lote": lote_row["numero_lote"],
-                        "vencimiento": lote_row["fecha_vencimiento"],
-                    }
-            elif lote_id:
-                lr = conn.execute(
-                    "SELECT id, numero_lote, fecha_vencimiento FROM lotes WHERE id=?", (lote_id,)
-                ).fetchone()
-                if lr:
-                    lote_info = {"id": lr["id"], "numero_lote": lr["numero_lote"],
-                                 "vencimiento": lr["fecha_vencimiento"]}
-
-            if descuento_item > precio_unit * qty:
-                return jsonify({"error": f"Descuento excede el precio en '{prod['nombre']}'"}), 400
             subtotal = pesos((precio_unit * qty) - descuento_item)
             total += subtotal
             items_validados.append({
@@ -177,19 +102,14 @@ def crear_venta():
                 "descuento": pesos(descuento_item),
                 "subtotal": subtotal,
                 "modo_stock": modo_stock,
-                "lote_id": lote_id,
-                "lote_info": lote_info,
-                "modificadores_desc": item.get("modificadores_desc") or None,
             })
 
         total = pesos(total - descuento_global)
-        if total < 0:
-            return jsonify({"error": "El descuento global genera total negativo"}), 400
-        config_negocio = _get_config_cached(conn)
+        cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+        config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
 
         iva_pct = float(config_negocio.get("iva_porcentaje") or 19)
-        neto     = pesos(total / (1 + iva_pct / 100))
-        impuesto = total - neto
+        impuesto = pesos(total * iva_pct / (100 + iva_pct))
 
         # Leer config de impresora desde DB (misma fuente que usa test_conexion)
         config_imp = {
@@ -200,12 +120,11 @@ def crear_venta():
 
         cur = conn.execute(
             """INSERT INTO ventas
-               (turno_id, usuario_id, pedido_id, total, descuento, neto, impuesto,
-                metodo_pago, estado, cliente_nombre, cliente_rut, notas)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (turno_id, uid, pedido_id, total, descuento_global, neto, impuesto,
-             metodo_pago, 'pendiente' if es_pendiente else 'completada',
-             cliente_nombre, cliente_rut, notas)
+               (turno_id, usuario_id, pedido_id, total, descuento, impuesto,
+                metodo_pago, cliente_nombre, cliente_rut, notas)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (turno_id, uid, pedido_id, total, descuento_global, impuesto,
+             metodo_pago, cliente_nombre, cliente_rut, notas)
         )
         venta_id = cur.lastrowid
 
@@ -219,36 +138,24 @@ def crear_venta():
             conn.execute(
                 """INSERT INTO venta_items
                    (venta_id, producto_id, variante_id, nombre_variante,
-                    cantidad, precio_unit, descuento, subtotal, lote_id, modificadores_desc)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                    cantidad, precio_unit, descuento, subtotal)
+                   VALUES (?,?,?,?,?,?,?,?)""",
                 (venta_id, it["producto_id"], it.get("variante_id"),
                  it.get("nombre_variante"), it["cantidad"],
-                 it["precio_unit"], it["descuento"], it["subtotal"],
-                 it.get("lote_id"), it.get("modificadores_desc"))
+                 it["precio_unit"], it["descuento"], it["subtotal"])
             )
-            if not es_pendiente:
-                try:
-                    if it.get("variante_id"):
-                        registrar_movimiento_stock(
-                            conn, it["producto_id"], it["variante_id"],
-                            "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
-                    elif it.get("modo_stock") != "sin_stock":
-                        registrar_movimiento_stock(
-                            conn, it["producto_id"], None,
-                            "salida", it["cantidad"], "venta", uid, venta_id=venta_id)
-                except ValueError as e:
-                    conn.rollback()
-                    return jsonify({"error": str(e)}), 409
-                if it.get("modo_stock") != "sin_stock":
-                    _check_stock_alerta(conn, it["producto_id"])
-                if it.get("lote_id"):
-                    conn.execute(
-                        """UPDATE lotes
-                           SET cantidad_actual = MAX(0, cantidad_actual - ?),
-                               estado = CASE WHEN cantidad_actual - ? <= 0 THEN 'agotado' ELSE estado END
-                           WHERE id=?""",
-                        (it["cantidad"], it["cantidad"], it["lote_id"])
-                    )
+            if it.get("variante_id"):
+                conn.execute(
+                    "UPDATE producto_variantes SET stock = stock - ? WHERE id=?",
+                    (it["cantidad"], it["variante_id"])
+                )
+            elif it.get("modo_stock") != "sin_stock":
+                conn.execute(
+                    "UPDATE productos SET stock = stock - ? WHERE id=?",
+                    (it["cantidad"], it["producto_id"])
+                )
+            if it.get("modo_stock") != "sin_stock":
+                _check_stock_alerta(conn, it["producto_id"])
 
         items_para_ticket = items_validados
 
@@ -260,77 +167,37 @@ def crear_venta():
                 pedido_data = dict(row)
 
         logger.info(f"Venta #{venta_id} creada por usuario {uid} — total={total}")
-        log_event(conn, 'venta', 'crear',
-                  entidad_id=venta_id,
-                  payload={'total': total, 'metodo': metodo_pago, 'items': len(items_validados)},
-                  usuario_id=uid,
-                  usuario_nombre=session.get('usuario_nombre'))
 
-    # La transacción ya está committed.
-    # Ventas pendientes (SumUp sin confirmar) no imprimen ticket aún.
-    if not es_pendiente:
-        try:
-            _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                                   config_negocio, config_imp, pedido_data, empleado,
-                                   neto=neto, impuesto=impuesto)
-        except Exception as e:
-            logger.error(f"Error al imprimir ticket venta #{venta_id}: {e}")
+    # La transacción ya está committed. Imprimir sin afectar la respuesta.
+    _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
+                           config_negocio, config_imp, pedido_data, empleado)
 
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
 
 def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, config_imp,
-                           pedido=None, empleado="", neto=0, impuesto=0):
-    """Encola el ticket PRIMERO (la venta ya está guardada), luego imprime en hilo separado.
-    Si la impresión falla, el ticket queda en cola para reintento automático.
-    La venta NUNCA se pierde aunque falle la impresora."""
-    from utils.impresora import _formatear_texto, imprimir_comanda
-
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    venta_data = {
-        "id": venta_id, "total": total, "metodo_pago": metodo_pago,
-        "creado_en": now_str, "cajero": empleado, "neto": neto, "impuesto": impuesto,
-    }
-
-    # Generar contenido del ticket de forma síncrona antes del hilo
-    try:
-        contenido = _formatear_texto(venta_data, items, config_negocio, pedido)
-    except Exception as e:
-        logger.warning(f"Error al formatear ticket #{venta_id}: {e}")
-        contenido = f"Venta #{venta_id} — ${total:,}\n{now_str}\n"
-
-    # Guardar en cola ANTES de intentar imprimir
-    cola_id = None
-    try:
-        with db_session() as conn:
-            cola_id = encolar_ticket(conn, venta_id, contenido,
-                                     config_imp.get("ip") or config_imp.get("tipo"))
-    except Exception as e:
-        logger.warning(f"Error al encolar ticket #{venta_id}: {e}")
+                           pedido=None, empleado=""):
+    """Imprime en hilo separado para no bloquear la respuesta HTTP."""
+    import threading
 
     def _print():
-        from utils.impresora import enviar_crudo
         try:
-            resultado = enviar_crudo(config_imp, contenido)
+            from utils.impresora import imprimir_recibo, imprimir_comanda
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            venta_data = {
+                "id": venta_id,
+                "total": total,
+                "metodo_pago": metodo_pago,
+                "creado_en": now_str,
+                "cajero": empleado,
+            }
+            resultado = imprimir_recibo(venta_data, items, config_negocio, config_imp, pedido)
             if resultado.get("ok"):
                 logger.info(f"Ticket venta #{venta_id} impreso OK")
-                if cola_id:
-                    try:
-                        with db_session() as conn:
-                            marcar_ticket_impreso(conn, cola_id)
-                    except Exception:
-                        pass
             else:
-                err = resultado.get("error", "error desconocido")
-                logger.warning(f"Impresión venta #{venta_id}: {err}")
-                if cola_id:
-                    try:
-                        with db_session() as conn:
-                            marcar_ticket_fallido(conn, cola_id, err)
-                    except Exception:
-                        pass
+                logger.warning(f"Impresión venta #{venta_id}: {resultado.get('error', 'error desconocido')}")
 
-            # Comanda de cocina (no se encola, es best-effort)
+            # Comanda de cocina si hay pedido delivery/retiro y hay impresora cocina configurada
             if pedido and pedido.get("tipo") in ("delivery", "retiro", "local"):
                 ip_cocina = config_negocio.get("impresora_cocina_ip", "")
                 if ip_cocina:
@@ -340,16 +207,12 @@ def _imprimir_ticket_async(venta_id, total, metodo_pago, items, config_negocio, 
                         "puerto": config_negocio.get("impresora_cocina_puerto", "9100"),
                     }
                     res_c = imprimir_comanda(venta_data, items, config_negocio, config_cocina, pedido)
-                    if not res_c.get("ok"):
+                    if res_c.get("ok"):
+                        logger.info(f"Comanda venta #{venta_id} impresa OK")
+                    else:
                         logger.warning(f"Comanda venta #{venta_id}: {res_c.get('error', '')}")
         except Exception as e:
             logger.warning(f"Error al imprimir ticket venta #{venta_id}: {e}")
-            if cola_id:
-                try:
-                    with db_session() as conn:
-                        marcar_ticket_fallido(conn, cola_id, str(e))
-                except Exception:
-                    pass
 
     threading.Thread(target=_print, daemon=True, name=f"ticket-{venta_id}").start()
 
@@ -431,40 +294,28 @@ def detalle_venta(vid):
 
 @ventas_bp.route("/<int:vid>/anular", methods=["POST"])
 def anular_venta(vid):
-    uid = session.get("usuario_id")
-    if not uid:
-        return jsonify({"error": "No autenticado"}), 401
-    motivo = (request.get_json(silent=True) or {}).get('motivo', '')
+    if session.get("usuario_rol") not in ("admin",):
+        return jsonify({"error": "Sin permisos"}), 403
 
     with db_session() as conn:
         venta = conn.execute(
-            "SELECT * FROM ventas WHERE id=? AND estado IN ('completada','pendiente')", (vid,)
+            "SELECT * FROM ventas WHERE id=? AND estado='completada'", (vid,)
         ).fetchone()
         if not venta:
             return jsonify({"error": "Venta no encontrada o ya anulada"}), 404
 
-        # Ventas completadas: requieren permiso y devuelven stock (dinero ya cobrado)
-        # Ventas pendientes: cualquier usuario autenticado puede cancelar (sin pago aún, sin stock descontado)
-        if dict(venta)["estado"] == "completada":
-            if not tiene_permiso(dict(session), "puede_anular_ventas"):
-                return jsonify({"error": "Sin permisos para anular ventas"}), 403
-            items = conn.execute(
-                "SELECT producto_id, variante_id, cantidad FROM venta_items WHERE venta_id=?", (vid,)
-            ).fetchall()
-            for it in items:
-                registrar_movimiento_stock(
-                    conn, it["producto_id"], it["variante_id"],
-                    "entrada", it["cantidad"], "anulacion", uid, venta_id=vid,
-                    notas=f"Devolución por anulación venta #{vid}")
+        items = conn.execute(
+            "SELECT producto_id, cantidad FROM venta_items WHERE venta_id=?", (vid,)
+        ).fetchall()
+        for it in items:
+            conn.execute(
+                "UPDATE productos SET stock = stock + ? WHERE id=?",
+                (it["cantidad"], it["producto_id"])
+            )
 
         conn.execute(
             "UPDATE ventas SET estado='anulada' WHERE id=?", (vid,)
         )
-        log_event(conn, 'venta', 'anular',
-                  entidad_id=vid,
-                  payload={'motivo': motivo} if motivo else None,
-                  usuario_id=uid,
-                  usuario_nombre=session.get('usuario_nombre'))
         return jsonify({"ok": True})
 
 
@@ -496,11 +347,11 @@ def devolucion(vid):
             if not orig or orig["cantidad"] < qty:
                 return jsonify({"error": f"Cantidad de devolución inválida para producto {pid}"}), 400
             monto_devuelto += orig["precio_unit"] * qty
-            registrar_movimiento_stock(
-                conn, pid, orig["variante_id"] if "variante_id" in orig.keys() else None,
-                "devolucion", qty, motivo or "devolucion", uid, venta_id=vid)
+            conn.execute(
+                "UPDATE productos SET stock = stock + ? WHERE id=?", (qty, pid)
+            )
 
-        cur_dev = conn.execute(
+        conn.execute(
             "INSERT INTO devoluciones (venta_id, usuario_id, motivo, monto) VALUES (?,?,?,?)",
             (vid, uid, motivo, pesos(monto_devuelto))
         )
@@ -521,12 +372,10 @@ def venta_rapida():
         return jsonify({"error": "Carrito vacío"}), 400
 
     metodo_pago = data.get("metodo_pago", "efectivo")
-    es_pendiente_r = (metodo_pago == "tarjeta_pendiente")
-    if es_pendiente_r:
-        metodo_pago = "tarjeta"
     descuento_global = float(data.get("descuento", 0))
     guardar_productos = data.get("guardar_productos", False)
     pedido_id_rapida = data.get("pedido_id")
+    turno_id = session.get("turno_id")
 
     total = 0
     items_para_ticket = []
@@ -535,14 +384,8 @@ def venta_rapida():
     venta_id = None
 
     with db_session() as conn:
-        turno = conn.execute(
-            "SELECT id FROM turnos WHERE usuario_id=? AND estado='abierto'", (uid,)
-        ).fetchone()
-        if not turno:
-            return jsonify({"error": "Debes abrir turno antes de vender"}), 409
-        turno_id = turno["id"]
-
-        config_negocio = _get_config_cached(conn)
+        cfg_rows = conn.execute("SELECT clave, valor FROM config").fetchall()
+        config_negocio = {r["clave"]: r["valor"] for r in cfg_rows}
         config_imp = {
             "tipo": config_negocio.get("impresora_tipo", "red"),
             "ip": config_negocio.get("impresora_ip", "192.168.1.100"),
@@ -592,18 +435,13 @@ def venta_rapida():
             })
 
         total = pesos(total - descuento_global)
-        if total < 0:
-            return jsonify({"error": "El descuento global genera total negativo"}), 400
-        neto     = pesos(total / (1 + iva_pct / 100))
-        impuesto = total - neto
+        impuesto = pesos(total * iva_pct / (100 + iva_pct))
 
         cur = conn.execute(
             """INSERT INTO ventas
-               (turno_id, usuario_id, pedido_id, total, descuento, neto, impuesto,
-                metodo_pago, estado)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
-            (turno_id, uid, pedido_id_rapida, total, descuento_global, neto, impuesto,
-             metodo_pago, 'pendiente' if es_pendiente_r else 'completada')
+               (turno_id, usuario_id, pedido_id, total, descuento, impuesto, metodo_pago)
+               VALUES (?,?,?,?,?,?,?)""",
+            (turno_id, uid, pedido_id_rapida, total, descuento_global, impuesto, metodo_pago)
         )
         venta_id = cur.lastrowid
 
@@ -622,13 +460,11 @@ def venta_rapida():
                  it["precio_unit"], it["subtotal"])
             )
         items_para_ticket = items_validados
-        logger.info(f"Venta rápida #{venta_id} — total={total}{' (pendiente)' if es_pendiente_r else ''}")
+        logger.info(f"Venta rápida #{venta_id} — total={total}")
 
-    if not es_pendiente_r:
-        _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
-                               config_negocio, config_imp,
-                               empleado=session.get("usuario_nombre", ""),
-                               neto=neto, impuesto=impuesto)
+    _imprimir_ticket_async(venta_id, total, metodo_pago, items_para_ticket,
+                           config_negocio, config_imp,
+                           empleado=session.get("usuario_nombre", ""))
     return jsonify({"ok": True, "venta_id": venta_id, "total": total}), 201
 
 
@@ -653,7 +489,6 @@ def pantalla_cliente_set():
                 "cantidad":    int(i.get("cantidad", 1)),
                 "precio_unit": pesos(i.get("precio_unit", 0)),
                 "subtotal":    pesos(i.get("subtotal", 0)),
-                "imagen_url":  i.get("imagen_url") or None,
             }
             for i in items
         ],
@@ -665,8 +500,6 @@ def pantalla_cliente_set():
         "vuelto":         pesos(data.get("vuelto", 0)),
         "estado":         estado,
         "activa":         bool(items),
-        "checkout_id":    str(data.get("checkout_id", "") or ""),
-        "link_pago":      str(data.get("link_pago", "") or ""),
     }
     return jsonify({"ok": True})
 

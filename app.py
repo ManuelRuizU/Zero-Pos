@@ -1,12 +1,12 @@
+# app.py
+
 import os
 import sys
 import socket
 import threading
 import logging
-from datetime import timedelta
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from flask import Flask, redirect, url_for, send_from_directory, request, session
+from flask import Flask, redirect, url_for, send_from_directory, request
 from flask_cors import CORS
 from flask_session import Session
 
@@ -22,7 +22,6 @@ SSL_KEY  = SSL_DIR / "key.pem"
 
 BASE_DIR = Path(__file__).parent
 SECRET_KEY_FILE = BASE_DIR / ".secret_key"
-IP_CACHE = BASE_DIR / ".ip_cache"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -30,21 +29,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("zero_pos")
-
-_logs_dir = BASE_DIR / "logs"
-_logs_dir.mkdir(exist_ok=True)
-_file_handler = RotatingFileHandler(
-    _logs_dir / "zero_pos.log",
-    maxBytes=5 * 1024 * 1024,
-    backupCount=3,
-    encoding="utf-8",
-)
-_file_handler.setLevel(logging.INFO)
-_file_handler.setFormatter(logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-))
-logging.getLogger().addHandler(_file_handler)
-logger.info("Logging a archivo iniciado")
 
 def get_or_create_ssl_cert() -> tuple[Path, Path]:
     """Generate a persistent self-signed cert (only on first run)."""
@@ -133,31 +117,18 @@ def is_hotspot_mode() -> bool:
 def get_ip_local() -> str:
     if is_hotspot_mode():
         return HOTSPOT_IP
-    # Intentar leer cache primero
-    if IP_CACHE.exists():
-        try:
-            ip = IP_CACHE.read_text().strip()
-            if ip and ip != "127.0.0.1":
-                return ip
-        except Exception:
-            pass
-    # Calcular IP real
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
         s.connect(("10.255.255.255", 1))
         ip = s.getsockname()[0]
         s.close()
+        return ip
     except Exception:
         try:
-            ip = socket.gethostbyname(socket.gethostname())
+            return socket.gethostbyname(socket.gethostname())
         except Exception:
-            ip = "127.0.0.1"
-    # Guardar en cache
-    try:
-        IP_CACHE.write_text(ip)
-    except Exception:
-        pass
-    return ip
+            return "127.0.0.1"
 
 
 def is_port_free(port: int) -> bool:
@@ -166,106 +137,10 @@ def is_port_free(port: int) -> bool:
 
 
 def find_free_port(preferred: int = 5000) -> int:
-    for port in range(preferred, preferred + 10):
-        try:
-            with socket.socket() as s:
-                s.bind(("", port))
-                return port
-        except OSError:
-            continue
+    for port in (preferred, preferred + 1):
+        if is_port_free(port):
+            return port
     return preferred
-
-
-def _run_mux(host: str, mux_port: int, https_int_port: int, http_port: int) -> None:
-    """
-    Protocol multiplexer (blocks forever).
-    TLS connections  → TCP-proxied to 127.0.0.1:https_int_port (HTTPS interno)
-    HTTP connections → 301 redirect a http://<host>:http_port<path>
-    """
-    mux = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    mux.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    mux.bind((host, mux_port))
-    mux.listen(256)
-    logger.info(f"Mux :{mux_port}  HTTP→:{http_port}  TLS→:127.0.0.1:{https_int_port}")
-
-    def _pipe(src: socket.socket, dst: socket.socket) -> None:
-        try:
-            while chunk := src.recv(32768):
-                dst.sendall(chunk)
-        except Exception:
-            pass
-        for s in (src, dst):
-            try:
-                s.shutdown(socket.SHUT_RDWR)
-            except Exception:
-                pass
-            try:
-                s.close()
-            except Exception:
-                pass
-
-    def _redirect(conn: socket.socket, client_ip: str) -> None:
-        try:
-            conn.settimeout(30)
-            raw = b""
-            while b"\r\n\r\n" not in raw and len(raw) < 8192:
-                chunk = conn.recv(4096)
-                if not chunk:
-                    break
-                raw += chunk
-            path, host_hdr = "/", client_ip
-            for i, line in enumerate(raw.decode("utf-8", "replace").split("\r\n")):
-                if i == 0:
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        path = parts[1]
-                elif line.lower().startswith("host:"):
-                    host_hdr = line.split(":", 1)[1].strip().split(":")[0]
-            conn.sendall((
-                f"HTTP/1.1 301 Moved Permanently\r\n"
-                f"Location: http://{host_hdr}:{http_port}{path}\r\n"
-                f"Content-Length: 0\r\nConnection: close\r\n\r\n"
-            ).encode())
-        except Exception:
-            pass
-        finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
-
-    def _handle(conn: socket.socket, addr: tuple) -> None:
-        try:
-            probe = conn.recv(1, socket.MSG_PEEK)
-            if not probe:
-                conn.close()
-                return
-            if probe[0] == 0x16:   # TLS ClientHello
-                try:
-                    backend = socket.create_connection(("127.0.0.1", https_int_port), timeout=30)
-                    threading.Thread(target=_pipe, args=(conn, backend), daemon=True).start()
-                    _pipe(backend, conn)
-                except Exception:
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
-            else:                  # Plain HTTP
-                _redirect(conn, addr[0])
-        except Exception:
-            try:
-                conn.close()
-            except Exception:
-                pass
-
-    while True:
-        try:
-            conn, addr = mux.accept()
-            threading.Thread(target=_handle, args=(conn, addr), daemon=True).start()
-        except Exception as exc:
-            if mux.fileno() == -1:
-                break
-            logger.warning(f"Mux accept error: {exc}")
 
 
 def create_app() -> Flask:
@@ -279,8 +154,6 @@ def create_app() -> Flask:
         SESSION_USE_SIGNER=True,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
-        SESSION_COOKIE_SECURE=True,
-        PERMANENT_SESSION_LIFETIME=timedelta(hours=12),
         MAX_CONTENT_LENGTH=50 * 1024 * 1024,
         # Flask-Compress
         COMPRESS_MIMETYPES=[
@@ -302,21 +175,8 @@ def create_app() -> Flask:
     except ImportError:
         logger.warning("flask-compress no disponible — respuestas sin comprimir")
 
-    from database import init_db, db_session
+    from database import init_db
     init_db()
-
-    # Guardar IP de red real en la DB para usarla en QR tickets
-    try:
-        _ip = get_ip_local()
-        with db_session() as _conn:
-            _conn.execute(
-                "INSERT INTO config (clave, valor) VALUES ('ip_local', ?) "
-                "ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor",
-                (_ip,)
-            )
-        logger.info(f"IP local guardada en config: {_ip}")
-    except Exception as _e:
-        logger.warning(f"No se pudo guardar ip_local: {_e}")
 
     from routes.auth import auth_bp
     from routes.ventas import ventas_bp
@@ -335,139 +195,14 @@ def create_app() -> Flask:
     from routes.voz import voz_bp
     from routes.pedidos import pedidos_bp
     from routes.direcciones import direcciones_bp
-    from routes.modificadores import modificadores_bp
-    from routes.fiado import fiado_bp
-    from routes.publicidad import publicidad_bp
-    from routes.sumup import sumup_bp
 
     for bp in (
         auth_bp, ventas_bp, productos_bp, reportes_bp,
         impresora_bp, backup_bp, inventario_bp, facturas_bp,
         comprobante_bp, qr_bp, khipu_bp, multi_bp, config_bp,
         onboarding_bp, voz_bp, pedidos_bp, direcciones_bp,
-        modificadores_bp, fiado_bp, sumup_bp,
     ):
         app.register_blueprint(bp)
-
-    app.register_blueprint(publicidad_bp, url_prefix="/api/publicidad")
-
-    @app.route('/credit/<qr_token>')
-    def portal_credit(qr_token):
-        from database import db_session
-        from utils.portal_credit import generar_portal_html
-        with db_session() as conn:
-            c = conn.execute(
-                "SELECT * FROM clientes_fiado WHERE qr_token=? AND activo=1", (qr_token,)
-            ).fetchone()
-            if not c:
-                return "Cliente no encontrado", 404
-            movs = conn.execute(
-                "SELECT * FROM fiado_movimientos WHERE cliente_id=? ORDER BY creado_en DESC LIMIT 20",
-                (c['id'],)
-            ).fetchall()
-            cfg = conn.execute("SELECT clave,valor FROM config").fetchall()
-        negocio = {r['clave']: r['valor'] for r in cfg}
-        return generar_portal_html(dict(c), negocio, [dict(m) for m in movs])
-
-    @app.route('/credit/manifest/<qr_token>')
-    def manifest_credit(qr_token):
-        from flask import jsonify
-        from database import db_session
-        with db_session() as conn:
-            cfg = {r['clave']: r['valor'] for r in conn.execute("SELECT clave,valor FROM config").fetchall()}
-        nombre = cfg.get('nombre_negocio', 'ZERO POS')
-        color = cfg.get('tema_color', '#6366f1')
-        resp = jsonify({
-            "name": f"ZERO CREDIT — {nombre}",
-            "short_name": "Mi Crédito",
-            "start_url": f"/credit/{qr_token}",
-            "display": "standalone",
-            "background_color": "#0f0f1a",
-            "theme_color": color,
-            "icons": [
-                {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-                {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
-            ]
-        })
-        resp.headers['Content-Type'] = 'application/manifest+json'
-        return resp
-
-    @app.route('/credit/sw/<qr_token>.js')
-    def sw_credit(qr_token):
-        from flask import Response
-        sw_js = f"""
-const CACHE = 'zc-{qr_token}-v2';
-const URL = '/credit/{qr_token}';
-
-self.addEventListener('install', e => {{
-  e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll([URL]))
-  );
-  self.skipWaiting();
-}});
-
-self.addEventListener('activate', e => {{
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys.filter(k => k.startsWith('zc-{qr_token}-') && k !== CACHE)
-            .map(k => caches.delete(k))
-      )
-    )
-  );
-  self.clients.claim();
-}});
-
-const SIN_CONEXION = `<!DOCTYPE html>
-<html lang="es"><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>ZERO CREDIT</title>
-<style>
-body{{background:#0f0f1a;color:#e2e8f0;font-family:-apple-system,sans-serif;
-  display:flex;align-items:center;justify-content:center;
-  min-height:100vh;margin:0;text-align:center;padding:20px;box-sizing:border-box;}}
-.card{{background:#1e1e2e;border-radius:16px;padding:32px 24px;max-width:320px;width:100%;}}
-.ico{{font-size:64px;margin-bottom:16px;}}
-h2{{margin:0 0 8px;font-size:20px;}}
-p{{color:#94a3b8;font-size:14px;line-height:1.6;margin:0;}}
-.tip{{margin-top:20px;padding:14px;background:#2d2d44;border-radius:10px;
-  font-size:13px;color:#94a3b8;line-height:1.5;}}
-</style></head><body>
-<div class="card">
-  <div class="ico">📵</div>
-  <h2>Sin conexión</h2>
-  <p>No hay datos guardados aún.<br>
-     Visita el almacén para sincronizar<br>
-     tu cuenta por primera vez.</p>
-  <div class="tip">
-    💡 La próxima vez que vayas al almacén
-    conéctate a su WiFi y abre esta página.
-    Tus datos se guardarán automáticamente.
-  </div>
-</div></body></html>`;
-
-self.addEventListener('fetch', e => {{
-  if (!e.request.url.includes(URL)) return;
-  e.respondWith(
-    Promise.race([
-      fetch(e.request).then(response => {{
-        const clone = response.clone();
-        caches.open(CACHE).then(cache => cache.put(e.request, clone));
-        return response;
-      }}),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
-    ]).catch(() =>
-      caches.match(e.request).then(cached =>
-        cached || new Response(SIN_CONEXION, {{headers: {{'Content-Type': 'text/html'}}}})
-      )
-    )
-  );
-}});
-""".strip()
-        resp = Response(sw_js, mimetype='application/javascript')
-        resp.headers['Cache-Control'] = 'no-cache'
-        return resp
 
     @app.route("/api/sistema/tipo")
     def sistema_tipo():
@@ -481,49 +216,13 @@ self.addEventListener('fetch', e => {{
         except Exception:
             return {"tipo": "store"}
 
-    # Páginas HTML que requieren sesión activa
-    _PAGINAS_PROTEGIDAS = {
-        '/static/pos.html', '/static/admin.html', '/static/inventario.html',
-        '/static/cliente.html', '/static/cocina.html', '/static/meson.html',
-        '/static/credit.html', '/static/pedidos.html',
-    }
-
-    @app.before_request
-    def proteger_paginas():
-        if request.path in _PAGINAS_PROTEGIDAS:
-            if not session.get('usuario_id'):
-                return redirect(url_for('static', filename='login.html'))
-
     @app.route("/")
     def index():
         return redirect(url_for("static", filename="login.html"))
 
     @app.route("/health")
     def health():
-        import shutil
-        from database import db_session as _db_session
-        db_ok = False
-        try:
-            with _db_session() as conn:
-                conn.execute("SELECT 1")
-                db_ok = True
-        except Exception:
-            pass
-        disco = shutil.disk_usage(BASE_DIR)
-        disco_libre_mb = disco.free // (1024 * 1024)
-        from flask import jsonify as _jsonify
-        return _jsonify({
-            "status":        "ok" if db_ok else "error",
-            "version":       "1.0.0",
-            "db":            "connected" if db_ok else "error",
-            "disco_libre_mb": disco_libre_mb,
-            "disco_alerta":  disco_libre_mb < 500,
-            "modo":          "lite" if (BASE_DIR / "zero_lite.flag").exists() else "pro",
-        })
-
-    @app.route("/api/sistema/version")
-    def sistema_version():
-        return {"version": "1.0.0"}
+        return {"status": "ok", "version": "1.0.0"}
 
     @app.route("/manifest.json")
     def manifest():
@@ -549,136 +248,6 @@ self.addEventListener('fetch', e => {{
     return app
 
 
-def calcular_metricas_dia(app: Flask):
-    """Calcula y persiste métricas del día en metricas_diarias (corre a las 23:59)."""
-    from datetime import date
-    from database import db_session
-    with app.app_context():
-        try:
-            with db_session() as conn:
-                hoy = date.today().isoformat()
-
-                stats = conn.execute("""
-                    SELECT
-                        COUNT(*) as num_ventas,
-                        COALESCE(SUM(total), 0) as total,
-                        COALESCE(AVG(total), 0) as promedio,
-                        COALESCE(SUM(CASE WHEN metodo_pago='efectivo'      THEN total ELSE 0 END), 0) as efectivo,
-                        COALESCE(SUM(CASE WHEN metodo_pago='tarjeta'       THEN total ELSE 0 END), 0) as tarjeta,
-                        COALESCE(SUM(CASE WHEN metodo_pago='transferencia' THEN total ELSE 0 END), 0) as transferencia
-                    FROM ventas
-                    WHERE DATE(creado_en)=? AND estado='completada'
-                """, (hoy,)).fetchone()
-
-                top = conn.execute("""
-                    SELECT p.id, p.nombre, SUM(vi.cantidad) as total_cant
-                    FROM venta_items vi
-                    JOIN productos p ON p.id = vi.producto_id
-                    JOIN ventas v ON v.id = vi.venta_id
-                    WHERE DATE(v.creado_en)=? AND v.estado='completada'
-                    GROUP BY p.id ORDER BY total_cant DESC LIMIT 1
-                """, (hoy,)).fetchone()
-
-                conn.execute("""
-                    INSERT INTO metricas_diarias
-                        (fecha, total_ventas, num_ventas, ticket_promedio,
-                         producto_top_id, producto_top_nombre, producto_top_cant,
-                         metodo_efectivo, metodo_tarjeta, metodo_transferencia)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)
-                    ON CONFLICT(fecha) DO UPDATE SET
-                        total_ventas         = excluded.total_ventas,
-                        num_ventas           = excluded.num_ventas,
-                        ticket_promedio      = excluded.ticket_promedio,
-                        producto_top_id      = excluded.producto_top_id,
-                        producto_top_nombre  = excluded.producto_top_nombre,
-                        producto_top_cant    = excluded.producto_top_cant,
-                        metodo_efectivo      = excluded.metodo_efectivo,
-                        metodo_tarjeta       = excluded.metodo_tarjeta,
-                        metodo_transferencia = excluded.metodo_transferencia,
-                        actualizado_en       = CURRENT_TIMESTAMP
-                """, (
-                    hoy,
-                    stats["total"], stats["num_ventas"], int(stats["promedio"]),
-                    top["id"] if top else None,
-                    top["nombre"] if top else None,
-                    top["total_cant"] if top else 0,
-                    stats["efectivo"], stats["tarjeta"], stats["transferencia"],
-                ))
-
-                # Métricas semanales
-                from datetime import date as _d, timedelta
-                hoy_d = _d.today()
-                anio, semana, _ = hoy_d.isocalendar()
-                lunes = hoy_d - timedelta(days=hoy_d.weekday())
-                domingo = lunes + timedelta(days=6)
-
-                sem_stats = conn.execute("""
-                    SELECT COUNT(*) as n, COALESCE(SUM(total),0) as t,
-                           COALESCE(AVG(total),0) as avg
-                    FROM ventas
-                    WHERE DATE(creado_en) BETWEEN ? AND ? AND estado='completada'
-                """, (lunes.isoformat(), domingo.isoformat())).fetchone()
-
-                dia_mejor = conn.execute("""
-                    SELECT DATE(creado_en) as d, COALESCE(SUM(total),0) as t
-                    FROM ventas
-                    WHERE DATE(creado_en) BETWEEN ? AND ? AND estado='completada'
-                    GROUP BY d ORDER BY t DESC LIMIT 1
-                """, (lunes.isoformat(), domingo.isoformat())).fetchone()
-
-                conn.execute("""
-                    INSERT INTO metricas_semanales
-                        (anio, semana, fecha_inicio, fecha_fin,
-                         total_ventas, num_ventas, ticket_promedio, dia_mejor, dia_mejor_total)
-                    VALUES (?,?,?,?,?,?,?,?,?)
-                    ON CONFLICT(anio, semana) DO UPDATE SET
-                        total_ventas    = excluded.total_ventas,
-                        num_ventas      = excluded.num_ventas,
-                        ticket_promedio = excluded.ticket_promedio,
-                        dia_mejor       = excluded.dia_mejor,
-                        dia_mejor_total = excluded.dia_mejor_total
-                """, (
-                    anio, semana, lunes.isoformat(), domingo.isoformat(),
-                    sem_stats["t"], sem_stats["n"], int(sem_stats["avg"]),
-                    dia_mejor["d"] if dia_mejor else None,
-                    dia_mejor["t"] if dia_mejor else 0,
-                ))
-
-                # Métricas mensuales
-                mes_str = hoy_d.strftime("%Y-%m")
-                mes_stats = conn.execute("""
-                    SELECT COUNT(*) as n, COALESCE(SUM(total),0) as t,
-                           COALESCE(AVG(total),0) as avg
-                    FROM ventas
-                    WHERE strftime('%Y-%m', creado_en)=? AND estado='completada'
-                """, (mes_str,)).fetchone()
-
-                mes_ant = (hoy_d.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
-                mes_ant_total = conn.execute(
-                    "SELECT COALESCE(SUM(total),0) as t FROM ventas WHERE strftime('%Y-%m', creado_en)=? AND estado='completada'",
-                    (mes_ant,)
-                ).fetchone()["t"] or 0
-                crecimiento = round(
-                    (mes_stats["t"] - mes_ant_total) * 100.0 / mes_ant_total, 2
-                ) if mes_ant_total else 0.0
-
-                conn.execute("""
-                    INSERT INTO metricas_mensuales
-                        (anio, mes, total_ventas, num_ventas, ticket_promedio, crecimiento_pct)
-                    VALUES (?,?,?,?,?,?)
-                    ON CONFLICT(anio, mes) DO UPDATE SET
-                        total_ventas    = excluded.total_ventas,
-                        num_ventas      = excluded.num_ventas,
-                        ticket_promedio = excluded.ticket_promedio,
-                        crecimiento_pct = excluded.crecimiento_pct
-                """, (hoy_d.year, hoy_d.month, mes_stats["t"], mes_stats["n"],
-                      int(mes_stats["avg"]), crecimiento))
-
-                logger.info(f"Métricas calculadas: {stats['num_ventas']} ventas, ${stats['total']:,}")
-        except Exception as e:
-            logger.error(f"calcular_metricas_dia error: {e}")
-
-
 def _reset_stock_produccion():
     from database import get_connection
     try:
@@ -691,149 +260,15 @@ def _reset_stock_produccion():
         logger.warning(f"reset_stock_produccion error: {e}")
 
 
-def _mantenimiento_db():
-    from database import db_session
-    try:
-        with db_session() as conn:
-            conn.execute("PRAGMA optimize")
-            conn.execute("ANALYZE")
-            conn.execute(
-                "INSERT INTO config (clave, valor) VALUES ('ultimo_mantenimiento_db', datetime('now'))"
-                " ON CONFLICT(clave) DO UPDATE SET valor=excluded.valor"
-            )
-            # Limpiar intentos de login con bloqueo expirado hace más de 1 hora
-            conn.execute("""
-                DELETE FROM login_intentos
-                WHERE bloqueado_hasta < (unixepoch() - 3600)
-                AND bloqueado_hasta > 0
-            """)
-        # VACUUM requiere conexión fuera de transacción activa
-        import sqlite3, os
-        db_path = os.path.join(os.path.dirname(__file__), 'zero_pos.db')
-        conn2 = sqlite3.connect(db_path)
-        conn2.execute("VACUUM")
-        conn2.close()
-        logger.info("DB: mantenimiento mensual completado")
-    except Exception as e:
-        logger.warning(f"DB: error mantenimiento: {e}")
-
-
-def _check_mantenimiento_db():
-    """Ejecuta mantenimiento si han pasado 30+ días desde el último."""
-    from database import db_session
-    from datetime import datetime, timedelta
-    try:
-        with db_session() as conn:
-            row = conn.execute(
-                "SELECT valor FROM config WHERE clave='ultimo_mantenimiento_db'"
-            ).fetchone()
-        if row and row["valor"]:
-            ultimo = datetime.fromisoformat(row["valor"])
-            if datetime.now() - ultimo < timedelta(days=30):
-                return
-        _mantenimiento_db()
-    except Exception as e:
-        logger.debug(f"check_mantenimiento_db: {e}")
-
-
-def procesar_cola_impresion(app: Flask):
-    """Reintenta tickets pendientes/fallidos con menos de 3 intentos."""
-    from database import db_session, marcar_ticket_impreso, marcar_ticket_fallido
-    with app.app_context():
-        try:
-            with db_session() as conn:
-                cfg_rows = conn.execute(
-                    "SELECT clave, valor FROM config WHERE clave LIKE 'impresora_%'"
-                ).fetchall()
-                cfg = {r["clave"]: r["valor"] for r in cfg_rows}
-                pendientes = conn.execute(
-                    "SELECT id, contenido FROM cola_impresion "
-                    "WHERE estado IN ('pendiente','fallido') AND intentos < 10 "
-                    "ORDER BY id ASC LIMIT 10"
-                ).fetchall()
-
-            if not pendientes:
-                return
-
-            from utils.impresora import enviar_crudo
-            config_imp = {
-                "tipo":   cfg.get("impresora_tipo", "red"),
-                "ip":     cfg.get("impresora_ip", ""),
-                "puerto": cfg.get("impresora_puerto", "9100"),
-            }
-            for row in pendientes:
-                resultado = enviar_crudo(config_imp, row["contenido"])
-                with db_session() as conn2:
-                    if resultado.get("ok"):
-                        marcar_ticket_impreso(conn2, row["id"])
-                    else:
-                        marcar_ticket_fallido(conn2, row["id"], resultado.get("error", ""))
-        except Exception as e:
-            logger.error(f"procesar_cola_impresion error: {e}")
-
-
-def revisar_fiados_vencidos(app: Flask):
-    with app.app_context():
-        from database import db_session
-        from datetime import date
-        hoy = date.today().isoformat()
-        try:
-            with db_session() as conn:
-                vencidos = conn.execute("""
-                    SELECT COUNT(*) as n, COALESCE(SUM(deuda_actual),0) as total
-                    FROM clientes_fiado
-                    WHERE proximo_vencimiento < ? AND deuda_actual > 0 AND activo = 1
-                """, (hoy,)).fetchone()
-            if vencidos['n'] > 0:
-                logger.warning(
-                    f"ZERO CREDIT: {vencidos['n']} fiados vencidos — ${vencidos['total']:,}"
-                )
-        except Exception as e:
-            logger.debug(f"revisar_fiados_vencidos: {e}")
-
-
-def _limpiar_backups_antiguos(dias: int = 30):
-    """Elimina backups más antiguos que N días."""
-    from datetime import datetime, timedelta
-    backup_dir = BASE_DIR / "backups"
-    if not backup_dir.exists():
-        return
-    limite = datetime.now() - timedelta(days=dias)
-    for archivo in backup_dir.glob("*.zip"):
-        if datetime.fromtimestamp(archivo.stat().st_mtime) < limite:
-            archivo.unlink()
-            logger.info(f"Backup antiguo eliminado: {archivo.name}")
-
-
-def _backup_automatico():
-    """Backup automático diario a las 2 AM."""
-    try:
-        from utils.backup import crear_backup_cifrado
-        resultado = crear_backup_cifrado()
-        if resultado.get("ok"):
-            logger.info(f"Backup automático OK: {resultado.get('archivo')}")
-            _limpiar_backups_antiguos(dias=30)
-        else:
-            logger.warning(f"Backup automático falló: {resultado}")
-    except Exception as e:
-        logger.error(f"Error en backup automático: {e}")
-
-
 def start_backup_scheduler(app: Flask):
     try:
         import schedule
         import time
-        from utils.backup import ejecutar_backup_completo, obtener_config_backup
+        from utils.backup import run_scheduled_backup
 
-        hora_backup = obtener_config_backup().get("backup_hora", "03:00")
-        schedule.every().day.at(hora_backup).do(ejecutar_backup_completo)
-        schedule.every().day.at("02:00").do(_backup_automatico)
+        schedule.every().day.at("03:00").do(run_scheduled_backup, app=app)
         schedule.every().day.at("06:00").do(_reset_stock_produccion)
-        schedule.every().day.at("08:00").do(revisar_fiados_vencidos, app)
-        schedule.every().day.at("23:59").do(calcular_metricas_dia, app)
-        schedule.every(60).seconds.do(procesar_cola_impresion, app)
-        schedule.every().day.at("04:00").do(_check_mantenimiento_db)
-        logger.info("Backup scheduler iniciado (03:00) + auto-backup (02:00) + reset produccion (06:00) + fiados (08:00) + métricas (23:59) + cola impresión (60s) + mantenimiento DB (04:00 si 30d)")
+        logger.info("Backup scheduler iniciado (03:00) + reset produccion (06:00)")
 
         def loop():
             while True:
@@ -842,10 +277,6 @@ def start_backup_scheduler(app: Flask):
 
         t = threading.Thread(target=loop, daemon=True, name="BackupScheduler")
         t.start()
-
-        # Verificar en startup si el mantenimiento está vencido
-        threading.Thread(target=_check_mantenimiento_db, daemon=True,
-                         name="DBMaintenanceCheck").start()
     except ImportError:
         logger.warning("schedule no disponible — backup automático desactivado")
 
@@ -923,38 +354,14 @@ if __name__ == "__main__":
         logger.info(f"  URL: {scheme}://{HOTSPOT_IP}:{port}")
     if ssl_ctx:
         logger.info("  HTTPS activo — acepta el certificado en Chrome una vez")
-        logger.info(f"  QR Clientes:  http://{local_ip}:5000/credit/  (HTTP, sin cert)")
-        logger.info(f"  QR antiguos:  http://{local_ip}:5001 → redirect automático a :5000")
     else:
         logger.info("  HTTP (micrófono solo en localhost)")
     logger.info("=" * 60)
 
     if ssl_ctx:
-        from werkzeug.serving import make_server as _ws
-
-        # 1. Servidor HTTPS interno (loopback) — proxeado a través del mux
-        _int_port = find_free_port(5099)
-        _srv_https = _ws("127.0.0.1", _int_port, app, ssl_context=ssl_ctx)
-        threading.Thread(
-            target=_srv_https.serve_forever, daemon=True, name="HTTPS-int"
-        ).start()
-        logger.info(f"Servidor HTTPS interno en 127.0.0.1:{_int_port}")
-
-        # 2. Servidor HTTP en puerto 5000 (para QR de clientes — sin cert)
-        def _http_5000(flask_app: Flask) -> None:
-            try:
-                srv = _ws("0.0.0.0", 5000, flask_app)
-                logger.info("Servidor HTTP iniciado en :5000 (QR clientes)")
-                srv.serve_forever()
-            except Exception as exc:
-                logger.warning(f"Servidor HTTP :5000 no disponible: {exc}")
-
-        threading.Thread(
-            target=_http_5000, args=(app,), daemon=True, name="HTTP-5000"
-        ).start()
-
-        # 3. Mux :5001 — detecta HTTP vs TLS y redirige/proxea (bloquea main thread)
-        _run_mux("0.0.0.0", port, _int_port, 5000)
+        # Waitress no soporta SSL nativo — Werkzeug maneja HTTPS
+        app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False,
+                ssl_context=ssl_ctx)
     else:
         try:
             from waitress import serve

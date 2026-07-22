@@ -1,3 +1,5 @@
+-- schema_inventario.sql
+
 -- =========================================================
 -- ZERO POS — Schema inventario / proveedores
 -- =========================================================
@@ -102,20 +104,4 @@ CREATE TABLE IF NOT EXISTS alertas_stock (
     creado_en   DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Relación explícita proveedor ↔ producto (P0.3)
-CREATE TABLE IF NOT EXISTS proveedor_productos (
-    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-    proveedor_id          INTEGER NOT NULL REFERENCES proveedores(id),
-    producto_id           INTEGER NOT NULL REFERENCES productos(id),
-    codigo_proveedor      TEXT,
-    precio_referencia     INTEGER,
-    precio_ultima_compra  INTEGER,
-    fecha_ultima_compra   DATE,
-    unidad_compra         TEXT DEFAULT 'unidad',
-    minimo_pedido         INTEGER DEFAULT 1,
-    activo                INTEGER NOT NULL DEFAULT 1,
-    UNIQUE(proveedor_id, producto_id)
-);
 
-CREATE INDEX IF NOT EXISTS idx_pp_proveedor ON proveedor_productos(proveedor_id);
-CREATE INDEX IF NOT EXISTS idx_pp_producto  ON proveedor_productos(producto_id);
